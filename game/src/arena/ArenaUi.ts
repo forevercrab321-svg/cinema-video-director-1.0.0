@@ -28,6 +28,7 @@ const CSS = `
 #arena .title { font-size: clamp(26px, 3.4vw, 40px); font-weight: 900; letter-spacing: .06em; line-height: 1.05; }
 #arena .title small { display: block; font-size: 12px; font-weight: 700; letter-spacing: .28em; opacity: .6; margin-top: 4px; }
 #arena .chip { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.08); letter-spacing: .06em; }
+#arena .net { font-weight: 700; } #arena .net.ok { color: #7be08a; } #arena .net.bad { color: #ff8a7a; } #arena .net.wait { color: #ffd27a; } #arena .net small { font-weight: 400; opacity: .7; }
 #arena .chip b { color: #8be07a; }
 #arena .cols { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.1fr) minmax(240px, 1fr); gap: 16px; min-height: 0; }
 #arena .col { background: rgba(16,18,20,.62); border-radius: 14px; padding: 14px; overflow: auto; backdrop-filter: blur(8px); }
@@ -209,9 +210,17 @@ export class ArenaUi {
     const prog = progress();
     const online = this.modeLabel;
     const peersN = s.net.peers().length;
+    // Online rooms: say whether the realtime link is up, so "only me online" is never a mystery.
+    const link = s.net as { status?: string; statusDetail?: string };
+    const linkLine =
+      link.status === 'connected'
+        ? `<span class="net ok">🟢 ${L('联机已连接', 'Online: connected')}</span>`
+        : link.status === 'error'
+          ? `<span class="net bad">🔴 ${L('联机服务连接失败，正在重试；现在只能和 AI 玩', 'Online service unreachable, retrying — AI only for now')} <small>(${(link.statusDetail ?? '').replace(/[<>&"]/g, '')})</small></span>`
+          : `<span class="net wait">⏳ ${L('正在连接联机服务…', 'Connecting to the online service…')}</span>`;
     const invite =
       s.net.kind === 'online'
-        ? `${L('房间号', 'Room')} <b class="code"></b> · ${L('把链接发给好友就能一起玩（最多 4 人）', 'Send the link to friends to play together (up to 4)')}<br>🎁 ${L('分享就送派对帽，和好友打完一局送限定涂装', 'Share for a free Party Hat; play a match with a friend for an exclusive skin')}<br><button class="btn primary" data-a="copy">📣 ${L('邀请好友（微信 / 抖音 / 小红书…）', 'Invite friends (WhatsApp / TikTok / IG…)')}</button>`
+        ? `${linkLine}<br>${L('房间号', 'Room')} <b class="code"></b> · ${L('把链接发给好友就能一起玩（最多 4 人）', 'Send the link to friends to play together (up to 4)')}<br>🎁 ${L('分享就送派对帽，和好友打完一局送限定涂装', 'Share for a free Party Hat; play a match with a friend for an exclusive skin')}<br><button class="btn primary" data-a="copy">📣 ${L('邀请好友（微信 / 抖音 / 小红书…）', 'Invite friends (WhatsApp / TikTok / IG…)')}</button>`
         : s.net.kind === 'room'
           ? L('邀请好友：点页面右上角的 <b>Share</b>，给好友「可互动」或更高权限，再把链接发给他们。好友用自己的 Claude 账号登录打开即可加入。', 'Invite friends: click <b>Share</b> (top right), give them “can interact”, and send them the link. They join with their own Claude account.')
           : s.net.kind === 'local'

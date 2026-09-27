@@ -101,6 +101,7 @@ function candidateHosts(): string[] {
  *   ''                → decide at runtime from the host (our site, the generic portal zip)
  *   'gamedistribution' → GameDistribution SDK build
  *   'nosdk'           → no third-party SDK code at all (GamePix requires "GamePix SDK or none")
+ *   'crazygames'      → CrazyGames SDK only (their terms: no other portal's SDK or branding in the build)
  * Constant-folded by Vite, so the unused adapters' dynamic imports are dropped from the bundle.
  */
 export const PORTAL_TARGET: string = (import.meta.env.VITE_PORTAL as string | undefined) ?? '';
@@ -117,6 +118,7 @@ export const PORTAL_BUILD: boolean = import.meta.env.VITE_PORTAL_BUILD === '1';
 export function detectPlatform(): PlatformName {
   if (PORTAL_TARGET === 'gamedistribution') return 'gamedistribution';
   if (PORTAL_TARGET === 'nosdk') return 'web';
+  if (PORTAL_TARGET === 'crazygames') return 'crazygames';
   try {
     const q = new URLSearchParams(location.search).get('platform');
     if (q === 'crazygames' || q === 'poki' || q === 'web') return q;
@@ -174,7 +176,7 @@ export async function createPlatform(): Promise<Platform> {
   } else if (PORTAL_TARGET !== 'nosdk' && name === 'crazygames') {
     const { CrazyGamesPlatform } = await import('./CrazyGamesPlatform');
     platform = new CrazyGamesPlatform();
-  } else if (PORTAL_TARGET !== 'nosdk' && name === 'poki') {
+  } else if (PORTAL_TARGET !== 'nosdk' && PORTAL_TARGET !== 'crazygames' && name === 'poki') {
     const { PokiPlatform } = await import('./PokiPlatform');
     platform = new PokiPlatform();
   } else {

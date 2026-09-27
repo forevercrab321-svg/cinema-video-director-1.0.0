@@ -12,7 +12,7 @@
 | itch.io | 2 材料就绪 | 自助发布；免费 + 可选打赏 | 默认 10%，可自设 | `dist-portal.zip` | 用户注册 → 发布 | 用户 + BD | D1 |
 | Newgrounds | 2 材料就绪 | 自助发布；曝光为主 | 官方未查到 | `dist-portal.zip` | 用户注册 → 发布 | 用户 + BD | D1 |
 | Y8 | 1 资格确认 | 送审；广告分成 | 开发者 50% | `dist-portal.zip`（SDK 要求待看） | 注册后读门户里的 SDK 要求 | 用户 → 工程 | D2 |
-| GameDistribution | 2 材料就绪（后台草稿已建，Game ID `c7b69794837644ac904db7f2206fe075`） | 分发到发行网络；广告分成 | 开发者得净收入 33% | `dist-portal-gamedistribution.zip`（已带 Game ID 和联机配置，测试 14/14 通过） | 用户上传 zip → 补全 Edit 页必填项 → 在测试 iframe 看完一次广告激活 SDK → 提交 | 用户 + 工程 | 9/28 |
+| GameDistribution | 4 审核中（2026-09-27 提交，修复版） | 分发到发行网络；广告分成 | 开发者得净收入 33% | `release/gamedistribution/grow-everything-gd.zip`（rev 2） | 等审核（官方最长约 3 周）；可选：激励广告测试 | 用户 | 10/18 |
 | GamePix | 1 资格确认 | 独家或允许分发（上传时勾选） | 官方未查到 | `dist-portal-nosdk.zip` | 640×480 iframe 测试；用户注册 | 工程 + 用户 | D4 |
 | Armor Games | 3 已联系（2026-09-24 已发首封邮件，未回复） | 策展；冠名或限时独占（邮件谈） | 官方未查到 | iframe 指向我们的网站 | 等回复；9/30 未回复则跟进第 1 次，10/8 收尾；对方回复后按 `negotiation-playbook.md` 回 3 个方案 | BD | 9/30 |
 | MSN Games | X 退信（暂缓） | 广告分成计划（2007 年公布，现行条款未知） | 未查到 | `dist-portal.zip` | 9/24 首封邮件被退信（550 拒收）；先查现行投稿入口，查到前不再发送 | BD | — |
@@ -23,6 +23,8 @@
 ## 推进记录
 
 <!-- 格式：日期 · 平台 · 做了什么 · 对方原话或门户状态 · 下一步 -->
+
+- 2026-09-27 · GameDistribution · 首次提交后发现在线模式下看完广告卡在倒计时（实时连接未建立时开局消息被丢弃），修复并上传 rev 2；测试 iframe 中看完广告、正式开局、25 秒正常游戏；SDK = Yes，重新 Request Activation · 门户：In Review / Not Active · 等审核
 
 - 2026-09-27 · GameDistribution · 用户注册开发者账号并验证邮箱；后台建了草稿「GROW EVERYTHING」（HTML5/JS、1280×720、Genre .IO、Android+iOS），拿到 Game ID · 门户：草稿，未上传 · 打 GD 包（修复了平台包读不到 .env.local 的问题，之前的平台包都不带联机配置）→ 用户上传并补全必填项
 

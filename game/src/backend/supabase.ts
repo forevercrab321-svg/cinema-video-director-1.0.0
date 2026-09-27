@@ -12,6 +12,8 @@ const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 let client: SupabaseClient | null = null;
 let userPromise: Promise<User | null> | null = null;
+/** Why the last sign-in failed (shown in the lobby's connection line and in window.__NET__). */
+export let authError = '';
 
 export function backendConfigured(): boolean {
   return !!URL && !!KEY;
@@ -33,9 +35,13 @@ export function currentUser(nickname = 'Player'): Promise<User | null> {
     if (!user) {
       const res = await sb.auth.signInAnonymously();
       user = res.data.user;
+      if (res.error) authError = res.error.message || String(res.error);
     }
     if (user) await sb.from('players').upsert({ id: user.id, display_name: nickname.slice(0, 24) || 'Player', last_seen_at: new Date().toISOString() }, { onConflict: 'id' });
     return user;
-  })().catch(() => null);
+  })().catch((e: unknown) => {
+    authError = e instanceof Error ? e.message : String(e);
+    return null;
+  });
   return userPromise;
 }
