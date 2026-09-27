@@ -4,13 +4,14 @@
 //     (none)            dist-portal.zip — CrazyGames / Poki (SDK picked from the host), itch.io, Newgrounds, Y8
 //     gamedistribution  dist-portal-gamedistribution.zip — GD SDK; needs VITE_GD_GAME_ID in .env.local
 //     nosdk             dist-portal-nosdk.zip — no third-party SDK code (GamePix: "GamePix SDK or none")
+//     crazygames        dist-portal-crazygames.zip — CrazyGames SDK only (their terms forbid other portals' SDKs)
 // Online rooms need VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY in .env.local (anon key only).
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const target = process.argv[2] ?? '';
-if (!['', 'gamedistribution', 'nosdk'].includes(target)) throw new Error(`unknown portal target "${target}"`);
+if (!['', 'gamedistribution', 'nosdk', 'crazygames'].includes(target)) throw new Error(`unknown portal target "${target}"`);
 const root = resolve(import.meta.dirname, '..');
 const out = resolve(root, 'dist-portal');
 const zipName = target ? `dist-portal-${target}.zip` : 'dist-portal.zip';
@@ -27,6 +28,10 @@ const html = resolve(out, 'index.html');
 if (!existsSync(html) || !readFileSync(html, 'utf8').includes('<script')) throw new Error('portal index.html missing the game script (public/index.html overwrote it?)');
 // Portal pages must not link out to our own site: drop the manifest link and absolute icon paths.
 writeFileSync(html, readFileSync(html, 'utf8').replace(/\s*<link rel="manifest"[^>]*>/, '').replaceAll('href="/icons/', 'href="./icons/'));
+if (target === 'crazygames') {
+  const leaks = readdirSync(resolve(out, 'assets')).filter((f) => /Poki|GameDistribution/.test(f) || /poki-sdk|game-cdn\.poki|gamedistribution\.com/.test(readFileSync(resolve(out, 'assets', f), 'latin1')));
+  if (leaks.length) throw new Error(`crazygames build still references another portal SDK: ${leaks.join(', ')}`);
+}
 if (target === 'nosdk') {
   const leaks = readdirSync(resolve(out, 'assets')).filter((f) => /CrazyGames|Poki|GameDistribution/.test(f) || /sdk\.crazygames|poki-sdk|gamedistribution\.com/.test(readFileSync(resolve(out, 'assets', f), 'latin1')));
   if (leaks.length) throw new Error(`nosdk build still references a portal SDK: ${leaks.join(', ')}`);

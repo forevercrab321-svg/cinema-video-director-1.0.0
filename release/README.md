@@ -8,5 +8,5 @@ and copy the zip here; replace, don't accumulate old versions.
 | --- | --- | --- |
 | `gamedistribution/grow-everything-gd.zip` | GameDistribution upload (GD SDK, game id c7b69794…, online rooms) | 2026-09-27 rev 2 (online-mode start fix), smoke test 14/14 + offline-online round |
 | `gamedistribution/cover-*.png` | GD Assets page | from `marketing/press-kit/covers/` |
-| `crazygames/grow-everything-crazygames.zip` | CrazyGames upload (CrazyGames SDK at runtime, online rooms) | 2026-09-27 rev 2 (online-mode start fix) |
+| `crazygames/grow-everything-crazygames.zip` | CrazyGames upload (CrazyGames SDK only — their terms forbid other portals' SDKs; online rooms) | 2026-09-27 rev 2 (online-mode start fix) |
 | `crazygames/cover-*.png`, `crazygames/*-*s.png` | CrazyGames covers and screenshots | from `marketing/press-kit/` |
