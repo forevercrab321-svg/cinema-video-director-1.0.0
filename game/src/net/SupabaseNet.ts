@@ -1,5 +1,5 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { currentUser, supabase } from '../backend/supabase';
+import { authError, currentUser, supabase } from '../backend/supabase';
 import type { Json, Net, NetMessage, NetPeer } from './Net';
 
 /**
@@ -31,6 +31,9 @@ export class SupabaseNet implements Net {
   private readonly peerFns: ((p: readonly NetPeer[]) => void)[] = [];
   private snapshot: readonly NetPeer[] = [];
   private live = false;
+  /** Realtime channel state for the lobby's connection line: connecting → connected, or the error. */
+  status: 'connecting' | 'connected' | 'error' = 'connecting';
+  statusDetail = '';
   private slowDirty = false;
   private fastDirty = false;
   private uid: string | null = null;
@@ -72,10 +75,30 @@ export class SupabaseNet implements Net {
         this.seen.delete(from);
         this.refresh();
       })
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         this.live = status === 'SUBSCRIBED';
-        if (this.live) this.slowDirty = true;
+        if (this.live) {
+          this.slowDirty = true;
+          this.status = 'connected';
+          this.statusDetail = '';
+        } else {
+          // CHANNEL_ERROR / TIMED_OUT / CLOSED: supabase-js keeps retrying; say why meanwhile.
+          this.status = status === 'CLOSED' ? 'connecting' : 'error';
+          this.statusDetail = err?.message ? `${status}: ${err.message}` : status;
+          console.warn('[net] realtime', status, err ?? '');
+        }
+        this.refresh();
       });
+    // Remote diagnosis: window.__NET__() in the console (or a browser agent) reports the link state.
+    (window as unknown as Record<string, unknown>).__NET__ = () => ({
+      room,
+      status: this.status,
+      detail: this.statusDetail,
+      auth: authError,
+      self: this.id,
+      peers: this.snapshot.map((p) => p.id),
+      others: [...this.others.keys()],
+    });
     setInterval(() => this.pump(), 66); // ~15 Hz state, presence changes debounced into the same tick
     const goodbye = () => {
       if (this.live) void this.channel.send({ type: 'broadcast', event: 'bye', payload: { from: this.id } });
