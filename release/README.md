@@ -6,5 +6,5 @@ and copy the zip here; replace, don't accumulate old versions.
 
 | File | For | Built |
 | --- | --- | --- |
-| `gamedistribution/grow-everything-gd.zip` | GameDistribution upload (GD SDK, game id c7b69794…, online rooms) | 2026-09-27, smoke test 14/14 |
+| `gamedistribution/grow-everything-gd.zip` | GameDistribution upload (GD SDK, game id c7b69794…, online rooms) | 2026-09-27 rev 2 (online-mode start fix), smoke test 14/14 + offline-online round |
 | `gamedistribution/cover-*.png` | GD Assets page | from `marketing/press-kit/covers/` |
