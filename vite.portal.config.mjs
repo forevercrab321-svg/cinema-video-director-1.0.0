@@ -7,6 +7,8 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   root: resolve(import.meta.dirname, 'game'),
   publicDir: resolve(import.meta.dirname, 'public'),
+  // root is game/, but .env.local (Supabase anon key, GD game id) lives at the repo root.
+  envDir: import.meta.dirname,
   base: './',
   build: {
     outDir: resolve(import.meta.dirname, 'dist-portal'),

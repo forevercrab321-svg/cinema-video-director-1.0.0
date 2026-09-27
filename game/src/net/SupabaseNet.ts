@@ -91,10 +91,19 @@ export class SupabaseNet implements Net {
   /** Join (or create) room `code`; null when no backend is configured. */
   static async connect(code: string, nickname: string): Promise<SupabaseNet | null> {
     if (!supabase()) return null;
-    const user = await currentUser(nickname);
+    // Never hold the lobby on auth: a blocked or slow backend retries for a long time. Join the
+    // room now and attach the account id whenever sign-in lands.
+    const pending = currentUser(nickname);
+    const user = await Promise.race([pending, new Promise<null>((r) => setTimeout(() => r(null), 4000))]);
     const net = new SupabaseNet(code, nickname);
-    net.uid = user?.id ?? null;
-    net.slow.uid = net.uid;
+    const attach = (u: { id: string } | null) => {
+      if (!u || net.uid) return;
+      net.uid = u.id;
+      net.slow.uid = u.id;
+      net.slowDirty = true;
+    };
+    attach(user);
+    void pending.then(attach);
     return net;
   }
 
@@ -119,7 +128,14 @@ export class SupabaseNet implements Net {
     this.refresh();
   }
   emit(topic: string, data: Json): void {
-    if (!this.live) return; // like the room: dropped while disconnected, no echo
+    if (!this.live) {
+      // Not subscribed (connecting, blocked or offline): nobody else can hear it, but this client must —
+      // the host drives its own match from the self-echo, so dropping it froze the round in countdown.
+      queueMicrotask(() => {
+        for (const fn of this.handlers.get(topic) ?? []) fn({ from: this.id, isMe: true, data });
+      });
+      return;
+    }
     void this.channel.send({ type: 'broadcast', event: 'msg', payload: { topic, from: this.id, data } });
   }
   on(topic: string, fn: (m: NetMessage) => void): void {
