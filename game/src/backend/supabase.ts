@@ -36,11 +36,20 @@ export function supabase(): SupabaseClient | null {
  * channel (realtime-js does not resubscribe after a server close): both players fell back to
  * "1 online" about ten seconds in.
  */
+/** Realtime socket heartbeat outcomes (window.__NET__): timeouts mean the socket was dropped. */
+export const socketBeats = { sent: 0, ok: 0, timeout: 0, error: 0, lastLatency: 0 };
+
 export function realtimeClient(): SupabaseClient | null {
   if (!backendConfigured()) return null;
   rtClient ??= createClient(URL!, KEY!, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'grow-rt' },
-    realtime: { vsn: '1.0.0' },
+    realtime: {
+      vsn: '1.0.0',
+      heartbeatCallback: (status: string, latency?: number) => {
+        if (status in socketBeats) (socketBeats as Record<string, number>)[status]++;
+        if (typeof latency === 'number') socketBeats.lastLatency = Math.round(latency);
+      },
+    },
   });
   return rtClient;
 }

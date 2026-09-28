@@ -1,5 +1,5 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { authError, currentUser, realtimeClient, supabase } from '../backend/supabase';
+import { authError, currentUser, realtimeClient, socketBeats, supabase } from '../backend/supabase';
 import type { Json, Net, NetMessage, NetPeer } from './Net';
 
 /**
@@ -17,7 +17,10 @@ import type { Json, Net, NetMessage, NetPeer } from './Net';
  * sends a heartbeat each second; a peer silent for PEER_TIMEOUT_MS is treated as gone (and
  * comes back as soon as it speaks again). Hiding or closing the page says goodbye at once.
  */
-const PEER_TIMEOUT_MS = 4500;
+// Generous: a busy or briefly throttled page (or a channel rejoin) must not drop a player. A page
+// that is really leaving says goodbye ('bye' on hide / pagehide), which drops it at once.
+const PEER_TIMEOUT_MS = 12_000;
+const HEARTBEAT_MS = 1000;
 const FAST_KEYS = new Set(['s', 'b', 'ep']);
 
 export class SupabaseNet implements Net {
@@ -47,6 +50,9 @@ export class SupabaseNet implements Net {
   /** Last time each other peer was heard from (heartbeat, state or message). */
   private readonly seen = new Map<string, number>();
   private hbTimer = 0;
+  private lastHb = 0;
+  /** Last channel state changes, for window.__NET__ (t = seconds since the page opened). */
+  private readonly history: string[] = [];
 
   private constructor(
     readonly room: string,
@@ -65,6 +71,8 @@ export class SupabaseNet implements Net {
       traffic: { ...this.traffic },
       vsn: (realtimeClient()?.realtime as unknown as { vsn?: string } | undefined)?.vsn,
       rejoins: this.rejoins,
+      history: [...this.history],
+      socket: { ...socketBeats },
       others: [...this.others.keys()],
     });
     setInterval(() => this.pump(), 66); // ~15 Hz state, presence changes debounced into the same tick
@@ -116,6 +124,8 @@ export class SupabaseNet implements Net {
       })
       .subscribe((status, err) => {
         if (channel !== this.channel || channel === this.retiring) return; // a retired channel reporting its own shutdown
+        this.history.push(`${Math.round(performance.now() / 1000)}s ${status}${err?.message ? ` (${err.message})` : ''}`);
+        if (this.history.length > 8) this.history.shift();
         this.live = status === 'SUBSCRIBED';
         if (this.live) {
           this.slowDirty = true;
@@ -273,10 +283,11 @@ export class SupabaseNet implements Net {
       }
       return;
     }
-    // Heartbeat (only while visible: a hidden page is not playing) and expiry of silent peers.
-    this.hbTimer += 66;
-    if (this.hbTimer >= 1000) {
-      this.hbTimer = 0;
+    // Heartbeat by wall clock (timers slow down on a busy page; each late tick still beats at once)
+    // — only while visible: a hidden page is not playing — plus expiry of silent peers.
+    const now = Date.now();
+    if (now - this.lastHb >= HEARTBEAT_MS) {
+      this.lastHb = now;
       if (document.visibilityState === 'visible') void this.push({ type: 'broadcast', event: 'hb', payload: { from: this.id } });
       const alive = 1 + [...this.others.keys()].filter((id) => this.isAlive(id)).length;
       if (alive !== this.snapshot.length) this.refresh(); // someone went silent (or came back)
