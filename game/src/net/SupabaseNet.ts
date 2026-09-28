@@ -34,6 +34,8 @@ export class SupabaseNet implements Net {
   /** Realtime channel state for the lobby's connection line: connecting → connected, or the error. */
   status: 'connecting' | 'connected' | 'error' = 'connecting';
   statusDetail = '';
+  /** Broadcast traffic counters for window.__NET__ (self = our own echoes, proof the server relays). */
+  private readonly traffic = { sent: 0, recv: 0, self: 0, subscribedAt: 0 };
   private slowDirty = false;
   private fastDirty = false;
   private uid: string | null = null;
@@ -51,12 +53,14 @@ export class SupabaseNet implements Net {
     this.channel
       .on('presence', { event: 'sync' }, () => this.syncPresence())
       .on('broadcast', { event: 'msg' }, ({ payload }) => {
+        this.count(payload);
         const m = payload as { topic?: string; from?: string; data?: Json };
         if (typeof m?.topic !== 'string' || typeof m.from !== 'string') return;
         this.heard(m.from);
         for (const fn of this.handlers.get(m.topic) ?? []) fn({ from: m.from, isMe: m.from === this.id, data: m.data });
       })
       .on('broadcast', { event: 'st' }, ({ payload }) => {
+        this.count(payload);
         const m = payload as { from?: string; st?: Record<string, Json> };
         if (typeof m?.from !== 'string' || m.from === this.id || !m.st || typeof m.st !== 'object') return;
         this.seen.set(m.from, Date.now());
@@ -66,6 +70,7 @@ export class SupabaseNet implements Net {
         this.refresh();
       })
       .on('broadcast', { event: 'hb' }, ({ payload }) => {
+        this.count(payload);
         const from = (payload as { from?: string })?.from;
         if (typeof from === 'string' && from !== this.id) this.heard(from);
       })
@@ -79,6 +84,7 @@ export class SupabaseNet implements Net {
         this.live = status === 'SUBSCRIBED';
         if (this.live) {
           this.slowDirty = true;
+          this.traffic.subscribedAt = Date.now();
           this.status = 'connected';
           this.statusDetail = '';
         } else {
@@ -97,6 +103,8 @@ export class SupabaseNet implements Net {
       auth: authError,
       self: this.id,
       peers: this.snapshot.map((p) => p.id),
+      traffic: { ...this.traffic },
+      vsn: (supabase()?.realtime as unknown as { vsn?: string } | undefined)?.vsn,
       others: [...this.others.keys()],
     });
     setInterval(() => this.pump(), 66); // ~15 Hz state, presence changes debounced into the same tick
@@ -159,7 +167,7 @@ export class SupabaseNet implements Net {
       });
       return;
     }
-    void this.channel.send({ type: 'broadcast', event: 'msg', payload: { topic, from: this.id, data } });
+    void this.push({ type: 'broadcast', event: 'msg', payload: { topic, from: this.id, data } });
   }
   on(topic: string, fn: (m: NetMessage) => void): void {
     const list = this.handlers.get(topic) ?? [];
@@ -171,6 +179,32 @@ export class SupabaseNet implements Net {
   }
   nameOf(peer: NetPeer): string {
     return (typeof peer.presence.nk === 'string' && peer.presence.nk) || 'Player';
+  }
+
+  private push(args: { type: 'broadcast'; event: string; payload: Json }): Promise<unknown> {
+    this.traffic.sent++;
+    return this.channel.send(args);
+  }
+
+  private count(payload: unknown): void {
+    this.traffic.recv++;
+    if ((payload as { from?: unknown } | null)?.from === this.id) this.traffic.self++;
+  }
+
+  /** Subscribed, yet not even our own heartbeat echo came back: the relay is not delivering. */
+  private checkRelay(): void {
+    const t = this.traffic;
+    const silent = this.live && t.subscribedAt > 0 && Date.now() - t.subscribedAt > 6000 && t.self === 0 && t.sent > 3;
+    if (silent && this.status !== 'error') {
+      this.status = 'error';
+      this.statusDetail = 'broadcast not delivered';
+      console.warn('[net] subscribed but no broadcast echo', t);
+      this.refresh();
+    } else if (!silent && this.live && t.self > 0 && this.status === 'error') {
+      this.status = 'connected';
+      this.statusDetail = '';
+      this.refresh();
+    }
   }
 
   private heard(from: string): void {
@@ -189,9 +223,10 @@ export class SupabaseNet implements Net {
     this.hbTimer += 66;
     if (this.hbTimer >= 1000) {
       this.hbTimer = 0;
-      if (document.visibilityState === 'visible') void this.channel.send({ type: 'broadcast', event: 'hb', payload: { from: this.id } });
+      if (document.visibilityState === 'visible') void this.push({ type: 'broadcast', event: 'hb', payload: { from: this.id } });
       const alive = 1 + [...this.others.keys()].filter((id) => this.isAlive(id)).length;
       if (alive !== this.snapshot.length) this.refresh(); // someone went silent (or came back)
+      this.checkRelay();
     }
     if (this.slowDirty) {
       this.slowDirty = false;
@@ -199,7 +234,7 @@ export class SupabaseNet implements Net {
     }
     if (this.fastDirty) {
       this.fastDirty = false;
-      void this.channel.send({ type: 'broadcast', event: 'st', payload: { from: this.id, st: this.fast } });
+      void this.push({ type: 'broadcast', event: 'st', payload: { from: this.id, st: this.fast } });
     }
   }
 

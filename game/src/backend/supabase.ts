@@ -21,7 +21,10 @@ export function backendConfigured(): boolean {
 
 export function supabase(): SupabaseClient | null {
   if (!backendConfigured()) return null;
-  client ??= createClient(URL!, KEY!, { auth: { persistSession: true, autoRefreshToken: true } });
+  // Realtime protocol 1.0.0 (JSON frames). The 2.0.0 default sends broadcasts as binary frames;
+  // in the field presence synced but no broadcast (heartbeats, match state) ever arrived, so every
+  // client dropped its peers after the heartbeat timeout and played alone.
+  client ??= createClient(URL!, KEY!, { auth: { persistSession: true, autoRefreshToken: true }, realtime: { vsn: '1.0.0' } });
   return client;
 }
 
