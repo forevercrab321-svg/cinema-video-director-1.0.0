@@ -313,7 +313,7 @@ export async function runArena(ctx: AppContext): Promise<void> {
     // Lobby re-renders only when something it shows changed (presence updates arrive at 30 Hz).
     if (lobbyDirty && session.match.ph === 'lobby') {
       lobbyDirty = false;
-      const sig = JSON.stringify([session.lobbyPlayers(), session.hostId(), session.city, session.bots, session.net.peers().length, session.vehicle, session.ready, session.canStart()]);
+      const sig = JSON.stringify([session.lobbyPlayers(), session.hostId(), session.city, session.bots, session.net.peers().length, session.vehicle, session.ready, session.canStart(), (session.net as { status?: string }).status]);
       if (sig !== lobbySig) {
         lobbySig = sig;
         ui.renderLobby();
