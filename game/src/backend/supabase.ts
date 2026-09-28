@@ -11,6 +11,7 @@ const URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 let client: SupabaseClient | null = null;
+let rtClient: SupabaseClient | null = null;
 let userPromise: Promise<User | null> | null = null;
 /** Why the last sign-in failed (shown in the lobby's connection line and in window.__NET__). */
 export let authError = '';
@@ -26,6 +27,22 @@ export function supabase(): SupabaseClient | null {
   // client dropped its peers after the heartbeat timeout and played alone.
   client ??= createClient(URL!, KEY!, { auth: { persistSession: true, autoRefreshToken: true }, realtime: { vsn: '1.0.0' } });
   return client;
+}
+
+/**
+ * Dedicated client for online rooms. It never signs in, so its realtime token stays the public
+ * key for the life of the page. On the shared client, the anonymous sign-in landing a few seconds
+ * after the room was joined swapped the channel's token mid-session, and the server closed the
+ * channel (realtime-js does not resubscribe after a server close): both players fell back to
+ * "1 online" about ten seconds in.
+ */
+export function realtimeClient(): SupabaseClient | null {
+  if (!backendConfigured()) return null;
+  rtClient ??= createClient(URL!, KEY!, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'grow-rt' },
+    realtime: { vsn: '1.0.0' },
+  });
+  return rtClient;
 }
 
 /** The signed-in player (anonymous on first visit), with a players row ensured. */

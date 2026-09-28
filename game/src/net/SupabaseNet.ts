@@ -1,5 +1,5 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { authError, currentUser, supabase } from '../backend/supabase';
+import { authError, currentUser, realtimeClient, supabase } from '../backend/supabase';
 import type { Json, Net, NetMessage, NetPeer } from './Net';
 
 /**
@@ -23,7 +23,12 @@ const FAST_KEYS = new Set(['s', 'b', 'ep']);
 export class SupabaseNet implements Net {
   readonly kind = 'online' as const;
   private readonly id = 'p-' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
-  private readonly channel: RealtimeChannel;
+  private channel!: RealtimeChannel;
+  /** Rejoin bookkeeping: a server-closed or long-failing channel is rebuilt with backoff. */
+  private rejoinTimer: number | null = null;
+  private rejoins = 0;
+  private retiring: RealtimeChannel | null = null;
+  private downSince = 0;
   private slow: Record<string, Json> = {};
   private fast: Record<string, Json> = {};
   private readonly others = new Map<string, { slow: Record<string, Json>; fast: Record<string, Json> }>();
@@ -47,10 +52,39 @@ export class SupabaseNet implements Net {
     readonly room: string,
     nickname: string,
   ) {
-    const sb = supabase()!;
     this.slow = { nk: nickname };
-    this.channel = sb.channel(`arena:${room}`, { config: { presence: { key: this.id }, broadcast: { self: true, ack: false } } });
-    this.channel
+    this.join();
+    // Remote diagnosis: window.__NET__() in the console (or a browser agent) reports the link state.
+    (window as unknown as Record<string, unknown>).__NET__ = () => ({
+      room,
+      status: this.status,
+      detail: this.statusDetail,
+      auth: authError,
+      self: this.id,
+      peers: this.snapshot.map((p) => p.id),
+      traffic: { ...this.traffic },
+      vsn: (realtimeClient()?.realtime as unknown as { vsn?: string } | undefined)?.vsn,
+      rejoins: this.rejoins,
+      others: [...this.others.keys()],
+    });
+    setInterval(() => this.pump(), 66); // ~15 Hz state, presence changes debounced into the same tick
+    const goodbye = () => {
+      if (this.live) void this.channel.send({ type: 'broadcast', event: 'bye', payload: { from: this.id } });
+    };
+    addEventListener('pagehide', goodbye);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') goodbye();
+      else this.slowDirty = this.fastDirty = true; // back: re-announce everything at once
+    });
+    this.refresh();
+  }
+
+  /** Subscribe to the room channel (again, after a server close). Presence key stays this.id. */
+  private join(): void {
+    const sb = realtimeClient()!;
+    const channel = sb.channel(`arena:${this.room}`, { config: { presence: { key: this.id }, broadcast: { self: true, ack: false } } });
+    this.channel = channel;
+    channel
       .on('presence', { event: 'sync' }, () => this.syncPresence())
       .on('broadcast', { event: 'msg' }, ({ payload }) => {
         this.count(payload);
@@ -81,42 +115,48 @@ export class SupabaseNet implements Net {
         this.refresh();
       })
       .subscribe((status, err) => {
+        if (channel !== this.channel || channel === this.retiring) return; // a retired channel reporting its own shutdown
         this.live = status === 'SUBSCRIBED';
         if (this.live) {
           this.slowDirty = true;
           this.traffic.subscribedAt = Date.now();
           this.status = 'connected';
           this.statusDetail = '';
+          this.downSince = 0;
+          this.rejoins = 0;
         } else {
-          // CHANNEL_ERROR / TIMED_OUT / CLOSED: supabase-js keeps retrying; say why meanwhile.
+          this.downSince ||= Date.now();
+          // The server closed the channel: realtime-js will not resubscribe, so we do.
+          if (status === 'CLOSED') this.scheduleRejoin();
+          // CHANNEL_ERROR / TIMED_OUT: supabase-js retries these itself; say why meanwhile.
           this.status = status === 'CLOSED' ? 'connecting' : 'error';
           this.statusDetail = err?.message ? `${status}: ${err.message}` : status;
           console.warn('[net] realtime', status, err ?? '');
         }
         this.refresh();
       });
-    // Remote diagnosis: window.__NET__() in the console (or a browser agent) reports the link state.
-    (window as unknown as Record<string, unknown>).__NET__ = () => ({
-      room,
-      status: this.status,
-      detail: this.statusDetail,
-      auth: authError,
-      self: this.id,
-      peers: this.snapshot.map((p) => p.id),
-      traffic: { ...this.traffic },
-      vsn: (supabase()?.realtime as unknown as { vsn?: string } | undefined)?.vsn,
-      others: [...this.others.keys()],
-    });
-    setInterval(() => this.pump(), 66); // ~15 Hz state, presence changes debounced into the same tick
-    const goodbye = () => {
-      if (this.live) void this.channel.send({ type: 'broadcast', event: 'bye', payload: { from: this.id } });
-    };
-    addEventListener('pagehide', goodbye);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') goodbye();
-      else this.slowDirty = this.fastDirty = true; // back: re-announce everything at once
-    });
-    this.refresh();
+  }
+
+  private scheduleRejoin(): void {
+    if (this.rejoinTimer !== null) return;
+    const delay = Math.min(10_000, 1000 * 2 ** this.rejoins++);
+    this.rejoinTimer = window.setTimeout(() => void this.rejoin(), delay);
+  }
+
+  /** Tear the dead channel down completely (channel() hands back an existing topic), then join again. */
+  private async rejoin(): Promise<void> {
+    const rt = realtimeClient()!;
+    const old = this.channel;
+    this.retiring = old;
+    this.live = false;
+    try {
+      await Promise.race([rt.removeChannel(old), new Promise((r) => setTimeout(r, 3000))]);
+    } catch {
+      /* already gone */
+    }
+    (rt.realtime as unknown as { _remove?(c: RealtimeChannel): void })._remove?.(old);
+    this.rejoinTimer = null;
+    this.join();
   }
 
   /** Join (or create) room `code`; null when no backend is configured. */
@@ -218,7 +258,21 @@ export class SupabaseNet implements Net {
   }
 
   private pump(): void {
-    if (!this.live) return;
+    if (!this.live) {
+      // Down: still expire silent peers (so the lobby stops showing them), and rebuild the channel
+      // if the library's own retries have not brought it back within 15 s.
+      this.hbTimer += 66;
+      if (this.hbTimer >= 1000) {
+        this.hbTimer = 0;
+        const alive = 1 + [...this.others.keys()].filter((id) => this.isAlive(id)).length;
+        if (alive !== this.snapshot.length) this.refresh();
+        if (this.downSince && Date.now() - this.downSince > 15_000) {
+          this.downSince = Date.now();
+          this.scheduleRejoin();
+        }
+      }
+      return;
+    }
     // Heartbeat (only while visible: a hidden page is not playing) and expiry of silent peers.
     this.hbTimer += 66;
     if (this.hbTimer >= 1000) {
