@@ -1,6 +1,6 @@
-import type { RealtimeChannel } from '@supabase/supabase-js';
-import { authError, authStatus, currentUser, realtimeClient, socketBeats, supabase } from '../backend/supabase';
+import { authError, authStatus, currentUser, socketBeats, supabase } from '../backend/supabase';
 import type { Json, Net, NetMessage, NetPeer } from './Net';
+import { RealtimeLink, tabId, type LinkStatus } from './RealtimeLink';
 
 /**
  * Public online rooms over Supabase Realtime (for the stand-alone web / portal builds, where
@@ -55,51 +55,15 @@ interface Remote {
   hasState: boolean;
 }
 
-type AnyChannel = RealtimeChannel & { channelAdapter?: { getChannel?(): unknown } };
-interface RealtimeInternals {
-  channels?: AnyChannel[];
-  getChannels?(): AnyChannel[];
-  _cancelPendingDisconnect?(): void;
-  socketAdapter?: { getSocket?(): { remove?(c: unknown): void } };
-  vsn?: string;
-}
-
 export class SupabaseNet implements Net {
   readonly kind = 'online' as const;
   /**
    * Stable per tab and room: a reload (or a phone browser restoring the page) keeps the same id,
    * so the room never lists a "ghost" of the previous load next to the new one.
    */
-  private readonly id = SupabaseNet.tabId();
-  private static tabId(): string {
-    const fresh = 'p-' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
-    try {
-      const k = 'ge-net-id';
-      // Reuse only on a reload of this tab: a new tab, a duplicated tab or a second iframe
-      // (sessionStorage is shared with same-origin frames) must never share an id.
-      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-      const v = sessionStorage.getItem(k);
-      if (nav?.type === 'reload' && v && /^p-[a-z0-9]{6,16}$/.test(v)) return v;
-      sessionStorage.setItem(k, fresh);
-    } catch {
-      /* storage blocked (private mode / sandboxed iframe): a fresh id per load */
-    }
-    return fresh;
-  }
-  private channel: AnyChannel | null = null;
-  /** Bumped per channel instance; callbacks and messages from a retired instance are ignored. */
-  private joinSeq = 0;
-  private joinStartedAt = 0;
-  private live = false;
-  /** When our link went down (0 = up). */
-  private downSince = 0;
-  private rejoinTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Backoff step (reset once subscribed); `rejoins` counts every rebuild and is never reset. */
-  private attempt = 0;
-  private rejoins = 0;
-  private joins = 0;
-  private lastRejoinReason = '';
-  private lastStatus = '';
+  private readonly id = tabId('ge-net-id', 'p-');
+  /** The room channel (join / rejoin / stuck / relay checks live there, shared with the hub). */
+  private readonly link: RealtimeLink;
   private slow: Record<string, Json> = {};
   private fast: Record<string, Json> = {};
   private slowSig = '';
@@ -108,11 +72,8 @@ export class SupabaseNet implements Net {
   private readonly peerFns: ((p: readonly NetPeer[]) => void)[] = [];
   private snapshot: readonly NetPeer[] = [];
   private visibleSig = '';
-  /** Realtime channel state for the lobby's connection line: connecting → connected, or the error. */
-  status: 'connecting' | 'connected' | 'error' = 'connecting';
-  statusDetail = '';
-  /** Broadcast traffic counters for window.__NET__ (self = our own echoes, proof the server relays). */
-  private readonly traffic = { sent: 0, recv: 0, self: 0, hbSent: 0, hbRecv: 0, subscribedAt: 0, sentSinceSub: 0, selfSinceSub: 0 };
+  /** Heartbeat counters for window.__NET__ (the link counts all broadcast traffic). */
+  private readonly beats = { hbSent: 0, hbRecv: 0 };
   private slowDirty = false;
   private fastDirty = false;
   private uid: string | null = null;
@@ -120,15 +81,13 @@ export class SupabaseNet implements Net {
   private lastHelloAnswer = 0;
   private lastHelloAsk = 0;
   private lastSlowTick = 0;
-  /** Last channel state changes, for window.__NET__ (t = seconds since the page opened). */
-  private readonly history: string[] = [];
 
   private constructor(
     readonly room: string,
     nickname: string,
   ) {
     this.setSlow({ nk: nickname });
-    this.join('initial');
+    this.link = new RealtimeLink(`arena:${room}`, this.id, ['msg', 'st', 'hb', 'bye'], { receive: (e, p, f) => this.onReceive(e, p, f), up: (w) => this.onUp(w), changed: () => this.refresh() }, NET_TIMING);
     // Remote diagnosis: window.__NET__() in the console (or a browser agent) reports the link state.
     (window as unknown as Record<string, unknown>).__NET__ = () => this.diagnostics();
     setInterval(() => this.pump(), NET_TIMING.pumpMs); // ~15 Hz state, presence changes debounced into the same tick
@@ -214,138 +173,41 @@ export class SupabaseNet implements Net {
     return (typeof peer.presence.nk === 'string' && peer.presence.nk) || 'Player';
   }
 
-  // ── Channel lifecycle ─────────────────────────────────────────────────────
-  private get rt(): RealtimeInternals | null {
-    return (realtimeClient()?.realtime as unknown as RealtimeInternals | undefined) ?? null;
+  // ── Link ──────────────────────────────────────────────────────────────────
+  get status(): LinkStatus {
+    return this.link.status;
+  }
+  get statusDetail(): string {
+    return this.link.statusDetail;
+  }
+  private get live(): boolean {
+    return this.link.live;
   }
 
-  /**
-   * Subscribe to the room channel (again, after a server close). Presence key stays this.id.
-   * Every older instance for this topic is retired first: realtime-js hands back an existing
-   * channel for a known topic, and a retired channel's late close unregisters channels BY TOPIC
-   * (i.e. the new one), after which the client disconnects the socket as "empty" 50 s later.
-   */
-  private join(reason: string): void {
-    const sb = realtimeClient()!;
-    const topic = `arena:${this.room}`;
-    this.retireTopic(`realtime:${topic}`);
-    const seq = ++this.joinSeq;
-    const mine = () => seq === this.joinSeq;
-    const channel = sb.channel(topic, { config: { broadcast: { self: true, ack: false }, presence: { key: this.id, enabled: false } } }) as AnyChannel;
-    this.channel = channel;
-    this.joins++;
-    this.joinStartedAt = Date.now();
-    this.log(`join #${this.joins} (${reason})`);
-    channel
-      .on('broadcast', { event: 'msg' }, ({ payload }) => mine() && this.onMsg(payload))
-      .on('broadcast', { event: 'st' }, ({ payload }) => mine() && this.onState(payload))
-      .on('broadcast', { event: 'hb' }, ({ payload }) => mine() && this.onHeartbeat(payload))
-      .on('broadcast', { event: 'bye' }, ({ payload }) => mine() && this.onBye(payload))
-      .subscribe((status, err) => {
-        if (mine()) this.onChannelStatus(status, err);
-      });
+  private onReceive(event: string, payload: unknown, from: string | null): void {
+    if (event === 'msg') this.onMsg(payload, from);
+    else if (event === 'st') this.onState(payload, from);
+    else if (event === 'hb') this.onHeartbeat(payload, from);
+    else if (event === 'bye') this.onBye(from);
   }
 
-  /** Unsubscribe and tear down every channel instance for `topic` (by instance, never by topic). */
-  private retireTopic(topic: string): void {
-    const rt = this.rt;
-    if (!rt) return;
-    const list = rt.getChannels?.() ?? rt.channels ?? [];
-    for (const c of [...list]) {
-      if (c.topic !== topic) continue;
-      const inner = c.channelAdapter?.getChannel?.();
-      try {
-        void c.unsubscribe().catch(() => undefined); // tells the server, if it still has us
-      } catch {
-        /* already gone */
-      }
-      try {
-        c.teardown(); // drops its bindings: its late close can no longer touch the new channel
-      } catch {
-        /* already gone */
-      }
-      if (inner) rt.socketAdapter?.getSocket?.()?.remove?.(inner);
-      if (rt.channels) rt.channels = rt.channels.filter((x) => x !== c);
-    }
-  }
-
-  /** The client lost track of our live channel (see join): register it again. */
-  private guardRegistration(): void {
-    const rt = this.rt;
-    const ch = this.channel;
-    if (!rt?.channels || !ch || rt.channels.includes(ch)) return;
-    rt.channels.push(ch);
-    rt._cancelPendingDisconnect?.();
-    this.log('re-registered channel');
-  }
-
-  private onChannelStatus(status: string, err?: Error): void {
-    this.lastStatus = status;
-    this.log(`${status}${err?.message ? ` (${err.message})` : ''}`);
+  private onUp(wasDown: number): void {
+    // We were deaf, the others were not silent: everyone gets a fresh window to be heard.
     const now = Date.now();
-    if (status === 'SUBSCRIBED') {
-      const wasDown = this.downSince;
-      this.live = true;
-      this.downSince = 0;
-      this.attempt = 0;
-      this.status = 'connected';
-      this.statusDetail = '';
-      this.traffic.subscribedAt = now;
-      this.traffic.sentSinceSub = this.traffic.selfSinceSub = 0;
-      // We were deaf, the others were not silent: everyone gets a fresh window to be heard.
-      if (wasDown) for (const o of this.others.values()) o.seen = Math.max(o.seen, now);
-      this.slowDirty = this.fastDirty = true;
-      this.sendHeartbeat(true); // hello: announce me, ask everyone to answer now
-    } else {
-      this.live = false;
-      this.downSince ||= now;
-      if (status === 'CLOSED') {
-        // The server closed the channel: realtime-js will not resubscribe, so we do.
-        this.scheduleRejoin('server closed channel');
-      }
-      // CHANNEL_ERROR / TIMED_OUT: realtime-js rejoins these itself (pump rebuilds if it stalls).
-      this.status = now - this.downSince > NET_TIMING.errorAfterMs ? 'error' : 'connecting';
-      this.statusDetail = err?.message ? `${status}: ${err.message}` : status;
-      console.warn('[net] realtime', status, err ?? '');
-    }
-    this.refresh();
-  }
-
-  private scheduleRejoin(reason: string): void {
-    if (this.rejoinTimer !== null) return;
-    const delay = this.attempt === 0 ? 250 : Math.min(10_000, 1000 * 2 ** (this.attempt - 1));
-    this.attempt++;
-    this.rejoins++;
-    this.lastRejoinReason = reason;
-    this.rejoinTimer = setTimeout(() => {
-      this.rejoinTimer = null;
-      this.live = false;
-      this.join(reason);
-    }, delay);
+    if (wasDown) for (const o of this.others.values()) o.seen = Math.max(o.seen, now);
+    this.slowDirty = this.fastDirty = true;
+    this.sendHeartbeat(true); // hello: announce me, ask everyone to answer now
   }
 
   // ── Receive ───────────────────────────────────────────────────────────────
-  private count(payload: unknown): string | null {
-    this.traffic.recv++;
-    const from = (payload as { from?: unknown } | null)?.from;
-    if (typeof from !== 'string' || !from || from.length > 64) return null;
-    if (from === this.id) {
-      this.traffic.self++;
-      this.traffic.selfSinceSub++;
-    }
-    return from;
-  }
-
-  private onMsg(payload: unknown): void {
-    const from = this.count(payload);
+  private onMsg(payload: unknown, from: string | null): void {
     const m = payload as { topic?: unknown; data?: Json };
     if (!from || typeof m.topic !== 'string') return;
     if (from !== this.id) this.heard(from);
     this.dispatch(m.topic, from, m.data);
   }
 
-  private onState(payload: unknown): void {
-    const from = this.count(payload);
+  private onState(payload: unknown, from: string | null): void {
     const st = (payload as { st?: unknown }).st;
     if (!from || from === this.id || !isPlainState(st)) return;
     const o = this.heard(from);
@@ -353,10 +215,9 @@ export class SupabaseNet implements Net {
     this.refresh();
   }
 
-  private onHeartbeat(payload: unknown): void {
-    const from = this.count(payload);
+  private onHeartbeat(payload: unknown, from: string | null): void {
     if (!from || from === this.id) return;
-    this.traffic.hbRecv++;
+    this.beats.hbRecv++;
     const p = payload as { s?: unknown; f?: unknown; hi?: unknown };
     const o = this.heard(from, isPlainState(p.s) ? p.s : undefined);
     if (o && isPlainState(p.f)) o.fast = { ...o.fast, ...p.f };
@@ -367,8 +228,7 @@ export class SupabaseNet implements Net {
     this.refresh();
   }
 
-  private onBye(payload: unknown): void {
-    const from = this.count(payload);
+  private onBye(from: string | null): void {
     if (!from || from === this.id || !this.others.has(from)) return;
     this.others.delete(from);
     this.refresh();
@@ -423,17 +283,13 @@ export class SupabaseNet implements Net {
 
   // ── Send ──────────────────────────────────────────────────────────────────
   private push(event: string, payload: Record<string, Json>): void {
-    const ch = this.channel;
-    if (!ch) return;
-    this.traffic.sent++;
-    this.traffic.sentSinceSub++;
-    void ch.send({ type: 'broadcast', event, payload }).catch(() => undefined);
+    this.link.send(event, payload);
   }
 
   private sendHeartbeat(hello: boolean): void {
     if (!this.live) return;
     this.lastHb = Date.now();
-    this.traffic.hbSent++;
+    this.beats.hbSent++;
     const payload: Record<string, Json> = { from: this.id, s: this.slow };
     if (Object.keys(this.fast).length) payload.f = this.fast;
     if (hello) payload.hi = 1;
@@ -464,39 +320,17 @@ export class SupabaseNet implements Net {
     }
     if (now - this.lastSlowTick < 1000) return;
     this.lastSlowTick = now;
-    this.guardRegistration();
-    if (!this.live) {
-      if (this.downSince && this.status === 'connecting' && now - this.downSince > NET_TIMING.errorAfterMs) {
-        this.status = 'error';
-        this.statusDetail ||= 'offline';
-      }
-      // The library's own retries have not brought the channel back: rebuild it.
-      if (this.rejoinTimer === null && now - Math.max(this.joinStartedAt, this.downSince) > NET_TIMING.stuckMs)this.scheduleRejoin(`stuck ${this.lastStatus || 'joining'}`);
-    }
-    this.checkRelay(now);
+    this.link.tick(now);
     for (const [id, o] of this.others) if (now - o.seen > 10 * 60_000) this.others.delete(id);
     this.refresh(); // expiry: someone went silent (or came back)
-  }
-
-  /** Subscribed, yet not even our own heartbeat echo came back: the relay is not delivering. */
-  private checkRelay(now: number): void {
-    const t = this.traffic;
-    const silent = this.live && now - t.subscribedAt > 6000 && t.selfSinceSub === 0 && t.sentSinceSub > 3;
-    if (silent && this.status !== 'error') {
-      this.status = 'error';
-      this.statusDetail = 'broadcast not delivered';
-      console.warn('[net] subscribed but no broadcast echo', t);
-    } else if (!silent && this.live && this.status !== 'connected' && (t.selfSinceSub > 0 || now - t.subscribedAt <= 6000)) {
-      this.status = 'connected';
-      this.statusDetail = '';
-    }
   }
 
   private isVisible(o: Remote, now: number): boolean {
     if (!o.hasState) return false;
     if (now - o.seen < NET_TIMING.peerTimeoutMs) return true;
     // Our own link is down: we cannot hear anyone, which says nothing about them.
-    return !!this.downSince && now - this.downSince < NET_TIMING.deafGraceMs;
+    const down = this.link.downSince;
+    return !!down && now - down < NET_TIMING.deafGraceMs;
   }
 
   private refresh(): void {
@@ -513,13 +347,9 @@ export class SupabaseNet implements Net {
     for (const fn of this.peerFns) fn(this.snapshot);
   }
 
-  private log(line: string): void {
-    this.history.push(`${Math.round(performance.now() / 1000)}s ${line}`);
-    if (this.history.length > 12) this.history.shift();
-  }
-
   private diagnostics() {
     const now = Date.now();
+    const link = this.link;
     return {
       room: this.room,
       status: this.status,
@@ -531,15 +361,15 @@ export class SupabaseNet implements Net {
       peers: this.snapshot.map((p) => p.id),
       others: [...this.others.keys()],
       peerAges: Object.fromEntries([...this.others].map(([id, o]) => [id, { ms: now - o.seen, state: o.hasState }])),
-      traffic: { ...this.traffic },
+      traffic: { ...link.traffic, ...this.beats },
       heartbeat: { ms: NET_TIMING.heartbeatMs, lastAgo: this.lastHb ? now - this.lastHb : -1, peerTimeoutMs: NET_TIMING.peerTimeoutMs },
-      vsn: this.rt?.vsn,
-      joins: this.joins,
-      rejoins: this.rejoins,
-      lastRejoinReason: this.lastRejoinReason,
-      downFor: this.downSince ? now - this.downSince : 0,
+      vsn: link.vsn,
+      joins: link.joins,
+      rejoins: link.rejoins,
+      lastRejoinReason: link.lastRejoinReason,
+      downFor: link.downSince ? now - link.downSince : 0,
       sig: this.visibleSig,
-      history: [...this.history],
+      history: [...link.history],
       socket: { ...socketBeats },
     };
   }
