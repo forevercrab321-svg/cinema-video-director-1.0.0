@@ -2,7 +2,7 @@
 
 > 每次推进都更新本表和下方的「推进记录」。阶段定义见 `.claude/skills/grow-platform-bd/SKILL.md`。
 > **没有对方回复就写「未回复」，不推测。** 条款以门户或合同显示为准，档案里的数字都带出处。
-> 最后更新：2026-09-26 · 本周执行顺序见 `go-live-runbook.md`
+> 最后更新：2026-09-30 · 本周执行顺序见 `go-live-runbook.md`
 
 ## 总表
 
@@ -14,7 +14,7 @@
 | Y8 | 1 资格确认 | 送审；广告分成 | 开发者 50% | `dist-portal.zip`（SDK 要求待看） | 注册后读门户里的 SDK 要求 | 用户 → 工程 | D2 |
 | GameDistribution | 4 审核中（2026-09-27 提交，修复版） | 分发到发行网络；广告分成 | 开发者得净收入 33% | `release/gamedistribution/grow-everything-gd.zip`（rev 2） | 等审核（官方最长约 3 周）；可选：激励广告测试 | 用户 | 10/18 |
 | GamePix | 1 资格确认 | 独家或允许分发（上传时勾选） | 官方未查到 | `dist-portal-nosdk.zip` | 640×480 iframe 测试；用户注册 | 工程 + 用户 | D4 |
-| Armor Games | 3 已联系（2026-09-24 已发首封邮件，未回复） | 策展；冠名或限时独占（邮件谈） | 官方未查到 | iframe 指向我们的网站 | 等回复；9/30 未回复则跟进第 1 次，10/8 收尾；对方回复后按 `negotiation-playbook.md` 回 3 个方案 | BD | 9/30 |
+| Armor Games | 3 已联系（9/28 NEX 回复：问 AI 使用、回合偏长、操作飘、画面错误） | 策展；冠名或限时独占（邮件谈） | 官方未查到 | iframe 指向我们的网站 | 回复草稿待用户确认发送；先修对方指出的问题、发新版，再谈合作方式 | 用户 → BD + 工程 | 10/3 |
 | MSN Games | X 退信（暂缓） | 广告分成计划（2007 年公布，现行条款未知） | 未查到 | `dist-portal.zip` | 9/24 首封邮件被退信（550 拒收）；先查现行投稿入口，查到前不再发送 | BD | — |
 | Addicting Games | 1 资格确认 | 授权、赞助、独占 | 未查到 | 待定 | 用户在开发者中心提交；与 Armor 同期询价 | 用户 | D4 |
 | Poki | 暂缓（已选多平台） | 一次性非独占授权费 | 按游戏单独定，无分成 | `dist-portal.zip` | 其他平台上线、有数据后再询价 | BD | D14+ |
@@ -23,6 +23,8 @@
 ## 推进记录
 
 <!-- 格式：日期 · 平台 · 做了什么 · 对方原话或门户状态 · 下一步 -->
+
+- 2026-09-30 · Armor Games · 收件箱查到 NEX（nex@armorgames.com，抄送 mygame@）9/28 回复，原话：「Thanks for reaching out to us with GROW EVERYTHING. Could you disclose if you used generative AI for anything? It does seem like rounds are a little longer than that 3-5 minute estimate. Gameplay seemed a bit fidgety and there were also graphical errors.」· 核对：回合计时 300 秒 + 3 秒倒计时 + 12 秒结算，首封邮件写的「3–5 分钟」不准确 · 已写回复草稿（Gmail 草稿，未发送）：如实说明 AI 使用（代码用 AI 编程助手、模型是代码生成的程序化几何、音乐用 Suno、无 AI 图片）；承认回合时长写错；请对方告知浏览器/设备和画面错误的样子，修好后发新版 · 等用户确认发送；联机修复验证通过后再发新版
 
 - 2026-09-27 · GameDistribution · 首次提交后发现在线模式下看完广告卡在倒计时（实时连接未建立时开局消息被丢弃），修复并上传 rev 2；测试 iframe 中看完广告、正式开局、25 秒正常游戏；SDK = Yes，重新 Request Activation · 门户：In Review / Not Active · 等审核
 
