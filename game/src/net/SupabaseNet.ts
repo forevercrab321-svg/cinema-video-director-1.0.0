@@ -40,6 +40,12 @@ export const NET_TIMING = {
   /** Answer hellos at most this often. */
   helloMinMs: 300,
   pumpMs: 66,
+  /**
+   * Fast state ('st', the moving machines) at most this often: 10 Hz. Supabase bills / rate-limits
+   * every delivery (4 players = 4 deliveries per send, self-echo included), and remote machines
+   * are extrapolated from position + heading + speed, so 10 Hz reads the same as 15 Hz.
+   */
+  stateMinMs: 100,
 } as const;
 
 const FAST_KEYS = new Set(['s', 'b', 'ep']);
@@ -81,6 +87,10 @@ export class SupabaseNet implements Net {
   private lastHelloAnswer = 0;
   private lastHelloAsk = 0;
   private lastSlowTick = 0;
+  private lastSt = 0;
+  /** Nobody else heard recently: game messages stay on this page (see emit). */
+  private solo = true;
+  private readonly local = { msg: 0, st: 0 };
 
   private constructor(
     readonly room: string,
@@ -153,9 +163,11 @@ export class SupabaseNet implements Net {
     this.refresh();
   }
   emit(topic: string, data: Json): void {
-    if (!this.live) {
-      // Not subscribed (connecting, blocked or offline): nobody else can hear it, but this client must —
-      // the host drives its own match from the self-echo, so dropping it froze the round in countdown.
+    if (!this.live || this.alone()) {
+      // Not subscribed (connecting, blocked or offline) or nobody else in the room (a warm-up vs AI):
+      // nobody else can hear it, but this client must — the host drives its own match from the
+      // self-echo, so dropping it froze the round in countdown. Alone, it would only cost quota.
+      if (this.live) this.local.msg++;
       queueMicrotask(() => this.dispatch(topic, this.id, data));
       return;
     }
@@ -313,9 +325,12 @@ export class SupabaseNet implements Net {
       // once) — only while visible: a hidden page is not playing and has said goodbye.
       const visible = document.visibilityState === 'visible';
       if (visible && (this.slowDirty || now - this.lastHb >= NET_TIMING.heartbeatMs)) this.sendHeartbeat(false);
-      if (this.fastDirty) {
+      if (this.fastDirty && now - this.lastSt >= NET_TIMING.stateMinMs) {
         this.fastDirty = false;
-        if (visible) this.push('st', { from: this.id, st: this.fast });
+        this.lastSt = now;
+        // Alone: nobody to show our machine to (the heartbeat still carries it for a newcomer).
+        if (this.alone()) this.local.st++;
+        else if (visible) this.push('st', { from: this.id, st: this.fast });
       }
     }
     if (now - this.lastSlowTick < 1000) return;
@@ -323,6 +338,15 @@ export class SupabaseNet implements Net {
     this.link.tick(now);
     for (const [id, o] of this.others) if (now - o.seen > 10 * 60_000) this.others.delete(id);
     this.refresh(); // expiry: someone went silent (or came back)
+  }
+
+  /** No other page heard within the peer timeout (a newcomer's hello ends it at once). */
+  private alone(now = Date.now()): boolean {
+    let alone = true;
+    for (const o of this.others.values()) if (now - o.seen < NET_TIMING.peerTimeoutMs) alone = false;
+    if (this.solo && !alone) this.fastDirty = true; // company: publish our machine right away
+    this.solo = alone;
+    return alone;
   }
 
   private isVisible(o: Remote, now: number): boolean {
@@ -361,7 +385,7 @@ export class SupabaseNet implements Net {
       peers: this.snapshot.map((p) => p.id),
       others: [...this.others.keys()],
       peerAges: Object.fromEntries([...this.others].map(([id, o]) => [id, { ms: now - o.seen, state: o.hasState }])),
-      traffic: { ...link.traffic, ...this.beats },
+      traffic: { ...link.traffic, ...this.beats, keptLocal: { ...this.local } },
       heartbeat: { ms: NET_TIMING.heartbeatMs, lastAgo: this.lastHb ? now - this.lastHb : -1, peerTimeoutMs: NET_TIMING.peerTimeoutMs },
       vsn: link.vsn,
       joins: link.joins,

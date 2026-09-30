@@ -2,9 +2,8 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { realtimeClient } from '../backend/supabase';
 
 /**
- * One Supabase Realtime BROADCAST channel that stays up. Shared by the room transport
- * (SupabaseNet, `arena:<code>`) and the site directory (HubPresence, `ge-lobby`); both run on the
- * dedicated realtimeClient(), so a page holds ONE socket however many channels it joins.
+ * One Supabase Realtime BROADCAST channel that stays up, on the dedicated realtimeClient()
+ * (used by the room transport, SupabaseNet, `arena:<code>`).
  *
  * What it survives (all seen in the field, all modelled by tools/net-presence-test.mjs):
  *   · the server closes the channel: realtime-js does not resubscribe → rebuild with backoff;
@@ -65,7 +64,7 @@ export class RealtimeLink {
   readonly history: string[] = [];
 
   constructor(
-    /** Channel topic without the `realtime:` prefix, e.g. `arena:ABCD` or `ge-lobby`. */
+    /** Channel topic without the `realtime:` prefix, e.g. `arena:ABCD`. */
     readonly topic: string,
     private readonly selfId: string,
     private readonly events: readonly string[],
