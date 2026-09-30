@@ -75,7 +75,17 @@ export function currentUser(nickname = 'Player'): Promise<User | null> {
       if (res.error) authError = res.error.message || String(res.error);
     }
     authStatus = user ? 'ok' : 'none';
-    if (user) await sb.from('players').upsert({ id: user.id, display_name: nickname.slice(0, 24) || 'Player', last_seen_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (user) {
+      // Never a plain upsert: ON CONFLICT DO UPDATE needs UPDATE rights on every written column
+      // (incl. id), and players only grants display_name / last_seen_at / equipped → 403, no row,
+      // and every sessions / events insert then failed its foreign key (409). Insert-if-missing,
+      // then update the allowed columns. (A trigger on auth.users also creates the row, 0003.)
+      const name = nickname.slice(0, 24) || 'Player';
+      const ins = await sb.from('players').upsert({ id: user.id, display_name: name }, { onConflict: 'id', ignoreDuplicates: true });
+      if (ins.error) console.warn('[backend] players insert', ins.error.code, ins.error.message);
+      const upd = await sb.from('players').update({ display_name: name, last_seen_at: new Date().toISOString() }).eq('id', user.id);
+      if (upd.error) console.warn('[backend] players update', upd.error.code, upd.error.message);
+    }
     return user;
   })().catch((e: unknown) => {
     authError = e instanceof Error ? e.message : String(e);
