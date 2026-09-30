@@ -10,10 +10,38 @@ import { buildPropParts, type PropParts } from './props';
 import { makeLod } from './lod';
 import type { CityDef } from './city';
 import type { Cluster } from './scrapCity';
+import type { Quality } from '../art/postfx';
 
 const SHADOW_ROLES: ReadonlySet<Role> = new Set<Role>(['paint', 'carPaint', 'plastic', 'glossyPlastic', 'cardboard', 'corrugated', 'roofMetal', 'concreteProp', 'wood', 'timber', 'tread', 'rubber', 'steel', 'propBrick', 'stone', 'copper']);
 
 export type ObjectState = 'idle' | 'pulled' | 'absorbed';
+
+/**
+ * Render detail per quality tier (render only, never gameplay):
+ *   hideSizes  — objects further than this many of their own sizes are not drawn (~3 px at high)
+ *   lodLarge / lodSmall — far-LOD distance in sizes for class ≥ 5 / smaller objects
+ *   smallShadows — class ≤ 5 props (cans … cars) cast sun shadows
+ */
+const DETAIL: Record<Quality, { hideSizes: number; lodLarge: number; lodSmall: number; smallShadows: boolean }> = {
+  high: { hideSizes: 260, lodLarge: 7, lodSmall: 9, smallShadows: true },
+  medium: { hideSizes: 200, lodLarge: 6, lodSmall: 8, smallShadows: true },
+  low: { hideSizes: 150, lodLarge: 5, lodSmall: 6.5, smallShadows: false },
+};
+let detail = DETAIL.high;
+
+/** Set the render detail tier (once at boot, before any World is built). */
+export function setWorldDetail(quality: Quality): void {
+  detail = DETAIL[quality] ?? DETAIL.high;
+}
+
+/**
+ * Prop role geometries and their far LODs are deterministic per object type, and the LOD
+ * edge-collapse is the most expensive part of building a World (~1.5 s on a low-end CPU).
+ * Cache both for the page's lifetime: every round after the first (and the lobby preview →
+ * round switch) reuses them. BatchedMesh copies what it draws, so these are never uploaded.
+ */
+const partsCache = new Map<ObjectTypeId, PropParts>();
+const lodCache = new Map<ObjectTypeId, Partial<Record<Role, THREE.BufferGeometry>>>();
 
 export interface WorldObject {
   id: number;
@@ -87,8 +115,6 @@ export class World {
   readonly dressing: Dressing;
   objects: WorldObject[] = [];
   private readonly roleBatches = new Map<string, RoleBatch>();
-  private readonly partsCache = new Map<ObjectTypeId, PropParts>();
-  private readonly lodCache = new Map<ObjectTypeId, Partial<Record<Role, THREE.BufferGeometry>>>();
   private readonly objectsRoot = new THREE.Group();
   private readonly quat = new THREE.Quaternion();
   private readonly spinQ = new THREE.Quaternion();
@@ -301,16 +327,16 @@ export class World {
   /** Build the role batches for this spawn and register every type's role geometries in them. */
   private createBatches(counts: Map<ObjectTypeId, number>): Map<ObjectTypeId, { batch: RoleBatch; geometryId: number; lodId: number }[]> {
     const partsOf = (typeId: ObjectTypeId): PropParts => {
-      let parts = this.partsCache.get(typeId);
+      let parts = partsCache.get(typeId);
       if (!parts) {
         parts = buildPropParts(OBJECT_TYPES[typeId] as ObjectType, typeId.length * 31);
-        this.partsCache.set(typeId, parts);
+        partsCache.set(typeId, parts);
       }
       return parts;
     };
     // Far LODs (quarter-density) for the heavy role geometries of class ≥ 3 objects.
     const lodsOf = (typeId: ObjectTypeId) => {
-      let lods = this.lodCache.get(typeId);
+      let lods = lodCache.get(typeId);
       if (!lods) {
         lods = {};
         if (OBJECT_TYPES[typeId].objectClass >= 3)
@@ -318,7 +344,7 @@ export class World {
             const lod = role === 'lamps' ? null : makeLod(g, role);
             if (lod) lods[role] = lod;
           }
-        this.lodCache.set(typeId, lods);
+        lodCache.set(typeId, lods);
       }
       return lods;
     };
@@ -338,7 +364,8 @@ export class World {
       const mesh = new THREE.BatchedMesh(e.instances, e.vertices, 0, this.lib.roles[e.role]);
       mesh.name = `OBJ_${key.replace(':', '_')}`;
       // Real shadows for body roles; trim, lamps and glass rely on MSAA/GTAO contact.
-      mesh.castShadow = SHADOW_ROLES.has(e.role);
+      // The low tier keeps shadows for structures only (the small set is most of the shadow pass).
+      mesh.castShadow = SHADOW_ROLES.has(e.role) && (!e.small || detail.smallShadows);
       mesh.receiveShadow = true;
       mesh.sortObjects = false;
       if (e.small) skipAO(mesh);
@@ -403,6 +430,9 @@ export class World {
    */
   cull(camera: THREE.Camera): void {
     const cp = camera.position;
+    const hide = detail.hideSizes * detail.hideSizes;
+    const farLarge = detail.lodLarge * detail.lodLarge;
+    const farSmall = detail.lodSmall * detail.lodSmall;
     let visible = 0;
     for (const o of this.objects) {
       if (o.state === 'absorbed') continue;
@@ -411,9 +441,9 @@ export class World {
       const dy = o.y - cp.y;
       const dz = o.z - cp.z;
       const d2 = dx * dx + dy * dy + dz * dz;
-      const show = d2 < size * size * 260 * 260;
-      const far = o.def.objectClass >= 5 ? 7 : 9; // vehicles and up carry the heavy geometry: simplify sooner
-      const lod = o.state === 'idle' && d2 > size * size * far * far;
+      const show = d2 < size * size * hide;
+      const far2 = o.def.objectClass >= 5 ? farLarge : farSmall; // vehicles and up carry the heavy geometry: simplify sooner
+      const lod = o.state === 'idle' && d2 > size * size * far2;
       if (show) visible++;
       for (const inst of o.instances) {
         inst.batch.mesh.setVisibleAt(inst.id, show);

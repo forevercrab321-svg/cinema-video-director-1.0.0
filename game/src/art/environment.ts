@@ -128,8 +128,15 @@ export function createSkyDome(radius = 900, palette: Palette = GOLDEN_HOUR): THR
   return dome;
 }
 
-/** Fallback when the HDRI cannot load: environment baked from the procedural sky. */
+/** Sky bakes per renderer and palette: rounds reuse them (each bake is a PMREM render target). */
+const skyBakes = new WeakMap<THREE.WebGLRenderer, Map<Palette, THREE.Texture>>();
+
+/** Fallback when the HDRI cannot load: environment baked from the procedural sky (cached per palette). */
 export function bakeSkyEnvironment(renderer: THREE.WebGLRenderer, palette: Palette = GOLDEN_HOUR): THREE.Texture {
+  let bakes = skyBakes.get(renderer);
+  if (!bakes) skyBakes.set(renderer, (bakes = new Map()));
+  const cached = bakes.get(palette);
+  if (cached) return cached;
   const envScene = new THREE.Scene();
   envScene.add(createSkyDome(50, palette));
   const ground = new THREE.Mesh(new THREE.CircleGeometry(49, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x3e3b37 }));
@@ -138,6 +145,8 @@ export function bakeSkyEnvironment(renderer: THREE.WebGLRenderer, palette: Palet
   const pmrem = new THREE.PMREMGenerator(renderer);
   const rt = pmrem.fromScene(envScene, 0.02);
   pmrem.dispose();
+  envScene.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
+  bakes.set(palette, rt.texture);
   return rt.texture;
 }
 

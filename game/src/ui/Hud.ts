@@ -9,13 +9,13 @@ import { massForDiameter } from '../systems/growth';
  */
 const CSS = `
 #hud { position: fixed; inset: 0; pointer-events: none; font-family: 'Inter', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; color: #f2efe8; -webkit-font-smoothing: antialiased; }
-#hud .panel { position: absolute; left: 24px; bottom: 22px; width: 250px; padding: 14px 16px 12px; border-radius: 10px;
+#hud .panel { position: absolute; left: calc(24px + env(safe-area-inset-left)); bottom: calc(22px + env(safe-area-inset-bottom)); width: 250px; padding: 14px 16px 12px; border-radius: 10px;
   background: linear-gradient(180deg, rgba(16,18,20,.52), rgba(16,18,20,.34)); box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 8px 24px rgba(0,0,0,.18); backdrop-filter: blur(6px); }
 #hud .row { display: flex; align-items: baseline; justify-content: space-between; }
 #hud .mass { font-size: 34px; font-weight: 800; line-height: 1; letter-spacing: .01em; font-variant-numeric: tabular-nums; display: inline-block; transform-origin: left center; }
 #hud .mass small { font-size: 13px; font-weight: 700; opacity: .7; margin-left: 5px; letter-spacing: .14em; }
 #hud .tierchip { font-size: 11px; font-weight: 800; letter-spacing: .14em; color: #16181a; background: #ffb347; border-radius: 4px; padding: 3px 7px; }
-#hud .label { font-size: 10px; font-weight: 700; letter-spacing: .2em; opacity: .62; text-transform: uppercase; }
+#hud .label { font-size: 10px; font-weight: 700; letter-spacing: .2em; opacity: .72; text-transform: uppercase; }
 #hud .bar { position: relative; margin: 11px 0 9px; height: 8px; background: rgba(0,0,0,.4); border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.1) inset; }
 #hud .bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, #d97a14, #ffb347); box-shadow: 0 0 10px rgba(255,160,60,.6); transition: width .18s ease-out; }
 #hud .bar b { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(0,0,0,.45); }
@@ -44,7 +44,7 @@ const CSS = `
 #hud .end .stats span { font-size: 9px; font-weight: 700; letter-spacing: .18em; opacity: .6; }
 #hud .end .keys { font-size: 12px; font-weight: 700; letter-spacing: .14em; opacity: .85; }
 #hud .end .keys kbd { font: inherit; color: #ffb347; }
-#hud .legend { position: absolute; right: 22px; bottom: 22px; font-size: 10px; font-weight: 700; letter-spacing: .16em; opacity: .55; text-align: right; line-height: 1.8; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+#hud .legend { position: absolute; right: 22px; bottom: 22px; font-size: 10px; font-weight: 700; letter-spacing: .16em; opacity: .75; text-align: right; line-height: 1.8; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
 #hud .legend kbd { font: inherit; color: #ffb347; }
 @media (max-width: 640px) { #hud .panel, #hud .obj { left: 12px; width: 210px; min-width: 0; } #hud .banner .big { font-size: 24px; } }
 @media (pointer: coarse), (max-width: 700px) {
@@ -55,9 +55,8 @@ const CSS = `
 @media (pointer: coarse) and (orientation: landscape), (max-height: 520px) {
   #hud .panel .label, #hud .panel .next { display: none; }
   #hud .panel { width: 140px; padding: 5px 9px 4px; }
-  #hud .mass { font-size: 19px; }
-  #hud .bar { margin: 4px 0 1px; height: 5px; }
   #hud .mass { font-size: 22px; }
+  #hud .mass small { font-size: 11px; }
   #hud .next, #hud .label { font-size: 9px; }
   #hud .bar { margin: 6px 0 5px; height: 6px; }
   #hud .banner .big { font-size: 24px; }

@@ -17,7 +17,9 @@
     "playtest": "node tools/playtest.mjs",
     "art:review": "node tools/art-review.mjs",
     "inspect:game": "node tools/inspect-game.mjs",
-    "build:portal": "tsc --noEmit && node tools/build-portal.mjs"
+    "build:portal": "tsc --noEmit && node tools/build-portal.mjs",
+    "smoke": "node tools/arena-smoke.mjs",
+    "perf": "node tools/perf-measure.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.1",

@@ -15,6 +15,48 @@ const SHARDS = 220;
 const DUST = 96;
 const SPARKS = 128;
 const RINGS = 4;
+const STREAKS = 48;
+const POPS = 24;
+
+/**
+ * Feel tunables owned by the presentation layer (design §11, §23–24, §47). Gameplay balance
+ * lives in config/; these only change how events LOOK, never what happens.
+ */
+export const FEEL = {
+  /** Hit-stop: presentation time runs at `hitStopScale` for the duration (sim never pauses). */
+  hitStopMax: 0.08,
+  hitStopScale: 0.06,
+  hitStopBig: 0.045, // eating a vehicle-class object while it is large relative to you
+  hitStopRival: 0.075, // eating / being eaten by a rival machine
+  hitStopStun: 0.06, // dashing into something too big
+  hitStopLandmark: 0.07, // the landmark's supports give way
+  /** Dash: FOV kick (degrees, eased out) and speed-line streaks. */
+  dashFovKick: 7,
+  fovKickDecay: 5,
+  dashStreaks: 10,
+  dashStreaksPerSecond: 45,
+  /** Tier-up: transient camera dolly-out (fraction of camera distance) and its duration. */
+  tierPullBack: 0.28,
+  tierPullSeconds: 1.6,
+  landmarkPullBack: 0.35,
+  landmarkPullSeconds: 2.6,
+  /** Degrees of extra FOV per unit of pull-back (the dolly is a lens widen + camera lift). */
+  pullBackFovPerUnit: 30,
+  /** Shake: smooth noise frequency (Hz-ish); trauma² × this × camera distance = offset. */
+  shakeFrequency: 17,
+  /** Far-away collapses fade out: full shake within this many metres (+ 3 × object size). */
+  shakeFalloffMetres: 45,
+  /** Multiplier for shake / hit-stop / FOV kick / dolly when the viewer asks for reduced motion. */
+  reducedMotionScale: 0.3,
+};
+
+function prefersReducedMotion(): boolean {
+  try {
+    return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
 
 interface Particle {
   life: number;
@@ -86,6 +128,27 @@ export class Effects {
   private readonly sparkMesh: THREE.InstancedMesh;
   private readonly sparkP: Particle[] = [];
   private readonly rings: { mesh: THREE.Mesh; life: number; max: number; radius: number }[] = [];
+  /** Speed lines: thin additive bars laid along the direction of travel (dash). */
+  private readonly streakMesh: THREE.InstancedMesh;
+  private readonly streakP: Particle[] = [];
+  private nStreak = 0;
+  private streakHeading = 0;
+  /** Intake pops: a soft hot flash that swells and fades where a small object is swallowed. */
+  private readonly popMesh: THREE.InstancedMesh;
+  private readonly popP: Particle[] = [];
+  private nPop = 0;
+  private streakAcc = 0;
+  /** Presentation clocks: hit-stop, FOV kick (degrees), dolly-out envelope. */
+  private stop = 0;
+  private fovKick = 0;
+  private pullAmount = 0;
+  private pullTime = 0;
+  private pullDuration = 1;
+  /** What applyCamera added last frame, so restoreCamera can hand the rig a clean camera. */
+  private readonly applied = new THREE.Vector3();
+  private appliedFov = 0;
+  /** 1 normally; FEEL.reducedMotionScale when the viewer prefers reduced motion. Settable. */
+  motion = prefersReducedMotion() ? FEEL.reducedMotionScale : 1;
   private nDebris = 0;
   private nShard = 0;
   private nDust = 0;
@@ -122,8 +185,14 @@ export class Effects {
     this.shardMesh = pool('FX_Shards', shard, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, metalness: 0.4, side: THREE.DoubleSide }), SHARDS, this.shardP);
     this.dustMesh = pool('FX_Dust', new THREE.PlaneGeometry(1, 1), spriteMaterial(false), DUST, this.dustP);
     this.sparkMesh = pool('FX_Sparks', new THREE.PlaneGeometry(1, 1), spriteMaterial(true), SPARKS, this.sparkP);
+    this.popMesh = pool('FX_Pops', new THREE.PlaneGeometry(1, 1), spriteMaterial(true), POPS, this.popP);
+    // Streak bar: 1 m long on local Z, rotated to the travel heading at spawn.
+    const streakMat = new THREE.MeshBasicMaterial({ name: 'MAT_FX_Streak', color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    this.streakMesh = pool('FX_SpeedLines', new THREE.BoxGeometry(0.03, 0.03, 1), streakMat, STREAKS, this.streakP);
     this.dustMesh.renderOrder = 5;
     this.sparkMesh.renderOrder = 6;
+    this.popMesh.renderOrder = 6;
+    this.streakMesh.renderOrder = 6;
     for (let i = 0; i < RINGS; i++) {
       const mesh = new THREE.Mesh(
         new THREE.RingGeometry(0.93, 1, 64).rotateX(-Math.PI / 2),
@@ -206,19 +275,114 @@ export class Effects {
   }
 
   addTrauma(amount: number): void {
-    this.trauma = Math.min(1, this.trauma + amount);
+    this.trauma = Math.min(1, this.trauma + amount * this.motion);
+  }
+
+  /** Trauma for an event at (x, z) seen from (fx, fz): full nearby, fading to nothing far away. */
+  addTraumaAt(amount: number, x: number, z: number, fx: number, fz: number, size = 0): void {
+    const reach = FEEL.shakeFalloffMetres + size * 3;
+    const d = Math.hypot(x - fx, z - fz);
+    const k = d <= reach ? 1 : Math.max(0, 1 - (d - reach) / reach);
+    if (k > 0) this.addTrauma(amount * k);
+  }
+
+  /** Freeze-frame: presentation time nearly stops for `seconds` (capped; hits don't stack past the cap). */
+  hitStop(seconds: number): void {
+    if (this.motion < 1) seconds *= 0.5;
+    this.stop = Math.min(FEEL.hitStopMax, Math.max(this.stop, seconds));
+  }
+
+  /**
+   * Presentation delta for this frame: `dt` normally, ~0 during a hit-stop. Advances the
+   * hit-stop clock by the real `dt`, so call it exactly once per frame before updating visuals.
+   */
+  presentDt(dt: number): number {
+    if (this.stop <= 0) return dt;
+    const frozen = Math.min(dt, this.stop);
+    this.stop -= frozen;
+    return dt - frozen + frozen * FEEL.hitStopScale;
+  }
+
+  get stopping(): boolean {
+    return this.stop > 0;
+  }
+
+  /** Dash: FOV punch plus a burst of speed lines around the machine. */
+  dashKick(x: number, y: number, z: number, heading: number, diameter: number): void {
+    this.fovKick = Math.max(this.fovKick, FEEL.dashFovKick * this.motion);
+    this.streaks(x, y, z, heading, diameter, FEEL.dashStreaks);
+  }
+
+  /** Keep speed lines flowing while a dash lasts (call per frame with the dash still active). */
+  dashTrail(dt: number, x: number, y: number, z: number, heading: number, diameter: number): void {
+    this.streakAcc += dt * FEEL.dashStreaksPerSecond;
+    const n = Math.floor(this.streakAcc);
+    if (n <= 0) return;
+    this.streakAcc -= n;
+    this.streaks(x, y, z, heading, diameter, n);
+  }
+
+  private streaks(x: number, y: number, z: number, heading: number, diameter: number, count: number): void {
+    this.streakHeading = heading;
+    const fx = -Math.sin(heading);
+    const fz = -Math.cos(heading);
+    for (let i = 0; i < count; i++) {
+      const p = this.streakP[this.nStreak];
+      this.nStreak = (this.nStreak + 1) % STREAKS;
+      // Beside and slightly ahead of the machine, at body height; they hang in the air and the
+      // machine rushes past them, so they read as wind, not as particles glued to the car.
+      const side = (this.rand() < 0.5 ? -1 : 1) * diameter * (0.55 + this.rand() * 0.6);
+      const ahead = diameter * (0.2 + this.rand() * 0.9);
+      p.x = x + fx * ahead - fz * side;
+      p.z = z + fz * ahead + fx * side;
+      p.y = y + diameter * (0.1 + this.rand() * 0.7);
+      p.vx = -fx * diameter * 2;
+      p.vz = -fz * diameter * 2;
+      p.vy = 0;
+      p.size = diameter * (0.9 + this.rand() * 0.9);
+      p.max = p.life = 0.22 + this.rand() * 0.12;
+      p.spin = 0.5 + this.rand() * 0.5;
+    }
+  }
+
+  /** A swallow flash at the intake; `size` in metres (small pickups ≈ 0.2–0.5). */
+  pop(x: number, y: number, z: number, size: number): void {
+    const p = this.popP[this.nPop];
+    this.nPop = (this.nPop + 1) % POPS;
+    p.x = x;
+    p.y = y;
+    p.z = z;
+    p.vx = p.vy = p.vz = 0;
+    p.size = size;
+    p.max = p.life = 0.16;
+  }
+
+  /** Transient dolly-out (tier-up, landmark): a smooth bump of `amount` × camera distance. */
+  pullBack(amount: number, seconds: number): void {
+    this.pullAmount = Math.max(amount * this.motion, this.pullTime < this.pullDuration ? this.pullAmount : 0);
+    this.pullTime = 0;
+    this.pullDuration = seconds;
+  }
+
+  /** A random hue for comedy bursts, from this pool's own seeded stream (never Math.random). */
+  hue(): number {
+    return this.rand();
   }
 
   /** (tx, ty, tz) is the player's intake: shards home onto it in the second half of their life. */
   update(dt: number, groundY = 0, tx = 0, ty = 0, tz = 0): void {
     this.time += dt;
     this.trauma = Math.max(0, this.trauma - feelConfig.traumaDecay * dt);
+    this.fovKick = Math.max(0, this.fovKick - this.fovKick * Math.min(1, FEEL.fovKickDecay * dt) - 0.2 * dt);
+    if (this.pullTime < this.pullDuration) this.pullTime += dt;
 
     // Idle pools are hidden so they cost no draw call in any pass.
-    this.debris.visible = this.debrisP.some((p) => p.life > 0);
-    this.shardMesh.visible = this.shardP.some((p) => p.life > 0);
-    this.dustMesh.visible = this.dustP.some((p) => p.life > 0);
-    this.sparkMesh.visible = this.sparkP.some((p) => p.life > 0);
+    this.debris.visible = anyAlive(this.debrisP);
+    this.shardMesh.visible = anyAlive(this.shardP);
+    this.dustMesh.visible = anyAlive(this.dustP);
+    this.sparkMesh.visible = anyAlive(this.sparkP);
+    this.streakMesh.visible = anyAlive(this.streakP);
+    this.popMesh.visible = anyAlive(this.popP);
     for (let i = 0; i < DEBRIS; i++) {
       const p = this.debrisP[i];
       if (p.life <= 0) continue;
@@ -292,6 +456,47 @@ export class Effects {
     this.sparkMesh.instanceMatrix.needsUpdate = true;
     if (this.sparkMesh.instanceColor) this.sparkMesh.instanceColor.needsUpdate = true;
 
+    if (this.streakMesh.visible) {
+      this.q.setFromAxisAngle(this.v.set(0, 1, 0), this.streakHeading);
+      for (let i = 0; i < STREAKS; i++) {
+        const p = this.streakP[i];
+        if (p.life <= 0) {
+          this.streakMesh.setMatrixAt(i, this.m.makeScale(0, 0, 0));
+          continue;
+        }
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.z += p.vz * dt;
+        const f = Math.max(0, p.life / p.max);
+        // Thin bar that stretches then thins out; brightness through the (additive) instance colour.
+        const len = p.size * (0.6 + 0.8 * (1 - f));
+        const w = Math.max(0.3, p.size * 0.5) * (0.4 + 0.6 * f);
+        this.streakMesh.setMatrixAt(i, this.m.compose(this.v.set(p.x, p.y, p.z), this.q, this.s.set(w, w, len)));
+        const b = 0.45 * p.spin * Math.sin(Math.PI * Math.min(1, (1 - f) * 1.3 + 0.1));
+        this.streakMesh.setColorAt(i, this.c.setRGB(b, b, b * 1.05));
+      }
+      this.streakMesh.instanceMatrix.needsUpdate = true;
+      if (this.streakMesh.instanceColor) this.streakMesh.instanceColor.needsUpdate = true;
+    }
+
+    if (this.popMesh.visible) {
+      for (let i = 0; i < POPS; i++) {
+        const p = this.popP[i];
+        if (p.life <= 0) {
+          this.popMesh.setMatrixAt(i, this.m.makeScale(0, 0, 0));
+          continue;
+        }
+        p.life -= dt;
+        const f = Math.max(0, p.life / p.max);
+        // Swell fast (ease-out), fade quadratically: a "pop", not a glow.
+        const k = p.size * (0.5 + 1.1 * (1 - f * f));
+        this.popMesh.setMatrixAt(i, this.m.compose(this.v.set(p.x, p.y, p.z), this.q.identity(), this.s.setScalar(k)));
+        this.popMesh.setColorAt(i, this.c.setRGB(0.45 * f * f, 0, 0));
+      }
+      this.popMesh.instanceMatrix.needsUpdate = true;
+      if (this.popMesh.instanceColor) this.popMesh.instanceColor.needsUpdate = true;
+    }
+
     for (const r of this.rings) {
       if (r.life <= 0) continue;
       r.life -= dt;
@@ -321,14 +526,57 @@ export class Effects {
   applyShake(camera: THREE.PerspectiveCamera, distance: number): void {
     if (this.trauma <= 0) return;
     const shake = this.trauma * this.trauma * feelConfig.maxShakeOffset * distance;
-    const f = this.time * 30;
-    camera.position.x += shake * noise(f, 1);
-    camera.position.y += shake * noise(f, 2);
-    camera.rotation.z += this.trauma * this.trauma * 0.04 * noise(f, 3);
+    const f = this.time * FEEL.shakeFrequency;
+    const ox = shake * smoothNoise(f, 1);
+    const oy = shake * smoothNoise(f, 2);
+    camera.position.x += ox;
+    camera.position.y += oy;
+    camera.rotation.z += this.trauma * this.trauma * 0.04 * smoothNoise(f, 3);
+  }
+
+  /**
+   * Everything transient the camera wears on top of the rig: shake, dash FOV kick and the
+   * tier-up / landmark dolly-out. Call after the rig update; call restoreCamera before the next
+   * rig update so the rig's easing never integrates the offsets (they must return to rest).
+   */
+  applyCamera(camera: THREE.PerspectiveCamera, distance: number, firstPerson: boolean): void {
+    this.applied.copy(camera.position);
+    let pullFov = 0;
+    if (!firstPerson && this.pullTime < this.pullDuration && this.pullAmount > 0) {
+      // Smooth bump: ease out to the peak by ~35 %, ease back in over the rest.
+      const t = this.pullTime / this.pullDuration;
+      const env = t < 0.35 ? 1 - Math.pow(1 - t / 0.35, 3) : 0.5 + 0.5 * Math.cos(((t - 0.35) / 0.65) * Math.PI);
+      // Widen the lens and lift the camera rather than dolly backwards: the rig already
+      // resolved occlusion behind the machine, and a backward dolly would push into walls.
+      pullFov = env * this.pullAmount * FEEL.pullBackFovPerUnit;
+      camera.position.y += env * this.pullAmount * distance * 0.45;
+    }
+    this.applyShake(camera, distance);
+    this.applied.subVectors(camera.position, this.applied);
+    this.appliedFov = this.fovKick + pullFov;
+    if (this.appliedFov > 0.01) {
+      camera.fov += this.appliedFov;
+      camera.updateProjectionMatrix();
+    } else this.appliedFov = 0;
+  }
+
+  restoreCamera(camera: THREE.PerspectiveCamera): void {
+    camera.position.sub(this.applied);
+    this.applied.set(0, 0, 0);
+    if (this.appliedFov) {
+      camera.fov -= this.appliedFov;
+      camera.updateProjectionMatrix();
+      this.appliedFov = 0;
+    }
   }
 }
 
-function noise(t: number, seed: number): number {
-  const x = Math.sin(t * 12.9898 + seed * 78.233) * 43758.5453;
-  return (x - Math.floor(x)) * 2 - 1;
+function anyAlive(list: Particle[]): boolean {
+  for (let i = 0; i < list.length; i++) if (list[i].life > 0) return true;
+  return false;
+}
+
+/** Smooth, deterministic pseudo-noise in [-1, 1]: incommensurate sines, not a per-frame hash (which buzzes). */
+function smoothNoise(t: number, seed: number): number {
+  return 0.5 * Math.sin(t * 1.0 + seed * 1.7) + 0.3 * Math.sin(t * 2.31 + seed * 4.1) + 0.2 * Math.sin(t * 4.77 + seed * 2.3);
 }

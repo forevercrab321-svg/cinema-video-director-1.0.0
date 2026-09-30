@@ -8,6 +8,8 @@ import type { Actor, ArenaGame } from './ArenaGame';
  *   1. flee a machine that can eat it,
  *   2. hunt a machine it can eat when one is close,
  *   3. otherwise collect: nearest worthwhile object, favouring golden crates and big classes.
+ * Skill (game.botSkill, 0..1) softens rookie rounds: slower decisions, a shorter hunt radius,
+ * rarer dashes, and no hunting human players during a grace period (arenaConfig.bot*).
  * Output is a world-space direction, like the player's input after camera mapping.
  */
 export class ArenaBot {
@@ -65,14 +67,17 @@ export class ArenaBot {
       }
       dash = dist > 4 + me.diameter * 3 && t > this.nextDash;
     }
-    if (dash) this.nextDash = t + 2.2 + this.rand() * 1.5;
+    if (dash) this.nextDash = t + (2.2 + this.rand() * 1.5) * (1 + (1 - game.botSkill) * A.botThinkSlow);
     const len = Math.hypot(dx, dz) || 1;
     [dx, dz] = this.avoid(game, me, dx / len, dz / len);
     return { dx, dz, dash };
   }
 
   private think(game: ArenaGame, me: Actor): void {
-    this.thinkAt = game.time + 0.25 + this.rand() * 0.15;
+    const skill = Math.min(1, Math.max(0, game.botSkill));
+    this.thinkAt = game.time + (0.25 + this.rand() * 0.15) * (1 + (1 - skill) * A.botThinkSlow);
+    const huntRange = A.botHuntRangeRookie + (1 - A.botHuntRangeRookie) * skill;
+    const graceOver = game.matchTime >= A.botHumanGraceSeconds * (1 - skill);
     const prevPrey = this.prey;
     this.threat = null;
     this.prey = null;
@@ -86,10 +91,12 @@ export class ArenaBot {
         this.threat = o;
       } else if (
         game.canEat(me, o) &&
-        d < 22 + me.diameter * 3 &&
+        d < (22 + me.diameter * 3) * huntRange &&
+        (o.kind === 'bot' || graceOver) &&
         d < bestPrey &&
         // Not worth the chase: tiny prey, or one it already failed to catch.
         (o.mass >= me.mass * A.botPreyMinShare || d < me.diameter) &&
+        !game.spares(me, o) &&
         (this.spared.get(o.id) ?? 0) <= game.time
       ) {
         bestPrey = d;
@@ -102,12 +109,12 @@ export class ArenaBot {
       this.spared.set(prey.id, game.time + A.botHuntGiveUp);
       this.prey = null;
     }
-    if (this.target && (this.target.state !== 'idle' || game.grants.has(this.target.id) || !game.world.isEligible(this.target, me.power))) this.target = null;
+    if (this.target && (this.target.state !== 'idle' || game.grants.has(this.target.id) || !game.eligible(this.target, me.power))) this.target = null;
     if (!this.target) {
       let best: WorldObject | null = null;
       let bestScore = Infinity;
       for (const o of game.world.objects) {
-        if (!game.world.isEligible(o, me.power) || game.grants.has(o.id)) continue;
+        if (!game.eligible(o, me.power) || game.grants.has(o.id)) continue;
         if ((this.blacklist.get(o.id) ?? 0) > game.time) continue;
         const d = Math.hypot(o.x - me.x, o.z - me.z);
         // Worth the trip: reward mass (diminishing), so growing rivals move on from dust to bigger prizes.
