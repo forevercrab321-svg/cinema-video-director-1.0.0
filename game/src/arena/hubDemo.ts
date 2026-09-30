@@ -36,7 +36,6 @@ export function demoHub(state: string | null): HubLike {
       capped: false,
       rooms: list,
       privateRooms: state === 'empty' ? 0 : 2,
-      playing: 9,
     };
   };
   return {
@@ -46,6 +45,5 @@ export function demoHub(state: string | null): HubLike {
     setSource(fn) {
       source = fn;
     },
-    onSnapshot: null,
   };
 }

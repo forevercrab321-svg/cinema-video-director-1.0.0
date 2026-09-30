@@ -87,12 +87,11 @@ export async function runArena(ctx: AppContext): Promise<void> {
   };
   if (!testMode) void startTelemetry(nickname, platform);
 
-  // Site directory (ge-lobby): live "N online" on every screen and the public room list. Needs
+  // Site directory (Postgres RPC, net/Hub.ts): live "N online" and the public room list. Needs
   // only the backend, so it runs on our site and on portals alike; never in the test harness.
   // ?hub=demo (dev builds only) fakes it for screenshots in a sandbox without Supabase.
   const demoHub = import.meta.env.DEV && params.get('hub') === 'demo';
   const hub: HubLike | null = demoHub ? (await import('./hubDemo')).demoHub(params.get('hubstate')) : testMode ? null : HubPresence.start();
-  if (hub && !demoHub) hub.onSnapshot = (snap) => track('online_snapshot', snap);
 
   let net: Net | null = null;
   let choice: HubChoice | null = null;
@@ -199,7 +198,7 @@ export async function runArena(ctx: AppContext): Promise<void> {
   if (hub) {
     const room = net instanceof SupabaseNet ? net : null;
     hub.setSource(() => ({
-      room: room && session.pub ? room.room : null,
+      room: room ? room.room : null,
       state: session.hubState(),
       announce:
         room && session.isHost() && room.connected()
