@@ -9,11 +9,11 @@ import { channels, copyText, isPhone, openOut, qrSvg, type ShareChannel } from '
  * (volumes, language, legal links). Rendered inside #arena so they share its styles.
  */
 const CSS = `
-#arena .panel { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(8,9,10,.6); pointer-events: auto; z-index: 3; }
+#arena .panel { position: absolute; inset: 0; display: grid; place-items: center; padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); background: rgba(8,9,10,.6); pointer-events: auto; z-index: 3; }
 #arena .panel .card { width: min(720px, 100%); max-height: 92vh; overflow-y: auto; padding: 20px 22px; border-radius: 16px; background: rgba(20,21,23,.96); box-shadow: 0 30px 80px rgba(0,0,0,.5); }
 #arena .panel .hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 #arena .panel h2 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: .08em; }
-#arena .panel .x { border: 0; background: rgba(255,255,255,.08); color: inherit; border-radius: 10px; width: 40px; height: 40px; font-size: 18px; }
+#arena .panel .x { border: 0; background: rgba(255,255,255,.08); color: inherit; border-radius: 12px; width: 44px; height: 44px; font-size: 18px; flex-shrink: 0; }
 #arena .panel .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 18px; }
 #arena .panel .item { display: grid; gap: 6px; justify-items: center; text-align: center; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.04); color: inherit; border-radius: 12px; padding: 12px 10px; }
 #arena .panel .item[aria-pressed="true"] { border-color: #ffb347; background: rgba(255,179,71,.12); }
@@ -26,7 +26,7 @@ const CSS = `
 #arena .panel .item .pr.gift { color: #ff9ad5; font-size: 10.5px; line-height: 1.35; }
 #arena .panel .gifts { font-size: 12px; line-height: 1.6; padding: 10px 12px; margin-bottom: 14px; border-radius: 12px; background: rgba(255,126,182,.12); border: 1px solid rgba(255,126,182,.35); }
 #arena .panel .gifts .btn { margin-left: 8px; padding: 7px 12px; font-size: 12px; }
-#arena .panel .note { font-size: 11px; opacity: .6; line-height: 1.6; }
+#arena .panel .note { font-size: 11.5px; opacity: .78; line-height: 1.6; }
 #arena .panel .set { display: grid; grid-template-columns: 110px 1fr 44px; gap: 12px; align-items: center; margin-bottom: 14px; font-size: 13px; font-weight: 700; }
 #arena .panel .set input[type=range] { width: 100%; accent-color: #ffb347; pointer-events: auto; }
 #arena .panel .langs { display: flex; gap: 8px; }

@@ -42,26 +42,67 @@ export const arenaConfig = {
   crashStunSeconds: 0.8,
   crashMassLoss: 0.03,
   /**
-   * Refill (host): absorbed small and medium props (class ≤ refillMaxClass, not landmark parts,
+   * Refill (host): absorbed small and medium props (class ≤ refillMaxClass — trucks and containers
+   * too since the 2026-09-30 audit, when more machines reach class 6 and ran dry there; not landmark parts,
    * not stacked) respawn at home after refillDelay + class × refillPerClass seconds, when no
    * machine is within refillClearance m — so a 5-minute round with 4 machines never runs dry
    * and a respawned machine always has something to rebuild with.
    */
-  refillMaxClass: 5,
-  refillDelay: 30,
-  refillPerClass: 6,
+  refillMaxClass: 6,
+  refillDelay: 25,
+  refillPerClass: 4,
   refillClearance: 12,
+  /**
+   * A machine's own size widens the clearance by 2 × diameter, capped here (audit: a 20 m
+   * leader blocked refills within ~52 m — a quarter of the map — and starved mid-size machines;
+   * no-food time rose from 3 % to 8 % once rounds ran longer).
+   */
+  refillClearanceMaxExtra: 14,
   refillCheckSeconds: 2,
   refillPerCheck: 16,
   /** AI rivals ignore prey worth less than this share of their own mass (no endless chases). */
   botPreyMinShare: 0.04,
   botHuntGiveUp: 6,
   /**
-   * Catch-up: a machine behind the leader gains up to this much extra from objects
-   * (scaled by how far behind it is), and eating the current leader pays a bounty.
+   * AI difficulty ramp (balance audit 2026-09-30, tools/arena-balance.mjs): skill 0..1 comes from
+   * the host's finished rounds — botSkillRookie on the first round, full skill after
+   * botSkillRounds. Low skill = slower decisions (think interval × 1 + (1 − skill) × botThinkSlow),
+   * a shorter hunt radius (× botHuntRangeRookie at skill 0), rarer dashes, and a grace period
+   * (botHumanGraceSeconds × (1 − skill)) before AI rivals hunt human players at all.
    */
-  catchUpMax: 0.6,
+  botSkillRookie: 0.3,
+  botSkillRounds: 4,
+  botThinkSlow: 1.4,
+  botHuntRangeRookie: 0.45,
+  botHumanGraceSeconds: 75,
+  /**
+   * Rookie AI neither chases nor eats a human worth less than (1 − skill) × this share of its own
+   * mass — they bounce off (ArenaGame.spares). Audit: a new player lost 2 of 3 lives, mostly to
+   * giant rivals hunting or driving over them at a tenth of their size.
+   */
+  botRookieHumanPreyShare: 0.4,
+  /**
+   * Catch-up (audit: leader held 96 % of all mass at the end, 27× second place): a machine
+   * behind the leader gains up to catchUpMax extra from objects, scaled by log(lead / mass) and
+   * full at catchUpFullRatio; eating the current leader pays a bounty.
+   */
+  catchUpMax: 1.6,
+  catchUpFullRatio: 12,
   leaderBounty: 0.25,
+  /**
+   * Leader drag: once the leader has leaderDragFrom × the runner-up's mass, its object gains
+   * shrink as (leaderDragFrom × second / mass) ^ leaderDragExp, never below leaderDragMin.
+   * The leader still grows (and still wins), but the field stays in the race.
+   */
+  leaderDragFrom: 2.5,
+  leaderDragExp: 0.5,
+  leaderDragMin: 0.35,
+  /**
+   * Landmark opens at this match time (audit: it fell at a median 197 s, ending 23/24 rounds
+   * early and handing the leader +25 % — as early as 73 s in Scrap City). Until then its parts
+   * are solid to everyone; the final minute becomes a race to topple it.
+   */
+  landmarkOpenSeconds: 240,
   /** Power-up crates (refill like other small props). */
   powerCount: 5,
   speedMul: 1.4,

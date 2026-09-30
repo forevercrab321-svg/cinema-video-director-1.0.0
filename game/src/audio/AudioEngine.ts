@@ -18,6 +18,16 @@ import { loadSettings } from '../settings';
  * never buries the sound effects.
  */
 const FILE_TRACK_GAIN = 0.5;
+
+/**
+ * Presentation-only cues the arena sends on top of the shared GameEvent set (they never touch
+ * the simulation): dash cooldown ready, and the crash stun from dashing into something too big.
+ */
+export type FeelEvent = { kind: 'dashReady' } | { kind: 'stun'; size: number };
+
+/** Small-pickup streak: each chained tick climbs a major-pentatonic step (semitones), then resets. */
+const STREAK_STEPS = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+const STREAK_WINDOW = 0.7;
 const VICTORY_TRACK_GAIN = 0.4;
 
 export class AudioEngine {
@@ -33,6 +43,8 @@ export class AudioEngine {
   private timer: number | null = null;
   private muted = false;
   private lastTick = 0;
+  private streak = 0;
+  private lastStreak = -9;
   /** City theme (null = the original industrial loop) and an optional file track override. */
   private theme: MusicTheme | null = null;
   private themeId = '';
@@ -213,12 +225,22 @@ export class AudioEngine {
   }
 
   // ── Event sounds ────────────────────────────────────────────────────────────
-  handle(e: GameEvent): void {
+  handle(e: GameEvent | FeelEvent): void {
     if (!this.ctx) return;
     switch (e.kind) {
       case 'absorb':
         if (e.cls <= 2) this.tick(e.size);
-        else this.thud(e.cls, e.size);
+        else {
+          this.thud(e.cls, e.size);
+          if (e.cls >= 5) this.boom(Math.min(0.55, 0.25 + (e.cls - 5) * 0.08), 0.5 + e.cls * 0.05);
+        }
+        break;
+      case 'dashReady':
+        this.ready();
+        break;
+      case 'stun':
+        this.clank(e.size);
+        this.dizzy();
         break;
       case 'crunch':
         this.crunch(e.cls, e.size);
@@ -231,6 +253,7 @@ export class AudioEngine {
         break;
       case 'dash':
         this.whoosh();
+        this.rev();
         break;
       case 'unlock':
         this.chime([0, 7], 0.18);
@@ -238,8 +261,10 @@ export class AudioEngine {
       case 'tier':
         this.chime([0, 4, 7, 12], 0.35);
         this.rumble(0.8, 0.4);
+        this.riser(0.55);
         break;
       case 'win':
+        this.boom(0.6, 0.9);
         this.chime([0, 4, 7, 12, 16, 19], 0.5);
         this.rumble(2.5, 1);
         break;
@@ -247,12 +272,15 @@ export class AudioEngine {
         this.beep(e.high ? 1320 : 660, e.high ? 0.5 : 0.18);
         break;
       case 'eaten':
+        this.boom(0.55, 0.8);
         this.sweep(420, 70, 0.9);
         this.rumble(1.2, 0.8);
         break;
       case 'landmark':
+        this.boom(0.7, 1.6);
         this.rumble(4, 1.2);
         this.chime([0, -5, -12], 0.4);
+        for (const at of [0.35, 0.8, 1.3, 1.9]) this.crackle(at, 0.25);
         break;
       case 'boing':
         this.boing();
@@ -459,15 +487,92 @@ export class AudioEngine {
     const t = ctx.currentTime;
     if (t - this.lastTick < 0.035) return;
     this.lastTick = t;
+    // Chained pickups climb a pentatonic ladder (a combo you can hear); a pause resets it.
+    this.streak = t - this.lastStreak < STREAK_WINDOW ? Math.min(STREAK_STEPS.length - 1, this.streak + 1) : 0;
+    this.lastStreak = t;
+    const base = Math.max(500, 1150 - size * 700) * Math.pow(2, STREAK_STEPS[this.streak] / 12) * (1 + (Math.random() - 0.5) * 0.03);
     const osc = ctx.createOscillator();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(1400 + Math.random() * 900 - size * 800, t);
-    osc.frequency.exponentialRampToValueAtTime(500, t + 0.06);
+    osc.frequency.setValueAtTime(base, t);
+    osc.frequency.exponentialRampToValueAtTime(base * 0.45, t + 0.06);
     const g = ctx.createGain();
     osc.connect(g).connect(this.sfx);
-    this.env(g, t, 0.08, 0.003, 0.07);
+    this.env(g, t, 0.07 + Math.min(0.03, this.streak * 0.004), 0.003, 0.07);
     osc.start(t);
     osc.stop(t + 0.1);
+    // A soft click transient on top so it reads as "plink", not a beep.
+    const v = this.noiseVoice('highpass', 3500, 0.7, 0.02);
+    this.env(v.gain, t, 0.05, 0.001, 0.015);
+  }
+
+  /** Sub-bass impact under big meals, rivals and collapses: felt more than heard. */
+  private boom(level: number, dur: number): void {
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(95, t);
+    osc.frequency.exponentialRampToValueAtTime(32, t + dur * 0.7);
+    const g = ctx.createGain();
+    osc.connect(g).connect(this.sfx);
+    this.env(g, t, level, 0.006, dur);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+    const v = this.noiseVoice('lowpass', 900, 0.5, 0.12);
+    v.filter.frequency.exponentialRampToValueAtTime(120, t + 0.12);
+    this.env(v.gain, t, level * 0.6, 0.002, 0.1);
+  }
+
+  /** Dash cooldown ready: a tiny two-note glint, quiet enough to live under everything. */
+  private ready(): void {
+    this.voice('sine', [[0, 1760]], 0.05, 0.035, 6000);
+    this.voice('sine', [[0, 2637]], 0.08, 0.03, 6000, 0.05);
+  }
+
+  /** Dash kick: the motor revs up hard for a moment. */
+  private rev(): void {
+    this.voice('sawtooth', [[0, 110], [0.08, 260], [0.28, 150]], 0.3, 0.07, 1200);
+  }
+
+  /** Metal-on-concrete crash for the stun: inharmonic partials + a bright noise hit + body thump. */
+  private clank(size: number): void {
+    const t = this.ctx!.currentTime;
+    for (const hz of [523, 1187, 1911]) this.voice('square', [[0, hz], [0.2, hz * 0.97]], 0.22, 0.03, 4000);
+    const v = this.noiseVoice('bandpass', 2600, 1.4, 0.12);
+    this.env(v.gain, t, 0.3, 0.002, 0.1);
+    this.thump(Math.max(40, 90 - size * 4), 0.35);
+  }
+
+  /** Cartoon dizzy: a wobbling descending whistle while the machine sees stars. */
+  private dizzy(): void {
+    this.voice('sine', [[0, 1500], [0.15, 1250], [0.3, 1420], [0.45, 1100], [0.6, 1260], [0.75, 950]], 0.75, 0.035, 5000, 0.12);
+  }
+
+  /** Rising power-up sweep for the tier change. */
+  private riser(dur: number): void {
+    const t = this.ctx!.currentTime;
+    const v = this.noiseVoice('bandpass', 300, 2.5, dur);
+    v.filter.frequency.exponentialRampToValueAtTime(4000, t + dur);
+    v.gain.gain.setValueAtTime(0.0001, t);
+    v.gain.gain.exponentialRampToValueAtTime(0.12, t + dur * 0.9);
+    v.gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  }
+
+  /** Debris crackle, delayed: masonry breaking up as the landmark comes down. */
+  private crackle(at: number, level: number): void {
+    const ctx = this.ctx!;
+    const t = ctx.currentTime + at;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 900 + Math.random() * 700;
+    f.Q.value = 0.9;
+    const g = ctx.createGain();
+    src.connect(f).connect(g).connect(this.sfx);
+    this.env(g, t, level, 0.004, 0.35);
+    src.start(t, Math.random() * 0.5);
+    src.stop(t + 0.4);
   }
 
   private thump(freq: number, level: number): void {

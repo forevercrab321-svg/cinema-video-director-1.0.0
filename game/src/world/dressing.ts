@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Obb } from '../core/collision';
 import { createSeededRandom } from '../core/rng';
+import { sceneOwned } from '../art/sceneGpu';
 import { CURB_HEIGHT } from './scrapCity';
 
 /** What a city asks the dressing pass for: street trees (with the ground height at each) and, for Scrap City, the alley weeds and decals. */
@@ -32,7 +33,7 @@ function canvasTexture(w: number, h: number, draw: (g: CanvasRenderingContext2D)
   c.width = w;
   c.height = h;
   draw(c.getContext('2d')!);
-  const t = new THREE.CanvasTexture(c);
+  const t = sceneOwned(new THREE.CanvasTexture(c)); // built per city: released with the round's scene
   t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
   t.anisotropy = 4;
   return t;

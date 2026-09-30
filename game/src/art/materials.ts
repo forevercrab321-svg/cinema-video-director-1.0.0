@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { signTexture, type TextureKit } from './textures';
 import { createSignAtlas } from './signs';
 import { interiorMapping, weathering } from './surfaceShaders';
+import type { Quality } from './postfx';
+
+/** Parameters only MeshPhysicalMaterial understands (dropped when the low tier folds it to standard). */
+const PHYSICAL_ONLY = ['clearcoat', 'clearcoatRoughness', 'clearcoatMap', 'clearcoatNormalMap', 'clearcoatNormalScale', 'clearcoatRoughnessMap', 'sheen', 'sheenColor', 'sheenRoughness', 'sheenColorMap', 'sheenRoughnessMap', 'transmission', 'thickness', 'ior', 'reflectivity', 'iridescence', 'specularIntensity', 'specularColor', 'anisotropy', 'dispersion'] as const;
 
 /**
  * Shared material roles (technical-art.md: one material per role, reused everywhere).
@@ -69,9 +73,22 @@ export class MaterialLibrary {
   /** Architecture + ground. */
   readonly arch: Record<'brick' | 'darkBrick' | 'plaster' | 'concrete' | 'asphalt' | 'sidewalk' | 'curb' | 'windowGlass' | 'windowFrame' | 'steelDark' | 'roofing' | 'awning' | 'shopGlass' | 'puddle' | 'paintLine' | 'lampGlow' | 'skylineWindows' | 'hazard' | 'craneYellow' | 'gravel' | 'metalLight' | 'metals' | 'water' | 'stone' | 'signalRed' | 'signalGreen' | 'lantern', THREE.Material>;
 
-  constructor(readonly kit: TextureKit) {
+  /**
+   * `quality: 'low'` folds every physical material (clearcoat / sheen lobes) into a standard
+   * one: the second specular lobe roughly doubles the lighting cost of car paint and glass,
+   * which the low tier (weak phones) cannot afford. Other tiers are unchanged.
+   */
+  constructor(
+    readonly kit: TextureKit,
+    quality: Quality = 'high',
+  ) {
     const std = (p: THREE.MeshStandardMaterialParameters) => new THREE.MeshStandardMaterial(p);
-    const phy = (p: THREE.MeshPhysicalMaterialParameters) => new THREE.MeshPhysicalMaterial(p);
+    const phy = (p: THREE.MeshPhysicalMaterialParameters): THREE.MeshStandardMaterial => {
+      if (quality !== 'low') return new THREE.MeshPhysicalMaterial(p);
+      const q: Record<string, unknown> = { ...p };
+      for (const k of PHYSICAL_ONLY) delete q[k];
+      return new THREE.MeshStandardMaterial(q as THREE.MeshStandardMaterialParameters);
+    };
     this.roles = {
       paint: std({ color: 0xffffff, ...tex(kit.wornPaint, 0.6), metalness: 0.35, envMapIntensity: 0.8 }),
       carPaint: phy({ color: 0xffffff, metalness: 0.35, roughness: 0.38, clearcoat: 0.8, clearcoatRoughness: 0.1, envMapIntensity: 1.0 }),
@@ -145,7 +162,7 @@ export class MaterialLibrary {
     for (const k of ['asphalt', 'sidewalk', 'gravel', 'roofing'] as const) weathering(this.arch[k], 'ground');
     for (const r of ['paint', 'concreteProp', 'roofMetal', 'stone'] as const) weathering(this.roles[r], 'prop', 0.8);
     weathering(this.roles.corrugated, 'prop', 0.35); // containers: grime blotches read as camouflage on dark paint
-    interiorMapping(this.arch.windowGlass as THREE.MeshPhysicalMaterial, { width: 3.2, depth: 4.2, height: 3.0, floorBelowCentre: 1.75, litChance: 0.3, shop: false });
-    interiorMapping(this.arch.shopGlass as THREE.MeshPhysicalMaterial, { width: 3.6, depth: 6, height: 3.8, floorBelowCentre: 1.9, litChance: 1, shop: true });
+    interiorMapping(this.arch.windowGlass as THREE.MeshStandardMaterial, { width: 3.2, depth: 4.2, height: 3.0, floorBelowCentre: 1.75, litChance: 0.3, shop: false });
+    interiorMapping(this.arch.shopGlass as THREE.MeshStandardMaterial, { width: 3.6, depth: 6, height: 3.8, floorBelowCentre: 1.9, litChance: 1, shop: true });
   }
 }

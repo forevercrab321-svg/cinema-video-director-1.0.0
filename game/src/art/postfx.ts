@@ -6,14 +6,19 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { CinematicOutputPass } from './cinematicOutput';
 import { LAYER_NO_AO } from './layers';
+import { releaseSceneGpu } from './sceneGpu';
 
 /**
  * Render pipeline by quality tier (technical-art.md: ≤ 2 post passes beyond render + output).
  *   high   → MSAA 4× + GTAO (contact/crevice occlusion) + bloom on authored emissives + cinematic output
- *   medium → MSAA 4× + bloom + cinematic output
+ *   medium → MSAA 2× + quarter-res bloom + cinematic output (mobile default: fill-rate bound)
  *   low    → direct render, no composer
+ * Sun shadow maps are capped per tier (high keeps what the mode asked for).
  */
 export type Quality = 'high' | 'medium' | 'low';
+
+/** Largest shadow-map edge per tier (the mode's own size wins when smaller). */
+const SHADOW_CAP: Record<Quality, number> = { high: Infinity, medium: 2048, low: 1024 };
 
 export class RenderPipeline {
   private composer: EffectComposer | null = null;
@@ -27,9 +32,10 @@ export class RenderPipeline {
     private camera: THREE.Camera,
     readonly quality: Quality,
   ) {
+    capShadowMaps(scene, SHADOW_CAP[quality]);
     if (quality === 'low') return;
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-    const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
+    const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: quality === 'high' ? 4 : 2 });
     this.composer = new EffectComposer(renderer, target);
     this.composer.addPass(new RenderPass(scene, camera));
     // Safety net: a single NaN/Inf pixel from any shader would be spread by the bloom blur into
@@ -67,6 +73,14 @@ export class RenderPipeline {
       this.composer.addPass(this.gtao);
     }
     this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.14, 0.35, 1.25);
+    if (quality === 'medium') {
+      // Bloom is a soft, low-strength glow: its mip chain at quarter resolution (instead of half)
+      // is indistinguishable on a phone and halves the blur passes' fill cost.
+      const bloom = this.bloom;
+      const setSize = bloom.setSize.bind(bloom);
+      bloom.setSize = (w: number, h: number) => setSize(Math.max(1, Math.round(w / 2)), Math.max(1, Math.round(h / 2)));
+      bloom.setSize(size.x, size.y);
+    }
     this.composer.addPass(this.bloom);
     this.output = new CinematicOutputPass(); // tone map + grade + lens finish in the output pass (no extra pass)
     this.composer.addPass(this.output);
@@ -82,9 +96,18 @@ export class RenderPipeline {
     else this.renderer.render(this.scene, this.camera);
   }
 
-  /** Release the composer's render targets (switching scenes). */
-  dispose(): void {
-    this.composer?.dispose();
+  /**
+   * Switching scenes: release the composer, every pass's render targets and materials, and —
+   * unless `keepScene` — the retired scene's own GPU resources (shadow maps, batched/instanced
+   * mesh buffers and data textures, per-scene textures). Shared library materials and
+   * textures are never touched. Without this each round restart leaked ~100 textures.
+   */
+  dispose(keepScene = false): void {
+    if (this.composer) {
+      for (const pass of this.composer.passes) pass.dispose();
+      this.composer.dispose();
+    }
+    if (!keepScene) releaseSceneGpu(this.scene);
   }
 
   /** Drop ambient occlusion (adaptive quality fallback on slow GPUs). */
@@ -100,4 +123,19 @@ export class RenderPipeline {
   get passes(): number {
     return this.quality === 'high' ? 2 : this.quality === 'medium' ? 1 : 0;
   }
+}
+
+/** Clamp every shadow-casting light's map to `cap` texels on its longest edge (aspect kept). */
+function capShadowMaps(scene: THREE.Scene, cap: number): void {
+  if (!Number.isFinite(cap)) return;
+  scene.traverse((o) => {
+    const light = o as THREE.DirectionalLight;
+    if (!light.isLight || !light.castShadow || !light.shadow) return;
+    const s = light.shadow.mapSize;
+    const k = cap / Math.max(s.x, s.y);
+    if (k >= 1) return;
+    s.set(Math.max(1, Math.round(s.x * k)), Math.max(1, Math.round(s.y * k)));
+    light.shadow.map?.dispose();
+    light.shadow.map = null;
+  });
 }

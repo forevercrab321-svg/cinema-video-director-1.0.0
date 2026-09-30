@@ -25,6 +25,14 @@ export class PlayerModel {
   private readonly arms: THREE.Object3D[] = [];
   private readonly jaws: THREE.Object3D[] = [];
   private chomp = 0;
+  /**
+   * Squash & stretch springs (design §47): `sq` > 0 flattens (gulp, landing), < 0 stretches tall
+   * (tier-up); `ln` > 0 stretches forward (dash lunge). Underdamped, so they overshoot and settle.
+   */
+  private sq = 0;
+  private sqV = 0;
+  private ln = 0;
+  private lnV = 0;
   private bob = 0;
   private t = 0;
   private readonly glow: THREE.MeshStandardMaterial;
@@ -275,18 +283,43 @@ export class PlayerModel {
 
   /** Show every part up to `tier`. With `animate`, newly reached parts unfold. */
   setTier(tier: number, animate: boolean): void {
+    let grew = false;
     for (const [t, group] of this.tierParts) {
       const reached = t <= tier;
+      if (reached && !group.visible) grew = true;
       group.visible = reached;
       if (!reached) this.unfold.set(t, 0);
       else if (!animate) this.unfold.set(t, 1);
     }
+    if (animate && grew) {
+      // Tier-up: the whole machine stretches up as the new parts unfold, then settles.
+      this.sq = -0.22;
+      this.sqV = 0;
+      this.glow.emissiveIntensity = 8;
+    }
   }
 
-  /** Brief intake flare when something is absorbed. */
+  /** Brief intake flare when something is absorbed; bigger meals also make the body gulp. */
   pulseIntake(amount: number): void {
     this.glow.emissiveIntensity = Math.min(8, this.glow.emissiveIntensity + amount);
     this.chomp = Math.min(1, this.chomp + amount * 0.25);
+    this.squash(Math.min(0.12, amount * 0.016));
+  }
+
+  /** Instant squash (> 0 flatter, < 0 taller); the spring returns it to rest with overshoot. */
+  squash(amount: number): void {
+    this.sq = THREE.MathUtils.clamp(this.sq + amount, -0.3, 0.3);
+  }
+
+  /** Dash: a crouch that springs into a forward stretch. */
+  lunge(amount: number): void {
+    this.sq = Math.min(0.3, this.sq + amount * 0.5);
+    this.lnV += amount * 14;
+  }
+
+  /** Dash is ready again: a quick glint on the intake. */
+  blink(): void {
+    this.glow.emissiveIntensity = Math.min(8, this.glow.emissiveIntensity + 1.6);
   }
 
   update(dt: number, diameter: number, speed: number, heading: number, x: number, z: number, lean: number, groundY = 0): void {
@@ -303,6 +336,14 @@ export class PlayerModel {
     this.chassis.rotation.z = THREE.MathUtils.lerp(this.chassis.rotation.z, -lean * 0.1, 1 - Math.exp(-10 * dt));
     this.chassis.rotation.x = THREE.MathUtils.lerp(this.chassis.rotation.x, -Math.min(1, speed / (4 * diameter + 1)) * 0.03, 1 - Math.exp(-6 * dt));
     this.glow.emissiveIntensity += (2.4 - this.glow.emissiveIntensity) * (1 - Math.exp(-5 * dt));
+    // Squash & stretch springs (semi-implicit Euler; stiff, underdamped → one visible overshoot).
+    this.sqV += (-240 * this.sq - 13 * this.sqV) * dt;
+    this.sq += this.sqV * dt;
+    this.lnV += (-200 * this.ln - 12 * this.lnV) * dt;
+    this.ln += this.lnV * dt;
+    const sy = 1 - this.sq;
+    const sxz = 1 + this.sq * 0.5;
+    this.chassis.scale.set(sxz / (1 + this.ln * 0.3), sy / (1 + this.ln * 0.3), sxz * (1 + this.ln));
     for (const arm of this.arms) arm.rotation.x = 0.4 + Math.sin(this.t * 1.7 + arm.position.x * 9) * 0.06;
     // Crusher jaws snap shut on every big absorb, then reopen.
     this.chomp = Math.max(0, this.chomp - dt * 2.5);

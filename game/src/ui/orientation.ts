@@ -19,8 +19,8 @@ export function installLandscapeMode(): void {
 .ge-rotate small { font-size: 12px; font-weight: 600; opacity: .7; letter-spacing: .04em; }
 @keyframes ge-turn { 0%, 20% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
 @media (orientation: portrait) { .ge-rotate { display: flex; } }
-.ge-full { position: fixed; bottom: calc(8px + env(safe-area-inset-bottom)); left: calc(8px + env(safe-area-inset-left)); z-index: 30; border: 0; border-radius: 8px; width: 36px; height: 30px;
-  background: rgba(16,18,20,.5); color: #f2efe8; font-size: 16px; }
+.ge-full { position: fixed; bottom: calc(8px + env(safe-area-inset-bottom)); left: calc(8px + env(safe-area-inset-left)); z-index: 30; border: 0; border-radius: 12px; width: 44px; height: 44px;
+  background: rgba(16,18,20,.45); color: #f2efe8; font-size: 16px; }
 :fullscreen .ge-full, .ge-full[hidden] { display: none; }
 @media (orientation: portrait) { .ge-full { display: none; } }`;
   document.head.appendChild(css);

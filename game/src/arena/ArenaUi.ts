@@ -15,136 +15,226 @@ import { ArenaPanels, type PanelHooks } from './ArenaPanels';
  * Player names are other people's input: always set with textContent.
  */
 const CSS = `
-#arena { position: fixed; inset: 0; pointer-events: none; font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif; color: #f2efe8; -webkit-font-smoothing: antialiased; z-index: 5; }
+/* Design tokens: one type scale, one spacing scale, one radius scale, one accent. */
+#arena { --ge-accent: #ffb347; --ge-accent-ink: #16181a; --ge-ink: #f2efe8; --ge-muted: rgba(242,239,232,.78); --ge-dim: rgba(242,239,232,.62);
+  --ge-panel: rgba(16,18,20,.74); --ge-card: rgba(255,255,255,.05); --ge-line: rgba(255,255,255,.1); --ge-ok: #7be08a; --ge-bad: #ff8a7a; --ge-warn: #ffd27a;
+  --ge-s1: 4px; --ge-s2: 8px; --ge-s3: 12px; --ge-s4: 16px; --ge-s5: 24px; --ge-r1: 8px; --ge-r2: 12px; --ge-r3: 16px;
+  --ge-fs-xs: 11px; --ge-fs-sm: 12.5px; --ge-fs-md: 14px; --ge-fs-lg: 16px; --ge-tap: 44px;
+  --ge-st: env(safe-area-inset-top, 0px); --ge-sr: env(safe-area-inset-right, 0px); --ge-sb: env(safe-area-inset-bottom, 0px); --ge-sl: env(safe-area-inset-left, 0px); }
+#arena { position: fixed; inset: 0; pointer-events: none; font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif; color: var(--ge-ink); -webkit-font-smoothing: antialiased; z-index: 5; }
 #arena .hex { font-variant-numeric: tabular-nums; }
 #arena [hidden] { display: none !important; }
 #hud .hint { display: none; } /* story onboarding prompt: not used in the arena */
 #arena button { font: inherit; cursor: pointer; pointer-events: auto; }
-#arena button:focus-visible { outline: 2px solid #ffb347; outline-offset: 2px; }
-#arena .lobby { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr auto; gap: 16px; padding: 22px max(16px, 3vw); pointer-events: auto;
-  background: linear-gradient(180deg, rgba(12,13,15,.72), rgba(12,13,15,.35) 30%, rgba(12,13,15,.35) 70%, rgba(12,13,15,.8)); }
-#arena .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-#arena .brand { font-size: 13px; font-weight: 800; letter-spacing: .3em; color: #ffb347; }
-#arena .title { font-size: clamp(26px, 3.4vw, 40px); font-weight: 900; letter-spacing: .06em; line-height: 1.05; }
-#arena .title small { display: block; font-size: 12px; font-weight: 700; letter-spacing: .28em; opacity: .6; margin-top: 4px; }
-#arena .chip { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.08); letter-spacing: .06em; }
-#arena .net { font-weight: 700; } #arena .net.ok { color: #7be08a; } #arena .net.bad { color: #ff8a7a; } #arena .net.wait { color: #ffd27a; } #arena .net small { font-weight: 400; opacity: .7; }
+#arena button:focus-visible, #arena summary:focus-visible, #arena input:focus-visible { outline: 2px solid var(--ge-accent); outline-offset: 2px; }
+/* ── Lobby: top bar · three columns (each scrolls on its own) · action bar that never scrolls away ── */
+#arena .lobby { position: absolute; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: var(--ge-s4); pointer-events: auto;
+  padding: calc(var(--ge-s4) + var(--ge-st)) calc(max(16px, 3vw) + var(--ge-sr)) calc(var(--ge-s4) + var(--ge-sb)) calc(max(16px, 3vw) + var(--ge-sl));
+  background: linear-gradient(180deg, rgba(12,13,15,.74), rgba(12,13,15,.4) 30%, rgba(12,13,15,.4) 70%, rgba(12,13,15,.84)); }
+#arena .top { display: flex; align-items: center; justify-content: space-between; gap: var(--ge-s3); min-width: 0; }
+#arena .brand { font-size: var(--ge-fs-xs); font-weight: 800; letter-spacing: .3em; color: var(--ge-accent); white-space: nowrap; }
+#arena .title { font-size: clamp(24px, 3vw, 36px); font-weight: 900; letter-spacing: .06em; line-height: 1.05; white-space: nowrap; }
+#arena .title small { display: block; font-size: var(--ge-fs-xs); font-weight: 700; letter-spacing: .24em; color: var(--ge-muted); margin-top: var(--ge-s1); }
+#arena .tools { display: flex; gap: var(--ge-s2); align-items: center; flex-shrink: 0; }
+#arena .chip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--ge-fs-sm); font-weight: 700; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.08); letter-spacing: .04em; white-space: nowrap; }
 #arena .chip b { color: #8be07a; }
-#arena .cols { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.1fr) minmax(240px, 1fr); gap: 16px; min-height: 0; }
-#arena .col { background: rgba(16,18,20,.62); border-radius: 14px; padding: 14px; overflow: auto; backdrop-filter: blur(8px); }
-#arena .h { font-size: 11px; font-weight: 800; letter-spacing: .24em; opacity: .6; margin-bottom: 10px; }
-#arena .city { display: grid; grid-template-columns: 38px 1fr; gap: 10px; width: 100%; text-align: left; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.04); color: inherit; border-radius: 10px; padding: 10px; margin-bottom: 8px; }
-#arena .city[aria-pressed="true"] { border-color: #ffb347; background: rgba(255,179,71,.12); }
-#arena .city:disabled { opacity: .45; cursor: default; }
-#arena .city .lv { font-size: 22px; font-weight: 900; color: #ffb347; text-align: center; line-height: 1.2; }
-#arena .city .lv small { display: block; font-size: 9px; letter-spacing: .14em; opacity: .7; }
-#arena .city .nm { font-size: 16px; font-weight: 800; }
-#arena .city .nm span { font-size: 11px; opacity: .6; margin-left: 6px; letter-spacing: .08em; }
-#arena .city .tg { font-size: 12px; opacity: .7; margin-top: 2px; }
-#arena .slot { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.04); margin-bottom: 8px; min-height: 44px; }
+#arena .net { font-weight: 800; } #arena .net.ok { color: var(--ge-ok); } #arena .net.bad { color: var(--ge-bad); } #arena .net.wait { color: var(--ge-warn); } #arena .net small { font-weight: 400; color: var(--ge-muted); }
+#arena .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr); gap: var(--ge-s4); min-height: 0; }
+#arena .col { display: flex; flex-direction: column; min-height: 0; background: var(--ge-panel); border: 1px solid var(--ge-line); border-radius: var(--ge-r3); padding: var(--ge-s3) var(--ge-s3) 0; backdrop-filter: blur(8px); }
+#arena .col > .list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: var(--ge-s3); scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.2) transparent; }
+#arena .h { display: flex; align-items: center; gap: var(--ge-s2); font-size: var(--ge-fs-sm); font-weight: 800; letter-spacing: .14em; color: var(--ge-muted); margin: 2px 2px var(--ge-s3); }
+#arena .h .step { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ge-accent); color: var(--ge-accent-ink); font-size: 12px; letter-spacing: 0; }
+#arena .h .sub { font-weight: 600; letter-spacing: .04em; color: var(--ge-dim); }
+#arena .city { display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: center; width: 100%; min-height: var(--ge-tap); text-align: left; border: 1px solid var(--ge-line); background: var(--ge-card); color: inherit; border-radius: var(--ge-r2); padding: 10px; margin-bottom: var(--ge-s2); }
+#arena .city[aria-pressed="true"], #arena .veh[aria-pressed="true"] { border-color: var(--ge-accent); background: rgba(255,179,71,.14); box-shadow: 0 0 0 1px var(--ge-accent) inset; }
+#arena .city:not(:disabled):hover, #arena .veh:hover { background: rgba(255,255,255,.09); }
+#arena .city:disabled { opacity: .5; cursor: default; }
+#arena .city .lv { font-size: 22px; font-weight: 900; color: var(--ge-accent); text-align: center; line-height: 1.1; }
+#arena .city .lv small { display: block; font-size: 9px; letter-spacing: .04em; color: var(--ge-muted); }
+#arena .city .nm { font-size: var(--ge-fs-lg); font-weight: 800; }
+#arena .city .nm span { font-size: var(--ge-fs-xs); color: var(--ge-dim); margin-left: 6px; letter-spacing: .08em; }
+#arena .city .tg { font-size: var(--ge-fs-sm); color: var(--ge-muted); margin-top: 2px; }
+#arena .room { display: grid; gap: var(--ge-s2); padding: var(--ge-s3); margin-bottom: var(--ge-s3); border-radius: var(--ge-r2); background: rgba(255,255,255,.06); border: 1px solid var(--ge-line); font-size: var(--ge-fs-sm); line-height: 1.5; color: var(--ge-muted); }
+#arena .room .rh { display: flex; align-items: center; justify-content: space-between; gap: var(--ge-s2); flex-wrap: wrap; }
+#arena .room .code-row { display: flex; align-items: baseline; gap: var(--ge-s2); color: var(--ge-muted); }
+#arena .room .code { font-size: 20px; font-weight: 900; letter-spacing: .18em; color: var(--ge-ink); font-variant-numeric: tabular-nums; }
+#arena .room .btn { display: block; width: 100%; white-space: normal; text-align: center; line-height: 1.4; }
+#arena .room .btn .apps { font-weight: 600; opacity: .85; }
+#arena .room .gift { font-size: var(--ge-fs-xs); color: var(--ge-dim); }
+#arena .nick { display: flex; gap: var(--ge-s2); align-items: center; font-size: var(--ge-fs-sm); font-weight: 700; color: var(--ge-muted); margin-bottom: var(--ge-s2); }
+#arena .nick input { flex: 1; min-width: 0; min-height: 40px; box-sizing: border-box; font: inherit; font-size: var(--ge-fs-md); color: var(--ge-ink); padding: 7px 10px; border-radius: var(--ge-r1); border: 1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.3); }
+#arena .slot { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: center; padding: 8px 12px; border-radius: var(--ge-r2); background: var(--ge-card); margin-bottom: var(--ge-s2); min-height: var(--ge-tap); box-sizing: border-box; }
 #arena .slot i { width: 12px; height: 12px; border-radius: 3px; }
 #arena .slot .n { font-weight: 800; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#arena .slot .n em { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .12em; color: #16181a; background: #ffb347; border-radius: 3px; padding: 1px 5px; margin-left: 6px; }
-#arena .slot .v { font-size: 11px; opacity: .65; }
-#arena .slot .st { font-size: 11px; font-weight: 800; letter-spacing: .1em; }
-#arena .slot.empty { opacity: .5; }
-#arena .veh { display: grid; gap: 4px; width: 100%; text-align: left; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.04); color: inherit; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
-#arena .veh[aria-pressed="true"] { border-color: #ffb347; background: rgba(255,179,71,.12); }
+#arena .slot .n em { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .12em; color: var(--ge-accent-ink); background: var(--ge-accent); border-radius: 3px; padding: 1px 5px; margin-left: 6px; }
+#arena .slot .v { font-size: var(--ge-fs-xs); color: var(--ge-muted); }
+#arena .slot .st { font-size: 13px; font-weight: 800; letter-spacing: .04em; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+#arena .slot .st.host { color: #ffd479; background: rgba(255,196,64,.14); }
+#arena .slot .st.ok { color: #0b2a12; background: #5fe08a; }
+#arena .slot .st.no { color: #ffd9c2; background: rgba(255,120,60,.22); border: 1px solid rgba(255,140,80,.55); }
+#arena .slot.ready { box-shadow: inset 0 0 0 2px rgba(95,224,138,.55); }
+#arena .slot.unready { box-shadow: inset 0 0 0 1px rgba(255,140,80,.35); }
+#arena .btn.is-ready { background: #5fe08a; color: #0b2a12; font-weight: 900; border-color: #5fe08a; }
+#arena .btn.is-ready small, #arena .btn.cta small { display: block; font-size: 11px; font-weight: 700; opacity: .8; }
+#arena .chip.wait-host { font-weight: 800; }
+#arena .slot.empty { background: transparent; border: 1px dashed rgba(255,255,255,.14); }
+#arena .slot.empty .n { font-weight: 700; color: var(--ge-muted); }
+#arena .invite { font-size: var(--ge-fs-sm); line-height: 1.6; color: var(--ge-muted); margin-top: var(--ge-s2); }
+#arena .invite .btn { margin-top: var(--ge-s2); }
+#arena .veh { display: grid; gap: 4px; width: 100%; text-align: left; border: 1px solid var(--ge-line); background: var(--ge-card); color: inherit; border-radius: var(--ge-r2); padding: 10px 12px; margin-bottom: var(--ge-s2); }
 #arena .veh .nm { font-weight: 800; font-size: 15px; display: flex; align-items: center; gap: 8px; }
-#arena .veh .nm i { width: 14px; height: 14px; border-radius: 50%; }
-#arena .veh .bl { font-size: 11px; opacity: .65; }
-#arena .bars { display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; font-size: 10px; letter-spacing: .08em; opacity: .85; margin-top: 4px; align-items: center; }
-#arena .bars b { display: block; height: 4px; border-radius: 2px; background: rgba(255,255,255,.12); }
-#arena .bars b i { display: block; height: 100%; border-radius: 2px; background: #ffb347; }
-#arena .foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-#arena .rules { font-size: 12px; opacity: .75; line-height: 1.6; max-width: 62ch; }
-#arena .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-#arena .btn { border: 0; border-radius: 10px; padding: 12px 18px; font-weight: 800; letter-spacing: .08em; background: rgba(255,255,255,.1); color: #f2efe8; }
-#arena .btn.primary { background: #ffb347; color: #16181a; }
-#arena .btn:disabled { opacity: .4; cursor: default; }
-#arena label.tog { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; pointer-events: auto; }
-#arena .nick { display: flex; gap: 8px; align-items: center; font-size: 12px; font-weight: 700; margin-bottom: 10px; }
-#arena .nick input { flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 7px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.15); background: rgba(0,0,0,.3); color: inherit; }
-#arena .invite .btn { margin-top: 8px; }
-#arena .invite { font-size: 12px; line-height: 1.6; opacity: .8; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
+#arena .veh .nm i { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+#arena .veh .nm span { color: var(--ge-dim); font-size: var(--ge-fs-xs); font-weight: 700; }
+#arena .veh .bl { font-size: var(--ge-fs-sm); color: var(--ge-muted); }
+#arena .bars { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 4px 8px; font-size: 10.5px; letter-spacing: .06em; color: var(--ge-muted); margin-top: 4px; align-items: center; }
+#arena .veh:not([aria-pressed="true"]) .bars { display: none; }
+#arena .bars b { display: block; height: 4px; border-radius: 2px; background: rgba(255,255,255,.14); }
+#arena .bars b i { display: block; height: 100%; border-radius: 2px; background: var(--ge-accent); }
+/* Action bar: condensed rules on the left, the one thing to press on the right. */
+#arena .foot { position: relative; display: flex; align-items: center; justify-content: space-between; gap: var(--ge-s3) var(--ge-s4); min-width: 0; }
+#arena .rules { min-width: 0; flex: 1 1 auto; font-size: var(--ge-fs-sm); color: var(--ge-muted); }
+#arena .rules summary { display: flex; align-items: center; gap: var(--ge-s2); flex-wrap: wrap; list-style: none; cursor: pointer; pointer-events: auto; min-height: var(--ge-tap); border-radius: var(--ge-r2); }
+#arena .rules summary::-webkit-details-marker { display: none; }
+#arena .rules .rk { font-weight: 800; color: var(--ge-ink); padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.1); white-space: nowrap; }
+#arena .rules .rc { white-space: nowrap; padding: 6px 10px; border-radius: 999px; background: rgba(16,18,20,.55); border: 1px solid var(--ge-line); }
+#arena .rules .rc b { color: var(--ge-accent); }
+#arena .rules .more { color: var(--ge-accent); font-weight: 700; white-space: nowrap; }
+#arena .rules[open] .more::after { content: ' ▾'; } #arena .rules:not([open]) .more::after { content: ' ▸'; }
+#arena .rules .full { position: absolute; left: 0; bottom: calc(100% + var(--ge-s2)); z-index: 2; width: min(62ch, 100%); box-sizing: border-box; padding: var(--ge-s3) var(--ge-s4); border-radius: var(--ge-r2); background: rgba(20,21,23,.96); border: 1px solid var(--ge-line); box-shadow: 0 16px 40px rgba(0,0,0,.45); color: var(--ge-ink); line-height: 1.7; max-height: 50vh; overflow-y: auto; }
+#arena .actions { display: flex; gap: var(--ge-s2); align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+#arena .foot .actions { flex: 0 0 auto; flex-wrap: nowrap; }
+#arena .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--ge-tap); box-sizing: border-box; border: 0; border-radius: var(--ge-r2); padding: 10px 16px; font-weight: 800; letter-spacing: .06em; background: rgba(255,255,255,.12); color: var(--ge-ink); white-space: nowrap; }
+#arena .btn:hover:not(:disabled) { background: rgba(255,255,255,.18); }
+#arena .btn.primary { background: var(--ge-accent); color: var(--ge-accent-ink); }
+#arena .btn.primary:hover:not(:disabled) { background: #ffc46e; }
+#arena .btn.outline { background: rgba(255,179,71,.12); color: var(--ge-accent); box-shadow: 0 0 0 1px var(--ge-accent) inset; }
+#arena .btn.icon { min-width: var(--ge-tap); padding-inline: 12px; }
+#arena .btn:disabled { opacity: .45; cursor: default; }
+#arena .btn:active:not(:disabled) { transform: translateY(1px); }
+#arena .btn.cta { min-height: 56px; padding: 8px 26px; font-size: 18px; letter-spacing: .08em; flex-direction: column; gap: 0; line-height: 1.15; box-shadow: 0 8px 24px rgba(255,160,60,.35); }
+#arena .btn.cta small { font-size: var(--ge-fs-xs); font-weight: 700; letter-spacing: .04em; opacity: .8; }
+#arena .btn.cta:not(:disabled) { animation: ge-cta 2.4s ease-in-out infinite; }
+@keyframes ge-cta { 0%, 100% { box-shadow: 0 8px 24px rgba(255,160,60,.3), 0 0 0 0 rgba(255,179,71,.5); } 50% { box-shadow: 0 8px 24px rgba(255,160,60,.3), 0 0 0 6px rgba(255,179,71,0); } }
+@media (prefers-reduced-motion: reduce) { #arena .btn.cta { animation: none !important; } }
+#arena label.tog { display: flex; align-items: center; gap: 8px; min-height: var(--ge-tap); padding: 0 10px; border-radius: var(--ge-r2); font-size: var(--ge-fs-sm); font-weight: 700; color: var(--ge-ink); pointer-events: auto; cursor: pointer; white-space: nowrap; }
+#arena label.tog input { width: 18px; height: 18px; accent-color: var(--ge-accent); margin: 0; }
 #arena .coins { color: #ffd35a; font-weight: 800; }
-#arena .timer { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); text-align: center; text-shadow: 0 2px 8px rgba(0,0,0,.5); }
-#arena .timer b { display: block; font-size: 30px; font-weight: 900; letter-spacing: .06em; }
-#arena .timer span { font-size: 11px; font-weight: 800; letter-spacing: .24em; opacity: .75; }
-#arena .board { position: absolute; top: 18px; right: 18px; width: 250px; padding: 10px 12px; border-radius: 12px; background: rgba(16,18,20,.5); backdrop-filter: blur(6px); }
-#arena .row { display: grid; grid-template-columns: 16px 10px 1fr auto; gap: 8px; align-items: center; padding: 5px 0; font-size: 13px; }
-#arena .row .rk { font-weight: 900; opacity: .7; }
+/* ── In round: timer top-centre, leaderboard top-right, feed under it, map bottom-right. The centre stays clear. ── */
+#arena .timer { position: absolute; top: calc(14px + var(--ge-st)); left: 50%; transform: translateX(-50%); text-align: center; padding: 4px 14px 5px; border-radius: var(--ge-r2); background: rgba(16,18,20,.42); backdrop-filter: blur(4px); text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+#arena .timer b { display: block; font-size: 28px; font-weight: 900; letter-spacing: .06em; line-height: 1.1; }
+#arena .timer span { font-size: var(--ge-fs-xs); font-weight: 800; letter-spacing: .16em; color: var(--ge-muted); white-space: nowrap; }
+#arena .timer .lock { display: table; margin: 2px auto 0; font-style: normal; font-size: var(--ge-fs-xs); font-weight: 800; letter-spacing: .06em; color: var(--ge-muted); white-space: nowrap; }
+#arena .timer .lock.open { color: var(--ge-accent-ink); background: var(--ge-accent); border-radius: 999px; padding: 1px 8px; animation: ge-open .6s ease-out 3; }
+@keyframes ge-open { 0% { transform: scale(1); } 40% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { #arena .timer .lock.open { animation: none; } }
+#arena .board { position: absolute; top: calc(14px + var(--ge-st)); right: calc(16px + var(--ge-sr)); width: 230px; padding: 8px 12px; border-radius: var(--ge-r2); background: rgba(16,18,20,.5); backdrop-filter: blur(6px); }
+#arena .row { display: grid; grid-template-columns: 14px 10px 1fr auto auto; gap: 7px; align-items: center; padding: 3px 0; font-size: 13px; }
+#arena .row .rk { font-weight: 900; color: var(--ge-muted); }
 #arena .row i { width: 10px; height: 10px; border-radius: 3px; }
 #arena .row .nm { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#arena .row .ms { font-weight: 800; }
-#arena .row .lv2 { grid-column: 3 / 5; font-size: 10px; opacity: .7; letter-spacing: .08em; margin-top: -3px; }
-#arena .row.me .nm { color: #ffb347; }
-#arena .row.out { opacity: .4; }
-#arena .feed { position: absolute; right: 18px; top: 220px; width: 280px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
-#arena .feed div { font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 8px; background: rgba(16,18,20,.55); animation: feed 5s forwards; }
+#arena .row .hp { font-size: 10px; letter-spacing: -.02em; color: #ff8f8f; }
+#arena .row .ms { font-weight: 800; text-align: right; min-width: 52px; }
+#arena .row .lv2 { grid-column: 3 / 6; font-size: 10.5px; color: var(--ge-muted); letter-spacing: .06em; margin-top: -2px; }
+#arena .row:not(.me) .lv2 { display: none; }
+#arena .row.me .nm { color: var(--ge-accent); }
+#arena .row.out { opacity: .45; }
+#arena .feed { position: absolute; right: calc(16px + var(--ge-sr)); top: calc(168px + var(--ge-st)); width: 280px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+#arena .feed div { font-size: var(--ge-fs-sm); font-weight: 700; padding: 5px 10px; border-radius: var(--ge-r1); background: rgba(16,18,20,.6); animation: feed 5s forwards; }
 #arena .feed .kill { border-left: 3px solid #ff6b5a; } #arena .feed .bonus { border-left: 3px solid #ffd35a; } #arena .feed .bad { border-left: 3px solid #ff6b8a; }
 @keyframes feed { 0% { opacity: 0; transform: translateX(10px); } 6% { opacity: 1; transform: none; } 85% { opacity: 1; } 100% { opacity: 0; } }
-#arena .warm { position: absolute; top: 84px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 14px; border-radius: 12px; background: rgba(40,28,10,.82); border: 1px solid #ffb347; font-size: 13px; font-weight: 800; letter-spacing: .03em; white-space: nowrap; pointer-events: auto; z-index: 3; }
-#arena .warm .btn { padding: 7px 11px; font-size: 12px; }
+#arena .warm { position: absolute; top: calc(84px + var(--ge-st)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 14px; border-radius: var(--ge-r2); background: rgba(40,28,10,.85); border: 1px solid var(--ge-accent); font-size: 13px; font-weight: 800; letter-spacing: .03em; white-space: nowrap; pointer-events: auto; z-index: 3; }
+#arena .warm .btn { min-height: 36px; padding: 6px 12px; font-size: 12px; }
 #arena .warm .ws { display: none; }
 #arena .center { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); text-align: center; text-shadow: 0 3px 14px rgba(0,0,0,.6); }
 #arena .center b { display: block; font-size: 96px; font-weight: 900; line-height: 1; }
 #arena .center span { font-size: 15px; font-weight: 800; letter-spacing: .24em; }
-#arena .combo { position: absolute; left: 290px; bottom: 30px; font-size: 22px; font-weight: 900; color: #ffd35a; text-shadow: 0 2px 8px rgba(0,0,0,.5); }
-#arena .map { position: absolute; right: 18px; bottom: 64px; width: 184px; height: 184px; border-radius: 14px; background: rgba(16,18,20,.55); backdrop-filter: blur(6px); }
+#arena .combo { position: absolute; left: calc(290px + var(--ge-sl)); bottom: calc(30px + var(--ge-sb)); font-size: 22px; font-weight: 900; color: #ffd35a; text-shadow: 0 2px 8px rgba(0,0,0,.5); }
+#arena .map { position: absolute; right: calc(16px + var(--ge-sr)); bottom: calc(64px + var(--ge-sb)); width: 184px; height: 184px; border-radius: var(--ge-r3); background: rgba(16,18,20,.55); backdrop-filter: blur(6px); }
 #arena .tag.edge { background: rgba(16,18,20,.75); }
 #arena .combo small { font-size: 12px; color: #8be07a; letter-spacing: .08em; }
 #arena .combo small.pw { color: #9fd8ff; }
 #arena .tag .say { display: block; font-size: 26px; line-height: 1.1; text-align: center; margin: -34px 0 4px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
 #arena .tag.me { background: none; border: 0 !important; }
-#arena .emotes { position: absolute; left: 50%; bottom: 74px; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: auto; }
-#arena .emotes button { border: 0; border-radius: 10px; background: rgba(16,18,20,.55); font-size: 20px; width: 40px; height: 40px; }
+#arena .emotes { position: absolute; left: 50%; bottom: calc(16px + var(--ge-sb)); transform: translateX(-50%); display: flex; gap: 6px; pointer-events: auto; }
+#arena .emotes button { border: 0; border-radius: var(--ge-r2); background: rgba(16,18,20,.5); font-size: 20px; width: var(--ge-tap); height: var(--ge-tap); }
+#arena .emotes button:hover { background: rgba(16,18,20,.75); }
 #arena .res .awards { margin-top: 12px; display: grid; gap: 4px; font-size: 13px; text-align: center; }
-#arena .res .awards b { color: #ffb347; }
-#arena .tag { position: absolute; transform: translate(-50%, -100%); font-size: 11px; font-weight: 800; letter-spacing: .06em; padding: 2px 7px; border-radius: 6px; background: rgba(16,18,20,.55); white-space: nowrap; }
-#arena .res { position: absolute; inset: 0; display: grid; place-items: center; padding-inline: 16px; background: rgba(12,13,15,.55); pointer-events: auto; }
-#arena .res .card { width: min(560px, 100%); padding: 26px; border-radius: 16px; background: rgba(20,21,23,.9); box-shadow: 0 30px 80px rgba(0,0,0,.5); }
+#arena .res .awards b { color: var(--ge-accent); }
+#arena .tag { position: absolute; transform: translate(-50%, -100%); font-size: var(--ge-fs-xs); font-weight: 800; letter-spacing: .06em; padding: 2px 7px; border-radius: 6px; background: rgba(16,18,20,.6); white-space: nowrap; }
+#arena .res { position: absolute; inset: 0; display: grid; place-items: center; padding: calc(16px + var(--ge-st)) calc(16px + var(--ge-sr)) calc(16px + var(--ge-sb)) calc(16px + var(--ge-sl)); background: rgba(12,13,15,.55); pointer-events: auto; }
+#arena .res .card { width: min(560px, 100%); box-sizing: border-box; max-height: 100%; overflow-y: auto; padding: 26px; border-radius: var(--ge-r3); background: rgba(20,21,23,.94); box-shadow: 0 30px 80px rgba(0,0,0,.5); }
 #arena .res h2 { margin: 0; font-size: 34px; font-weight: 900; letter-spacing: .08em; text-align: center; }
-#arena .res .who { text-align: center; font-size: 15px; font-weight: 800; color: #ffb347; margin-top: 6px; letter-spacing: .1em; }
+#arena .res .who { text-align: center; font-size: 15px; font-weight: 800; color: var(--ge-accent); margin-top: 6px; letter-spacing: .1em; }
 #arena .res table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 13px; }
 #arena .res td, #arena .res th { padding: 8px 6px; text-align: right; }
-#arena .res th { font-size: 10px; letter-spacing: .16em; opacity: .6; font-weight: 800; }
+#arena .res th { font-size: 10.5px; letter-spacing: .14em; color: var(--ge-muted); font-weight: 800; }
 #arena .res td:nth-child(2), #arena .res th:nth-child(2) { text-align: left; }
-#arena .res tr.me td { color: #ffb347; font-weight: 800; }
+#arena .res tr.me td { color: var(--ge-accent); font-weight: 800; }
+#arena .res tbody tr + tr td { border-top: 1px solid var(--ge-line); }
 #arena .res .earn { text-align: center; margin-top: 14px; font-size: 13px; }
 #arena .res .actions { justify-content: center; margin-top: 16px; }
-#arena .notice { position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%); z-index: 4; padding: 10px 16px; border-radius: 12px; background: rgba(40,16,30,.92); border: 1px solid #ff7eb6; font-size: 14px; font-weight: 800; letter-spacing: .04em; white-space: nowrap; animation: feed 4.2s forwards; }
+#arena .notice { position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%); z-index: 4; padding: 10px 16px; border-radius: var(--ge-r2); background: rgba(40,16,30,.92); border: 1px solid #ff7eb6; font-size: 14px; font-weight: 800; letter-spacing: .04em; white-space: nowrap; animation: feed 4.2s forwards; }
 #arena .revive { position: absolute; top: calc(40% + 80px); left: 50%; transform: translateX(-50%); white-space: nowrap; }
 #arena .res .earn .btn { margin-left: 10px; padding: 8px 12px; font-size: 12px; }
 /* ?clip=1 — clean frame for marketing captures: mass HUD, banners and name tags only. */
 body.ge-clip #arena .board, body.ge-clip #arena .map, body.ge-clip #arena .emotes, body.ge-clip #arena .feed, body.ge-clip #arena .combo, body.ge-clip #hud .legend, body.ge-clip .ge-full, body.ge-clip .ge-dash { display: none !important; }
 body.ge-clip #arena .timer { top: auto; bottom: 28px; }
-body:has(#arena .lobby:not([hidden])) .ge-dash, body:has(#arena .res:not([hidden])) .ge-dash { display: none; }
+body:has(#arena .lobby:not([hidden])) .ge-dash, body:has(#arena .res:not([hidden])) .ge-dash, body:has(#arena .lobby:not([hidden])) #hud { display: none; }
+/* The first touch already asks for fullscreen; in the lobby the corner belongs to the rules button. */
+body:has(#arena .lobby:not([hidden])) .ge-full { display: none; }
+/* Medium desktop widths: tools collapse to icons before the top bar would wrap. */
+@media (max-width: 1100px) { #arena .tools .lbl { display: none; } #arena .cols { gap: var(--ge-s3); } }
+/* Narrow windows (half-screen desktop, portrait): one column that scrolls; the action bar stays pinned. */
+@media (max-width: 760px) {
+  #arena .lobby { gap: var(--ge-s3); padding-inline: calc(12px + var(--ge-sl)) calc(12px + var(--ge-sr)); }
+  #arena .title small { display: none; }
+  #arena .cols { display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; gap: var(--ge-s3); margin-inline: -4px; padding-inline: 4px; }
+  #arena .col { flex: 0 0 auto; padding-bottom: 0; }
+  #arena .col > .list { overflow: visible; }
+  #arena .col.c-room { order: -1; }
+  #arena .foot { flex-direction: column; align-items: stretch; gap: var(--ge-s2); }
+  #arena .rules .rc { display: none; }
+  #arena .rules .full { width: 100%; }
+  #arena .foot .actions { justify-content: space-between; }
+  #arena .foot .actions .cta { flex: 1 1 auto; }
+}
 /* Phones play in landscape: HUD hugs the corners, thumbs own the bottom corners. */
 @media (pointer: coarse), (max-height: 520px) {
-  #arena .timer { top: calc(4px + env(safe-area-inset-top)); bottom: auto; } #arena .timer b { font-size: 20px; } #arena .timer span { font-size: 9px; letter-spacing: .12em; }
-  #arena .board { top: calc(6px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); width: 150px; padding: 5px 8px; } #arena .row { font-size: 10.5px; gap: 5px; padding: 1px 0; grid-template-columns: 10px 8px 1fr auto; } #arena .row .lv2 { display: none; }
-  #arena .map { width: 96px; height: 96px; top: calc(98px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); bottom: auto; left: auto; }
-  #arena .feed { top: calc(92px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left)); right: auto; width: 230px; align-items: flex-start; } #arena .feed div { font-size: 10px; padding: 3px 8px; }
-  #arena .combo { left: calc(168px + env(safe-area-inset-left)); bottom: auto; top: calc(8px + env(safe-area-inset-top)); font-size: 14px; }
+  #arena .timer { top: calc(4px + var(--ge-st)); padding: 2px 10px 3px; } #arena .timer b { font-size: 20px; } #arena .timer span, #arena .timer .lock { font-size: 9.5px; letter-spacing: .06em; }
+  #arena .board { top: calc(6px + var(--ge-st)); right: calc(8px + var(--ge-sr)); width: 156px; padding: 4px 8px; } #arena .row { font-size: 11px; gap: 5px; padding: 1px 0; grid-template-columns: 10px 8px 1fr auto; } #arena .row .lv2, #arena .row .hp { display: none; } #arena .row .ms { min-width: 0; }
+  #arena .map { width: 96px; height: 96px; top: calc(100px + var(--ge-st)); right: calc(8px + var(--ge-sr)); bottom: auto; left: auto; }
+  #arena .feed { top: calc(84px + var(--ge-st)); left: calc(8px + var(--ge-sl)); right: auto; width: 230px; align-items: flex-start; } #arena .feed div { font-size: 10.5px; padding: 3px 8px; }
+  #arena .combo { left: calc(168px + var(--ge-sl)); bottom: auto; top: calc(8px + var(--ge-st)); font-size: 14px; }
   #arena .center b { font-size: 56px; } #arena .center span { font-size: 12px; }
-  #arena .emotes { left: 50%; right: auto; transform: translateX(-50%); bottom: calc(8px + env(safe-area-inset-bottom)); flex-direction: row; } #arena .emotes button { width: 42px; height: 42px; font-size: 22px; }
-  #arena .warm { top: calc(52px + env(safe-area-inset-top)); font-size: 11px; padding: 4px 5px 4px 10px; gap: 6px; } #arena .warm .btn { padding: 5px 8px; font-size: 11px; } #arena .warm .wl { display: none; } #arena .warm .ws { display: inline; }
+  #arena .emotes { left: 50%; right: auto; transform: translateX(-50%); bottom: calc(6px + var(--ge-sb)); flex-direction: row; gap: 4px; } #arena .emotes button { width: var(--ge-tap); height: var(--ge-tap); font-size: 20px; background: rgba(16,18,20,.4); }
+  #arena .warm { top: calc(50px + var(--ge-st)); font-size: 11px; padding: 3px 4px 3px 10px; gap: 6px; } #arena .warm .btn { min-height: 32px; padding: 4px 9px; font-size: 11px; } #arena .warm .wl { display: none; } #arena .warm .ws { display: inline; }
   #arena .notice { bottom: auto; top: 30%; font-size: 12px; padding: 7px 12px; }
   #arena .tag { font-size: 10px; }
-  #arena .res .card { padding: 14px 18px; max-height: 92vh; overflow-y: auto; } #arena .res h2 { font-size: 22px; } #arena .res table { margin-top: 8px; font-size: 11px; } #arena .res td, #arena .res th { padding: 4px 6px; }
+  #arena .res .card { padding: 14px 18px; } #arena .res h2 { font-size: 22px; } #arena .res table { margin-top: 8px; font-size: 11px; } #arena .res td, #arena .res th { padding: 4px 6px; }
 }
-@media (max-width: 860px) { #arena .lobby { display: block; overflow-y: auto; } #arena .lobby > * { margin-bottom: 14px; } #arena .col { overflow: visible; } #arena .cols { grid-template-columns: 1fr; } }
-@media (pointer: coarse) and (orientation: landscape), (max-height: 520px) and (min-width: 600px) {
-  #arena .lobby { display: block; overflow-y: auto; padding: calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 12px calc(12px + env(safe-area-inset-left)); }
-  #arena .lobby > * { margin-bottom: 10px; }
-  #arena .title { font-size: 22px; } #arena .brand { font-size: 10px; } #arena .title small { font-size: 9px; }
-  #arena .cols { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-  #arena .col { padding: 10px; overflow: visible; } #arena .h { margin-bottom: 6px; }
-  #arena .city, #arena .veh { padding: 7px 9px; margin-bottom: 6px; } #arena .slot { padding: 7px 9px; margin-bottom: 6px; min-height: 0; }
-  #arena .veh .bars { display: none; } #arena .rules { font-size: 10.5px; }
-  #arena .btn { padding: 10px 14px; }
+/* Landscape phones / short windows: compact top bar, three short scrolling columns, pinned action bar. */
+@media (pointer: coarse) and (orientation: landscape) and (min-width: 561px), (max-height: 520px) and (min-width: 561px) {
+  #arena .lobby { gap: var(--ge-s2); padding: calc(6px + var(--ge-st)) calc(10px + var(--ge-sr)) calc(6px + var(--ge-sb)) calc(10px + var(--ge-sl)); }
+  #arena .top > div:first-child { display: flex; align-items: baseline; gap: var(--ge-s2); min-width: 0; }
+  #arena .title { font-size: 20px; } #arena .brand { font-size: 9.5px; letter-spacing: .2em; } #arena .title small { display: none; }
+  #arena .tools .lbl { display: none; } #arena .tools .chip { padding: 4px 10px; }
+  #arena .btn { padding: 8px 12px; }
+  #arena .cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: hidden; gap: var(--ge-s2); margin: 0; padding: 0; }
+  #arena .col { padding: 8px 8px 0; border-radius: var(--ge-r2); }
+  #arena .col > .list { overflow-y: auto; padding-bottom: 8px; }
+  #arena .col.c-room { order: 0; }
+  #arena .h { margin-bottom: 6px; font-size: var(--ge-fs-xs); } #arena .h .step { width: 18px; height: 18px; font-size: 11px; }
+  #arena .city, #arena .veh { padding: 6px 8px; margin-bottom: 6px; } #arena .city { grid-template-columns: 24px 1fr; gap: 6px; } #arena .city .lv small { display: none; } #arena .city .lv { font-size: 18px; } #arena .city .nm { font-size: 14px; } #arena .city .nm span { display: none; } #arena .city .tg, #arena .veh .bl { font-size: var(--ge-fs-xs); }
+  #arena .slot { padding: 6px 8px; margin-bottom: 6px; } #arena .slot .n { font-size: 13px; }
+  #arena .veh .nm { font-size: 13.5px; } #arena .veh .nm span { display: none; } #arena .veh .bars { display: none; }
+  #arena .room { padding: 8px; gap: 6px; margin-bottom: 8px; } #arena .room .btn .apps { display: none; } #arena .room .code { font-size: 16px; } #arena .room .gift { display: none; }
+  #arena .nick { margin-bottom: 6px; } #arena .nick input { min-height: 36px; padding: 5px 8px; }
+  #arena .foot { flex-direction: row; align-items: center; gap: var(--ge-s2); }
+  #arena .rules .rc { display: none; } #arena .rules .full { font-size: 12px; max-height: 60vh; }
+  #arena .foot .actions { flex: 0 1 auto; justify-content: flex-end; }
+  #arena .btn.cta { min-height: 48px; font-size: 16px; padding: 4px 18px; }
 }
+@media (max-height: 520px) and (max-width: 700px) { #arena .foot label.tog { padding: 0 6px; } #arena .btn.cta small { display: none; } #arena .foot [data-a="join"] { padding-inline: 10px; } }
 `;
 
 const STAT = (v: number, lo: number, hi: number) => Math.round(Math.max(0.08, Math.min(1, (v - lo) / (hi - lo))) * 100);
@@ -220,32 +310,42 @@ export class ArenaUi {
           : `<span class="net wait">⏳ ${L('正在连接联机服务…', 'Connecting to the online service…')}</span>`;
     const invite =
       s.net.kind === 'online'
-        ? `${linkLine}<br>${L('房间号', 'Room')} <b class="code"></b> · ${L('把链接发给好友就能一起玩（最多 4 人）', 'Send the link to friends to play together (up to 4)')}<br>🎁 ${L('分享就送派对帽，和好友打完一局送限定涂装', 'Share for a free Party Hat; play a match with a friend for an exclusive skin')}<br><button class="btn primary" data-a="copy">📣 ${L('邀请好友（微信 / 抖音 / 小红书…）', 'Invite friends (WhatsApp / TikTok / IG…)')}</button>`
+        ? `<div class="rh">${linkLine}</div><div class="code-row">${L('房间号', 'Room')} <b class="code"></b></div><button class="btn outline" data-a="copy">📣 ${L('邀请好友', 'Invite friends')}<span class="apps">${L('（微信 / 抖音 / 小红书…）', ' (WhatsApp / TikTok / IG…)')}</span></button><div>${L('把链接发给好友就能一起玩（最多 4 人）', 'Send the link to friends to play together (up to 4)')}</div><div class="gift">🎁 ${L('分享就送派对帽，和好友打完一局送限定涂装', 'Share for a free Party Hat; play a match with a friend for an exclusive skin')}</div>`
         : s.net.kind === 'room'
           ? L('邀请好友：点页面右上角的 <b>Share</b>，给好友「可互动」或更高权限，再把链接发给他们。好友用自己的 Claude 账号登录打开即可加入。', 'Invite friends: click <b>Share</b> (top right), give them “can interact”, and send them the link. They join with their own Claude account.')
           : s.net.kind === 'local'
             ? L('本地多开测试：同一浏览器再开一个标签页即可加入。', 'Local test: open another tab in this browser to join.')
-            : `${L('单人模式：AI 对手补满 4 个位置。', 'Solo: AI rivals fill the empty slots.')}<br><button class="btn primary" data-a="copy">📣 ${L('分享游戏给好友', 'Share the game')}</button>`;
+            : `${L('单人模式：AI 对手补满 4 个位置。', 'Solo: AI rivals fill the empty slots.')}<br><button class="btn outline" data-a="copy">📣 ${L('分享游戏给好友', 'Share the game')}</button>`;
+    const onlineRoom = s.net.kind === 'online';
+    const waiting = players.filter((p) => !p.isMe && p.id !== s.hostId() && !p.ready).length;
+    const startLabel = s.warmupReady()
+      ? `${L('先和 AI 热身', 'Warm up vs AI')}<small>${L('好友来了自动重开', 'restarts when a friend joins')}</small>`
+      : L('开始比赛', 'Start');
+    // Re-renders (presence updates) must not close the rules or jump the scroll position.
+    const rulesOpen = (this.lobby.querySelector('details.rules') as HTMLDetailsElement | null)?.open ?? false;
+    const scrolls = [...this.lobby.querySelectorAll<HTMLElement>('.cols, .list')].map((e) => e.scrollTop);
+    const hadFocus = this.lobby.contains(document.activeElement);
     this.lobby.innerHTML = `
       <div class="top">
         <div><div class="brand">GROW EVERYTHING</div><div class="title">${L('竞技场', 'Arena')}<small>${L('最多 4 人 · 吞下整座城市', 'Up to 4 players · eat the city')}</small></div></div>
-        <div class="actions"><span class="chip">${online} · <b>${peersN}</b> ${L('人在线', 'online')}${specs ? ` · ${specs} ${L('人观战', 'watching')}` : ''}</span><span class="chip coins">◎ ${prog.coins}</span><button class="btn" data-a="shop">🛒 ${L('商店', 'Shop')}</button><button class="btn" data-a="settings" aria-label="${L('设置', 'Settings')}">⚙</button><button class="btn" data-a="story">${L('剧情模式', 'Story')}</button></div>
+        <div class="tools"><span class="chip coins" title="${L('金币', 'Coins')}">◎ ${prog.coins}</span><button class="btn icon" data-a="shop" aria-label="${L('商店', 'Shop')}">🛒<span class="lbl">${L('商店', 'Shop')}</span></button><button class="btn icon" data-a="settings" aria-label="${L('设置', 'Settings')}">⚙</button><button class="btn icon" data-a="story" aria-label="${L('剧情模式', 'Story')}">📖<span class="lbl">${L('剧情模式', 'Story')}</span></button></div>
       </div>
       <div class="cols">
-        <div class="col"><div class="h">${L('关卡', 'Levels')}${host ? '' : L(' · 由房主选择', ' · host picks')}</div><div class="cities"></div></div>
-        <div class="col"><div class="h">${L('玩家', 'Players')}</div>${s.net.kind === 'room' ? '' : `<label class="nick">${L('昵称', 'Name')} <input maxlength="16" aria-label="${L('昵称', 'Name')}"></label>`}<div class="slots"></div>
-          <div class="invite">${invite}</div></div>
-        <div class="col"><div class="h">${L('选择车辆', 'Vehicle')}</div><div class="vehs"></div></div>
+        <div class="col c-city"><div class="h"><span class="step">1</span>${L('选关卡', 'Pick a level')}${host ? '' : `<span class="sub">${L('由房主选择', 'host picks')}</span>`}</div><div class="list cities"></div></div>
+        <div class="col c-veh"><div class="h"><span class="step">2</span>${L('选车辆', 'Pick a vehicle')}</div><div class="list vehs"></div></div>
+        <div class="col c-room"><div class="h">${L('玩家', 'Players')}<span class="sub">${online} · <b>${peersN}</b> ${L('人在线', 'online')}${specs ? ` · ${specs} ${L('人观战', 'watching')}` : ''}</span></div><div class="list">
+          ${onlineRoom ? `<div class="room invite">${invite}</div>` : ''}${s.net.kind === 'room' ? '' : `<label class="nick">${L('昵称', 'Name')} <input maxlength="16" aria-label="${L('昵称', 'Name')}"></label>`}<div class="slots"></div>
+          ${onlineRoom ? '' : `<div class="invite">${invite}</div>`}</div></div>
       </div>
       <div class="foot">
-        <div class="rules">${L(
+        <details class="rules"><summary><span class="rk">📖 ${L('规则', 'Rules')}</span><span class="rc">🦷 ${L('大 <b>25%</b> 就能吞掉对手', '<b>25%</b> bigger eats')}</span><span class="rc">♥ ${L('每人 <b>3</b> 条命', '<b>3</b> lives')}</span><span class="rc">⏱ <b>${A.roundSeconds / 60}</b> ${L('分钟一局', 'min')}</span><span class="rc">⚡🧲🛡 ${L('道具', 'Power-ups')}</span><span class="more">${L('详情', 'Details')}</span></summary><div class="full">${L(
           `规则：比对手大 25% 就能把它整个吞掉（得到它 60% 的质量）。每人 3 条命，被吞后留 45% 质量重生。${A.roundSeconds / 60} 分钟结束，或只剩一人，或地标被拆完。金色箱子、连击、第一滴血、吞掉第一名（悬赏）、拆掉地标最后一块都有奖励；落后的人吃东西有追赶加成；道具箱：⚡加速、🧲强磁、🛡护盾（不会被吃）；冲刺撞上吃不动的东西会被眩晕并掉质量。`,
           `Rules: be 25% bigger than a rival to swallow it whole (you get 60% of its mass). 3 lives each; when eaten you respawn with 45% of your mass. The round ends after ${A.roundSeconds / 60} minutes, when one machine is left, or when the landmark is torn down. Golden crates, combos, first blood, the leader's bounty and the last landmark piece all pay extra; machines behind the leader get a catch-up bonus. Power-ups: ⚡ speed, 🧲 magnet, 🛡 shield (can't be eaten). Dashing into something you can't eat stuns you and costs mass.`,
-        )}</div>
+        )}</div></details>
         <div class="actions">
-          <button class="btn" data-a="join">${me ? L('离开 · 观战', 'Leave · spectate') : L('加入比赛', 'Join')}</button>
-          ${me && !host ? `<button class="btn" data-a="ready">${s.ready ? L('取消准备', 'Not ready') : L('准备', 'Ready')}</button>` : ''}
-          ${host ? `<label class="tog"><input type="checkbox" id="arena-bots" ${s.bots ? 'checked' : ''}> ${L('AI 对手补位', 'Fill with AI')}</label><button class="btn primary" data-a="start" ${s.canStart() ? '' : 'disabled'}>${s.warmupReady() ? L('先和 AI 热身 · 好友来了自动重开', 'Warm up vs AI · restarts when a friend joins') : L('开始比赛', 'Start')}</button>` : `<span class="chip">${L('等待房主开始', 'Waiting for the host')}</span>`}
+          <button class="btn${me || host ? '' : ' primary cta'}" data-a="join">${me ? L('离开 · 观战', 'Leave · spectate') : L('加入比赛', 'Join')}</button>
+          ${me && !host ? `<button class="btn ${s.ready ? 'is-ready' : 'primary cta'}" data-a="ready" aria-pressed="${s.ready}">${s.ready ? `✓ ${L('已准备', 'Ready')}<small>${L('点击取消', 'tap to undo')}</small>` : `${L('点我准备', 'Tap when ready')}<small>${L('房主等你准备好才能开始', 'the host starts once you are ready')}</small>`}</button>` : ''}
+          ${host ? `<label class="tog"><input type="checkbox" id="arena-bots" ${s.bots ? 'checked' : ''}> ${L('AI 对手补位', 'Fill with AI')}</label><button class="btn primary cta" data-a="start" ${s.canStart() ? '' : 'disabled'}>${s.canStart() ? startLabel : `${L('等待准备', 'Waiting')}<small>${L(`${waiting} 人还没准备`, `${waiting} not ready yet`)}</small>`}</button>` : `<span class="chip wait-host">${s.ready ? L('✓ 已准备 · 等待房主开始', '✓ Ready · waiting for the host') : L('准备好后房主才能开始', 'Get ready so the host can start')}</span>`}
         </div>
       </div>`;
     // Cities.
@@ -277,7 +377,11 @@ export class ArenaUi {
         n.textContent = p.name;
         if (p.isMe) n.insertAdjacentHTML('beforeend', `<em>${L('你', 'you')}</em>`);
         (d.querySelector('.v') as HTMLElement).textContent = `${L(VEHICLES[p.vehicle].nameZh, VEHICLES[p.vehicle].name)}${p.guest ? L(' · 访客', ' · guest') : ''}`;
-        (d.querySelector('.st') as HTMLElement).textContent = p.id === s.hostId() ? L('房主', 'Host') : p.ready ? L('已准备', 'Ready') : L('未准备', 'Not ready');
+        const st = d.querySelector('.st') as HTMLElement;
+        const isHostSlot = p.id === s.hostId();
+        st.textContent = isHostSlot ? `👑 ${L('房主', 'Host')}` : p.ready ? `✓ ${L('已准备', 'Ready')}` : `… ${L('未准备', 'Not ready')}`;
+        st.classList.add(isHostSlot ? 'host' : p.ready ? 'ok' : 'no');
+        if (!isHostSlot) d.classList.add(p.ready ? 'ready' : 'unready');
       } else {
         n.textContent = s.bots ? L('AI 对手', 'AI rival') : L('等待玩家…', 'Waiting for a player…');
         (d.querySelector('.v') as HTMLElement).textContent = s.bots ? L('开局时自动补位', 'Joins when the round starts') : L('空位', 'Open slot');
@@ -291,7 +395,7 @@ export class ArenaUi {
       const b = document.createElement('button');
       b.className = 'veh';
       b.setAttribute('aria-pressed', String(s.vehicle === id));
-      b.innerHTML = `<div class="nm"><i style="background:#${v.shell.toString(16).padStart(6, '0')}"></i>${L(v.nameZh, v.name)} <span style="opacity:.6;font-size:11px">${L(v.name, '')}</span></div><div class="bl"></div>
+      b.innerHTML = `<div class="nm"><i style="background:#${v.shell.toString(16).padStart(6, '0')}"></i>${L(v.nameZh, v.name)} <span>${L(v.name, '')}</span></div><div class="bl"></div>
         <div class="bars"><span>${L('速度', 'Speed')}</span><b><i style="width:${STAT(v.speed, 0.7, 1.3)}%"></i></b><span>${L('加速', 'Accel')}</span><b><i style="width:${STAT(v.accel, 0.6, 1.4)}%"></i></b><span>${L('吸取', 'Reach')}</span><b><i style="width:${STAT(v.reach, 0.6, 1.7)}%"></i></b><span>${L('吞噬', 'Bite')}</span><b><i style="width:${STAT(2 - v.eatRatio, 0.85, 1.12)}%"></i></b></div>`;
       (b.querySelector('.bl') as HTMLElement).textContent = L(v.blurbZh, v.blurb);
       b.onclick = () => {
@@ -331,6 +435,10 @@ export class ArenaUi {
         this.renderLobby();
       };
     });
+    if (rulesOpen) (this.lobby.querySelector('details.rules') as HTMLDetailsElement).open = true;
+    this.lobby.querySelectorAll<HTMLElement>('.cols, .list').forEach((e, i) => (e.scrollTop = scrolls[i] ?? 0));
+    // Keyboard / gamepad players land on the one button that matters (never steals focus from the name field).
+    if (!hadFocus && document.activeElement === document.body && matchMedia('(pointer: fine)').matches) (this.lobby.querySelector('.cta:not(:disabled)') as HTMLElement | null)?.focus({ preventScroll: true });
     const bots = this.lobby.querySelector('#arena-bots') as HTMLInputElement | null;
     if (bots) bots.onchange = () => {
       s.setBots(bots.checked);
@@ -344,7 +452,7 @@ export class ArenaUi {
     if (s.match.ph === 'lobby') return;
     if (!this.overlay.dataset.built) {
       this.overlay.dataset.built = '1';
-      this.overlay.innerHTML = `<div class="timer"><b class="hex">5:00</b><span></span></div><div class="board"></div><div class="feed"></div><div class="warm" hidden><span class="wl">🔥 ${L('热身中 · 等好友加入，好友一来自动重新开局', 'Warm-up · a friend joining restarts the round')}</span><span class="ws">🔥 ${L('热身中 · 好友来了自动重开', 'Warm-up · restarts when a friend joins')}</span><button class="btn primary" data-w="invite">📣 ${L('邀请', 'Invite')}</button><button class="btn" data-w="leave">${L('退出热身', 'Leave')}</button></div><div class="center"></div><button class="btn primary revive" hidden>📺 ${L('看广告复活 · 保留 75% 质量', 'Watch an ad: revive with 75% mass')}</button><div class="combo"></div><div class="tags"></div><canvas class="map" width="368" height="368" aria-label="minimap"></canvas><div class="emotes" aria-label="emotes"><button data-e="1" title="1">😂</button><button data-e="3" title="3">👋</button><button data-e="4" title="4">🐷</button><button data-e="6" title="H">📯</button><button class="cam" title="V" aria-label="${L('切换视角', 'Switch camera')}">🎥</button></div>`;
+      this.overlay.innerHTML = `<div class="timer"><b class="hex">5:00</b><span></span><em class="lock" hidden></em></div><div class="board"></div><div class="feed"></div><div class="warm" hidden><span class="wl">🔥 ${L('热身中 · 等好友加入，好友一来自动重新开局', 'Warm-up · a friend joining restarts the round')}</span><span class="ws">🔥 ${L('热身中 · 好友来了自动重开', 'Warm-up · restarts when a friend joins')}</span><button class="btn primary" data-w="invite">📣 ${L('邀请', 'Invite')}</button><button class="btn" data-w="leave">${L('退出热身', 'Leave')}</button></div><div class="center"></div><button class="btn primary revive" hidden>📺 ${L('看广告复活 · 保留 75% 质量', 'Watch an ad: revive with 75% mass')}</button><div class="combo"></div><div class="tags"></div><canvas class="map" width="368" height="368" aria-label="minimap"></canvas><div class="emotes" aria-label="emotes"><button data-e="1" title="1">😂</button><button data-e="3" title="3">👋</button><button data-e="4" title="4">🐷</button><button data-e="6" title="H">📯</button><button class="cam" title="V" aria-label="${L('切换视角', 'Switch camera')}">🎥</button></div>`;
       this.overlay.querySelectorAll<HTMLButtonElement>('.emotes button[data-e]').forEach((b) => (b.onclick = () => this.onEmote?.(Number(b.dataset.e))));
       (this.overlay.querySelector('.emotes .cam') as HTMLButtonElement).onclick = () => this.onCamera?.();
       g.onFeed = (text, tone) => this.feed(text, tone);
@@ -362,6 +470,22 @@ export class ArenaUi {
     (this.overlay.querySelector('.timer b') as HTMLElement).textContent = `${Math.floor(left / 60)}:${Math.floor(left % 60).toString().padStart(2, '0')}`;
     const climax = g.world.objects.filter((o) => o.def.climax).length;
     (this.overlay.querySelector('.timer span') as HTMLElement).textContent = `${L(g.city.nameZh, g.city.name)} · ${L(g.city.climaxNameZh, g.city.climaxName.replace(/^the /, ''))} ${climax - g.climaxLeft()}/${climax}`;
+    // Landmark lock cue: countdown while it is solid, then a short "open" highlight.
+    const lock = this.overlay.querySelector('.timer .lock') as HTMLElement;
+    const opensIn = A.landmarkOpenSeconds - g.matchTime;
+    const lmName = L(g.city.climaxNameZh, 'Landmark');
+    if (climax > 0 && g.climaxLeft() > 0 && opensIn > 0) {
+      lock.hidden = false;
+      lock.classList.remove('open');
+      const t = `${Math.floor(Math.ceil(opensIn) / 60)}:${(Math.ceil(opensIn) % 60).toString().padStart(2, '0')}`;
+      lock.textContent = L(`🔒 ${lmName} ${t} 后开放`, `🔒 ${lmName} opens in ${t}`);
+    } else if (climax > 0 && g.climaxLeft() > 0 && opensIn > -8) {
+      lock.hidden = false;
+      if (!lock.classList.contains('open')) {
+        lock.classList.add('open');
+        lock.textContent = L('🔓 可以推倒了!', '🔓 Topple it now!');
+      }
+    } else lock.hidden = true;
     // Scoreboard.
     const board = this.overlay.querySelector('.board') as HTMLElement;
     const rows = [...g.actors].sort((a, b) => (a.eliminated !== b.eliminated ? (a.eliminated ? 1 : -1) : b.mass - a.mass));
@@ -369,10 +493,11 @@ export class ArenaUi {
     rows.forEach((a, i) => {
       const r = document.createElement('div');
       r.className = `row${a === g.local ? ' me' : ''}${a.eliminated ? ' out' : ''}`;
-      r.innerHTML = `<span class="rk">${i + 1}</span><i style="background:#${SLOT_COLORS[a.slot % 4].toString(16).padStart(6, '0')}"></i><span class="nm"></span><span class="ms hex"></span><span class="lv2"></span>`;
+      r.innerHTML = `<span class="rk">${i + 1}</span><i style="background:#${SLOT_COLORS[a.slot % 4].toString(16).padStart(6, '0')}"></i><span class="nm"></span><span class="hp"></span><span class="ms hex"></span><span class="lv2"></span>`;
       (r.querySelector('.nm') as HTMLElement).textContent = (i === 0 && !a.eliminated ? '👑 ' : '') + a.name + (a === g.local ? L('（你）', ' (you)') : '');
       (r.querySelector('.ms') as HTMLElement).textContent = massText(a.mass);
-      (r.querySelector('.lv2') as HTMLElement).textContent = `${'♥'.repeat(a.lives)}${'♡'.repeat(Math.max(0, A.lives - a.lives))} · ${L('吞', 'ate')} ${a.kills} · ${L(a.vehicle.nameZh, a.vehicle.name)}${a.eliminated ? L(' · 出局', ' · out') : !a.alive ? L(' · 重生中', ' · respawning') : ''}`;
+      (r.querySelector('.hp') as HTMLElement).textContent = a.eliminated ? '' : '♥'.repeat(a.lives);
+      (r.querySelector('.lv2') as HTMLElement).textContent = `${L('吞', 'ate')} ${a.kills} · ${L(a.vehicle.nameZh, a.vehicle.name)}${a.eliminated ? L(' · 出局', ' · out') : !a.alive ? L(' · 重生中', ' · respawning') : ''}`;
       board.appendChild(r);
     });
     // Centre message.
@@ -429,8 +554,8 @@ export class ArenaUi {
         continue;
       }
       if (cls < 6 && !o.def.climax) continue;
-      const edible = me && g.world.isEligible(o, me.power);
-      ctx.fillStyle = o.def.climax ? (edible ? '#ffb347' : 'rgba(255,179,71,.55)') : edible ? 'rgba(140,224,122,.55)' : cls >= 7 ? 'rgba(210,214,220,.34)' : 'rgba(210,214,220,.18)';
+      const edible = me && g.eligible(o, me.power);
+      ctx.fillStyle = o.def.climax ? (edible ? '#ffb347' : g.locked(o) ? 'rgba(170,176,186,.5)' : 'rgba(255,179,71,.55)') : edible ? 'rgba(140,224,122,.55)' : cls >= 7 ? 'rgba(210,214,220,.34)' : 'rgba(210,214,220,.18)';
       ctx.save();
       ctx.translate(mx(o.x), mz(o.z));
       ctx.rotate(-o.yaw);

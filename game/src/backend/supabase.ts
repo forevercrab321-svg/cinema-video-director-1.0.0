@@ -15,6 +15,11 @@ let rtClient: SupabaseClient | null = null;
 let userPromise: Promise<User | null> | null = null;
 /** Why the last sign-in failed (shown in the lobby's connection line and in window.__NET__). */
 export let authError = '';
+/**
+ * Sign-in progress for window.__NET__: 'off' (no backend), 'pending', 'ok' (signed in, anonymous
+ * or not), 'none' (finished without a user). An empty authError alone never meant "unused".
+ */
+export let authStatus: 'off' | 'pending' | 'ok' | 'none' = 'off';
 
 export function backendConfigured(): boolean {
   return !!URL && !!KEY;
@@ -29,15 +34,17 @@ export function supabase(): SupabaseClient | null {
   return client;
 }
 
+/** Realtime socket heartbeat outcomes (window.__NET__): timeouts mean the socket was dropped. */
+export const socketBeats = { sent: 0, ok: 0, timeout: 0, error: 0, lastLatency: 0 };
+
 /**
  * Dedicated client for online rooms. It never signs in, so its realtime token stays the public
  * key for the life of the page. On the shared client, the anonymous sign-in landing a few seconds
  * after the room was joined swapped the channel's token mid-session, and the server closed the
  * channel (realtime-js does not resubscribe after a server close): both players fell back to
- * "1 online" about ten seconds in.
+ * "1 online" about ten seconds in. Room membership never depends on sign-in: the account id
+ * rides along in the room state once it lands.
  */
-/** Realtime socket heartbeat outcomes (window.__NET__): timeouts mean the socket was dropped. */
-export const socketBeats = { sent: 0, ok: 0, timeout: 0, error: 0, lastLatency: 0 };
 
 export function realtimeClient(): SupabaseClient | null {
   if (!backendConfigured()) return null;
@@ -59,6 +66,7 @@ export function currentUser(nickname = 'Player'): Promise<User | null> {
   const sb = supabase();
   if (!sb) return Promise.resolve(null);
   userPromise ??= (async () => {
+    authStatus = 'pending';
     const { data } = await sb.auth.getSession();
     let user = data.session?.user ?? null;
     if (!user) {
@@ -66,10 +74,12 @@ export function currentUser(nickname = 'Player'): Promise<User | null> {
       user = res.data.user;
       if (res.error) authError = res.error.message || String(res.error);
     }
+    authStatus = user ? 'ok' : 'none';
     if (user) await sb.from('players').upsert({ id: user.id, display_name: nickname.slice(0, 24) || 'Player', last_seen_at: new Date().toISOString() }, { onConflict: 'id' });
     return user;
   })().catch((e: unknown) => {
     authError = e instanceof Error ? e.message : String(e);
+    authStatus = 'none';
     return null;
   });
   return userPromise;

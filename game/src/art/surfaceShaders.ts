@@ -98,7 +98,7 @@ export interface RoomSpec {
   shop: boolean;
 }
 
-export function interiorMapping(material: THREE.MeshPhysicalMaterial, room: RoomSpec): THREE.Material {
+export function interiorMapping(material: THREE.MeshStandardMaterial, room: RoomSpec): THREE.Material {
   material.color.set(0x050607);
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uRoom = { value: new THREE.Vector4(room.width, room.depth, room.height, room.floorBelowCentre) };

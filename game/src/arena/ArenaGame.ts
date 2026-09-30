@@ -8,7 +8,8 @@ import type { Input } from '../core/Input';
 import { createSeededRandom } from '../core/rng';
 import { PlayerModel } from '../entities/PlayerModel';
 import { CameraRig } from '../systems/CameraRig';
-import { Effects } from '../systems/Effects';
+import { Effects, FEEL } from '../systems/Effects';
+import type { FeelEvent } from '../audio/AudioEngine';
 import { classForPower, diameterForMass, progressToNextClass, tierForClass } from '../systems/growth';
 import { Hud } from '../ui/Hud';
 import { L } from '../i18n';
@@ -20,6 +21,7 @@ import { World, type WorldObject } from '../world/World';
 import type { Cluster } from '../world/scrapCity';
 import type { ObjectTypeId } from '../config/objects';
 import { ArenaBot } from './ArenaBot';
+import { botSkill } from './progress';
 import { EMOTES, GooglyEyes, HORN, killQuip } from './comedy';
 import { hatById, hornById, skinById, type HornSound } from '../config/cosmetics';
 import { Hat } from '../entities/Hat';
@@ -176,12 +178,15 @@ export class ArenaGame {
   readonly outbox: { claims: [number, string][]; eats: [string, string][] } = { claims: [], eats: [] };
   /** Final grants from the host: object id → actor id. */
   readonly grants = new Map<number, string>();
-  onEvent: ((e: GameEvent) => void) | null = null;
+  onEvent: ((e: GameEvent | FeelEvent) => void) | null = null;
   /** Kill feed and notices for the arena HUD. */
   onFeed: ((text: string, tone: 'kill' | 'info' | 'bonus' | 'bad') => void) | null = null;
   /** Set when this client's machine recycles the last landmark part. */
   landmarkBy: string | null = null;
   firstBloodDone = false;
+  /** AI rival skill 0..1 (host's experience; see arenaConfig.botSkill*). Read by ArenaBot every think. */
+  botSkill = botSkill();
+  private landmarkAnnounced = false;
   private goBeeped = false;
   private readonly contact: Contact = { nx: 0, nz: 0, depth: 0 };
   private shadowExtent = 0;
@@ -385,6 +390,8 @@ export class ArenaGame {
   step(dt: number): void {
     this.frame++;
     this.time += dt;
+    // Feel: hand the rig a camera without last frame's shake / FOV kick / dolly (re-applied below).
+    this.effects.restoreCamera(this.camera);
     const intents = this.input.read();
     if (this.phase === 'countdown') {
       const before = Math.ceil(this.countdown);
@@ -397,6 +404,11 @@ export class ArenaGame {
     }
     const playing = this.phase === 'playing';
     if (playing) this.matchTime += dt;
+    if (playing && !this.landmarkAnnounced && this.landmarkOpen()) {
+      this.landmarkAnnounced = true;
+      this.onFeed?.(L(`${this.city.climaxNameZh}开放了 · 第一个拆倒它的人赢得地标奖励！`, `${this.city.climaxName} is open · topple it for the landmark bonus!`), 'bonus');
+      if (this.local) this.hud.showBanner(L('地标开放！', 'LANDMARK OPEN!'), L(`拆倒${this.city.climaxNameZh}`, `TOPPLE ${this.city.climaxName.replace(/^the /, '').toUpperCase()}`), 2.4);
+    }
 
     for (const a of this.actors) {
       if (a.kind === 'remote' || (a.kind === 'bot' && !a.owned)) {
@@ -425,15 +437,21 @@ export class ArenaGame {
     this.bumpActors();
     this.updatePulls(dt);
     const landed = this.world.updateFalling(dt);
+    const seen = landed.length ? this.cameraTarget() : null;
     for (const o of landed) {
       const size = Math.max(...o.def.size);
       this.effects.dust(o.x, o.z, size * 0.6, 12);
-      this.effects.addTrauma(Math.min(0.5, 0.12 + size * 0.02));
-      this.onEvent?.({ kind: 'collapse', size });
+      // Feel: a collapse across the map should not shake (or deafen) this viewer.
+      if (!seen || Math.hypot(o.x - seen.x, o.z - seen.z) < (FEEL.shakeFalloffMetres + size * 3) * 2) {
+        if (seen) this.effects.addTraumaAt(Math.min(0.5, 0.12 + size * 0.02), o.x, o.z, seen.x, seen.z, size);
+        this.onEvent?.({ kind: 'collapse', size });
+      }
     }
     if (landed.length && this.local) this.world.applyEligibility(this.local.power);
     this.world.syncInstances();
 
+    // Feel: hit-stop slows presentation time only (models, particles, camera); the sim runs on.
+    const vdt = this.effects.presentDt(dt);
     for (const a of this.actors) {
       a.diameter += (a.targetDiameter - a.diameter) * (1 - Math.exp(-growthConfig.visualGrowthRate * dt));
       const top = this.topSpeed(a);
@@ -441,11 +459,11 @@ export class ArenaGame {
       // First person hides my own machine (the camera sits in its cab).
       const cab = a === this.local && this.firstPersonActive();
       a.model.root.visible = a.alive && !blink && !cab;
-      a.model.update(dt, a.diameter, a.speed, a.heading, a.x, a.z, a.turnVelocity * Math.min(1, Math.abs(a.speed) / top), this.city.groundHeight(a.x, a.z));
+      a.model.update(vdt, a.diameter, a.speed, a.heading, a.x, a.z, a.turnVelocity * Math.min(1, Math.abs(a.speed) / top), this.city.groundHeight(a.x, a.z));
       a.eyes.place(a.tier);
-      a.eyes.update(dt, a.speed, a.heading, a.diameter, a.jolt);
+      a.eyes.update(vdt, a.speed, a.heading, a.diameter, a.jolt);
       a.hat?.place(a.tier);
-      a.hat?.update(dt, a.speed, a.jolt);
+      a.hat?.update(vdt, a.speed, a.jolt);
       a.jolt = Math.max(0, a.jolt - dt * 3);
       if (this.matchTime < a.stunUntil) this.sayFor(a, '💫', 0.2);
       a.ring.visible = a.alive && !cab;
@@ -464,11 +482,12 @@ export class ArenaGame {
     if (focus) {
       const fx = -Math.sin(focus.heading);
       const fz = -Math.cos(focus.heading);
-      this.effects.update(dt, 0, focus.x + fx * focus.diameter * 0.35, focus.diameter * 0.35, focus.z + fz * focus.diameter * 0.35);
-      if (focus === this.local && this.firstPersonActive())
-        this.rig.updateFirstPerson(dt, focus.x, this.city.groundHeight(focus.x, focus.z), focus.z, focus.heading, Math.abs(focus.speed) / this.topSpeed(focus), focus.diameter, focus.dashTime > 0);
-      else this.rig.update(dt, focus.x, focus.z, focus.heading, Math.abs(focus.speed) / this.topSpeed(focus), focus.diameter);
-      this.effects.applyShake(this.camera, this.rig.distance);
+      if (focus.dashTime > 0 && focus.alive) this.effects.dashTrail(vdt, focus.x, this.city.groundHeight(focus.x, focus.z), focus.z, focus.heading, focus.diameter);
+      this.effects.update(vdt, 0, focus.x + fx * focus.diameter * 0.35, focus.diameter * 0.35, focus.z + fz * focus.diameter * 0.35);
+      const fp = focus === this.local && this.firstPersonActive();
+      if (fp) this.rig.updateFirstPerson(vdt, focus.x, this.city.groundHeight(focus.x, focus.z), focus.z, focus.heading, Math.abs(focus.speed) / this.topSpeed(focus), focus.diameter, focus.dashTime > 0);
+      else this.rig.update(vdt, focus.x, focus.z, focus.heading, Math.abs(focus.speed) / this.topSpeed(focus), focus.diameter);
+      this.effects.applyCamera(this.camera, this.rig.distance, fp);
     }
     this.updateSun();
     if (this.local) {
@@ -512,13 +531,22 @@ export class ArenaGame {
     const turnRate = (MC.baseTurnRate / (1 + MC.turnMassDrag * massLog)) * a.vehicle.turn;
     const stunned = this.matchTime < a.stunUntil;
     let mag = stunned ? 0 : Math.min(1, Math.hypot(wx, wz));
+    const cooling = a.dashCooldown > 0;
     a.dashCooldown = Math.max(0, a.dashCooldown - dt);
+    if (cooling && a.dashCooldown <= 0 && a.kind === 'local') {
+      a.model.blink(); // feel: dash is ready again
+      this.onEvent?.({ kind: 'dashReady' });
+    }
     a.dashTime = Math.max(0, a.dashTime - dt);
     if (dash && !stunned && a.dashCooldown <= 0) {
       a.dashTime = MC.dash.duration;
       a.dashCooldown = MC.dash.cooldown * a.vehicle.dashCooldown;
       this.effects.dust(a.x, a.z, a.diameter * 0.6, 4);
-      if (a.kind === 'local') this.onEvent?.({ kind: 'dash' });
+      a.model.lunge(0.14);
+      if (a.kind === 'local') {
+        this.effects.dashKick(a.x, this.city.groundHeight(a.x, a.z), a.z, a.heading, a.diameter);
+        this.onEvent?.({ kind: 'dash' });
+      }
     }
     let targetSpeed = 0;
     let turn = 0;
@@ -543,7 +571,7 @@ export class ArenaGame {
   private collideObjects(a: Actor): void {
     const r = a.diameter * 0.47;
     for (const o of this.world.objects) {
-      if (!this.world.isSolid(o, a.power)) continue;
+      if (!this.world.isSolid(o, this.locked(o) ? 0 : a.power)) continue;
       if (Math.abs(o.x - a.x) > o.radius + r || Math.abs(o.z - a.z) > o.radius + r) continue;
       if (!circleVsObb(a.x, a.z, r, o.obb, this.contact)) continue;
       a.x += this.contact.nx * this.contact.depth;
@@ -556,10 +584,13 @@ export class ArenaGame {
         a.speed *= -0.3;
         a.jolt = 1;
         this.effects.sparks(a.x, a.diameter * 0.5, a.z, 14, 3 + a.diameter);
+        a.model.squash(0.22);
         if (a.kind === 'local') {
           this.effects.addTrauma(0.35);
+          this.effects.hitStop(FEEL.hitStopStun);
+          this.effects.dust(a.x - this.contact.nx * a.diameter * 0.5, a.z - this.contact.nz * a.diameter * 0.5, a.diameter * 0.5, 5);
           this.hud.toast(`${L('撞车眩晕', 'CRASH')} · −${Math.round(lost).toLocaleString('en-US')} KG`);
-          this.onEvent?.({ kind: 'bump', size: a.diameter });
+          this.onEvent?.({ kind: 'stun', size: a.diameter });
           this.onFeed?.(L('冲刺撞上吃不动的东西：眩晕并掉质量', 'Dashed into something too big: stunned, mass lost'), 'bad');
         }
       } else if (a.speed > this.topSpeed(a) * 0.45) a.speed *= 0.4;
@@ -574,7 +605,7 @@ export class ArenaGame {
   private proposeCollection(a: Actor): void {
     const reach = this.reach(a);
     for (const o of this.world.objects) {
-      if (o.state !== 'idle' || this.grants.has(o.id) || !this.world.isEligible(o, a.power)) continue;
+      if (o.state !== 'idle' || this.grants.has(o.id) || !this.eligible(o, a.power)) continue;
       const r = o.radius * 2 < a.diameter * CC.vacuumSizeRatio ? reach * CC.vacuumReachMultiplier : reach;
       if (Math.abs(o.x - a.x) > o.radius + r || Math.abs(o.z - a.z) > o.radius + r) continue;
       if (!circleVsObb(a.x, a.z, r, o.obb, this.contact)) continue;
@@ -596,7 +627,10 @@ export class ArenaGame {
       this.effects.dust(o.x, o.z, size * 0.5, o.def.objectClass >= 6 ? 6 : 3);
       if (o.def.destructionType === 'crush' || o.def.destructionType === 'collapse') this.effects.sparks(o.x, o.y + o.def.size[1] * 0.8, o.z, 10, 1.5 + size * 0.6);
       if (a.kind === 'local') {
-        this.effects.addTrauma(Math.min(0.45, 0.08 + o.def.objectClass * 0.035));
+        // Feel: shake by the object's size relative to the machine (a car shakes a tiny machine, not a giant one).
+        const rel = Math.min(1.5, size / a.diameter);
+        this.effects.addTrauma(Math.min(0.45, (0.08 + o.def.objectClass * 0.035) * Math.min(1, 0.25 + rel * 0.6)));
+        if (o.def.objectClass >= 5 && rel > 0.35) this.effects.hitStop(FEEL.hitStopBig * Math.min(1.6, 0.6 + rel * 0.5));
         this.onEvent?.({ kind: 'crunch', cls: o.def.objectClass, size });
       }
     }
@@ -689,11 +723,24 @@ export class ArenaGame {
       const left = this.climaxLeft();
       if (left === 0) this.onFeed?.(L(`${a.name} 拆掉了${this.city.climaxNameZh}的最后一块！`, `${a.name} ate the last piece of ${this.city.climaxName}!`), 'bonus');
       if (fell.length) {
-        this.effects.addTrauma(0.6);
+        const f = this.cameraTarget();
+        if (f) this.effects.addTraumaAt(0.6, o.x, o.z, f.x, f.z, size * 4);
+        if (fell.some((r) => r.def.climax) && f && Math.hypot(f.x - o.x, f.z - o.z) < 80 + f.diameter * 8) {
+          // Feel: the landmark moment — a freeze, then the camera leans back to take it in.
+          this.effects.hitStop(FEEL.hitStopLandmark);
+          this.effects.pullBack(FEEL.landmarkPullBack, FEEL.landmarkPullSeconds);
+          this.effects.pulse(o.x, o.z, size * 3, 1.4);
+        }
         this.onEvent?.({ kind: 'landmark' });
       }
     }
     a.model.pulseIntake(big ? 4 : 1.2);
+    if (!big && a === this.cameraTarget()) {
+      // Feel: small swallow = a hot pop at the intake (no shake).
+      const fx = -Math.sin(a.heading);
+      const fz = -Math.cos(a.heading);
+      this.effects.pop(a.x + fx * a.diameter * 0.42, a.diameter * 0.3, a.z + fz * a.diameter * 0.42, Math.max(0.12, a.diameter * 0.22));
+    }
     if (!a.owned) return; // the owner's client adds the mass; presence brings it here
     a.objects++;
     // Combo: chained absorbs within the window raise a multiplier.
@@ -722,7 +769,7 @@ export class ArenaGame {
     this.setMass(a, a.mass + gain);
     if (a.kind === 'local') {
       this.hud.punch(gain);
-      this.effects.addTrauma(big ? feelConfig.largePickupTrauma * Math.min(1, size / a.diameter) : feelConfig.pickupTrauma);
+      if (big) this.effects.addTrauma(feelConfig.largePickupTrauma * Math.min(1, size / a.diameter)); // small pickups never shake
       this.onEvent?.({ kind: 'absorb', cls: o.def.objectClass, mass: gain, size, destruction: o.def.destructionType });
       if (o.def.bonus) this.onFeed?.(`${L('金色箱子', 'Golden crate')} +${Math.round(gain).toLocaleString('en-US')} kg`, 'bonus');
       if (climaxLeft === 0) this.hud.showBanner(L(`拆除${this.city.climaxNameZh}！`, `${this.city.climaxName.replace(/^the /, '').toUpperCase()} DOWN!`), `${L('地标奖励', 'LANDMARK BONUS')} +${Math.round(A.landmarkBonus * 100)}%`, 3);
@@ -738,7 +785,7 @@ export class ArenaGame {
       if (!this.refillable.has(id) || o.state !== 'absorbed') continue;
       if (this.matchTime < at + A.refillDelay + o.def.objectClass * A.refillPerClass) continue;
       const h = this.homes[id];
-      const near = this.actors.some((a) => a.alive && Math.hypot(a.x - h.x, a.z - h.z) < A.refillClearance + a.diameter * 2 + o.radius);
+      const near = this.actors.some((a) => a.alive && Math.hypot(a.x - h.x, a.z - h.z) < A.refillClearance + Math.min(a.diameter * 2, A.refillClearanceMaxExtra) + o.radius);
       if (!near) out.push(id);
     }
     return out;
@@ -843,7 +890,7 @@ export class ArenaGame {
       if (!a.alive) continue;
       for (let j = i + 1; j < this.actors.length; j++) {
         const b = this.actors[j];
-        if (!b.alive || this.canEat(a, b) || this.canEat(b, a)) continue;
+        if (!b.alive || (this.canEat(a, b) && !this.spares(a, b)) || (this.canEat(b, a) && !this.spares(b, a))) continue;
         const dx = b.x - a.x;
         const dz = b.z - a.z;
         const d = Math.hypot(dx, dz) || 0.001;
@@ -873,12 +920,33 @@ export class ArenaGame {
     }
   }
 
-  /** Object-gain multiplier for a machine behind the leader (1 for the leader). */
+  /**
+   * Object-gain multiplier (arenaConfig catch-up / leader drag): up to 1 + catchUpMax for a
+   * machine far behind the leader (log-scaled, full at catchUpFullRatio); the leader's gains
+   * shrink once it has leaderDragFrom × the runner-up's mass.
+   */
   catchUp(a: Actor): number {
     let lead = 0;
     for (const b of this.actors) if (b.alive && b !== a) lead = Math.max(lead, b.mass);
-    if (lead <= a.mass) return 1;
-    return 1 + A.catchUpMax * Math.min(1, Math.max(0, 1 - Math.cbrt(a.mass / lead)));
+    if (lead <= 0) return 1;
+    if (lead > a.mass) return 1 + A.catchUpMax * Math.min(1, Math.log(lead / a.mass) / Math.log(A.catchUpFullRatio));
+    const ahead = a.mass / (lead * A.leaderDragFrom);
+    return ahead <= 1 ? 1 : Math.max(A.leaderDragMin, Math.pow(1 / ahead, A.leaderDragExp));
+  }
+
+  /** The landmark's parts can be eaten from arenaConfig.landmarkOpenSeconds on. */
+  landmarkOpen(): boolean {
+    return this.matchTime >= A.landmarkOpenSeconds;
+  }
+
+  /** Locked for now (a landmark part before it opens): solid and never eligible. */
+  locked(o: WorldObject): boolean {
+    return !!o.def.climax && !this.landmarkOpen();
+  }
+
+  /** Eligible to collect in the arena: the world's size rule plus the landmark lock. */
+  eligible(o: WorldObject, power: number): boolean {
+    return this.world.isEligible(o, power) && !this.locked(o);
   }
 
   // ── Players eating players ─────────────────────────────────────────────────
@@ -887,9 +955,18 @@ export class ArenaGame {
     return a.diameter >= b.diameter * A.eatRatio * a.vehicle.eatRatio;
   }
 
+  /**
+   * Training wheels: a rookie AI rival (botSkill < 1) spares a human machine worth less than
+   * (1 − skill) × botRookieHumanPreyShare of its own mass — they bounce off instead (audit: new
+   * players lost most lives to giant rivals simply driving over them).
+   */
+  spares(a: Actor, b: Actor): boolean {
+    return a.kind === 'bot' && b.kind !== 'bot' && b.mass < a.mass * (1 - this.botSkill) * A.botRookieHumanPreyShare;
+  }
+
   private proposeEats(a: Actor): void {
     for (const b of this.actors) {
-      if (!this.canEat(a, b)) continue;
+      if (!this.canEat(a, b) || this.spares(a, b)) continue;
       if (Math.hypot(a.x - b.x, a.z - b.z) > (a.diameter / 2) * A.eatReach + b.diameter * 0.2) continue;
       if ((a.eatCooldown.get(b.id) ?? 0) > this.time) continue;
       a.eatCooldown.set(b.id, this.time + 0.6);
@@ -924,7 +1001,7 @@ export class ArenaGame {
     }
     if (!this.firstBloodDone) this.firstBloodDone = true;
     // Comedy: the victim pops like a balloon, the winner burps.
-    this.effects.burst(v.x, v.diameter * 0.6, v.z, new THREE.Color().setHSL(Math.random(), 0.9, 0.6), 30, Math.max(0.05, v.diameter * 0.1), 4 + v.diameter * 3);
+    this.effects.burst(v.x, v.diameter * 0.6, v.z, new THREE.Color().setHSL(this.effects.hue(), 0.9, 0.6), 30, Math.max(0.05, v.diameter * 0.1), 4 + v.diameter * 3);
     this.sayFor(a, L('嗝~ 😋', 'BURP~ 😋'), 1.8);
     a.jolt = 1;
     if (a.kind === 'bot' && a.owned) {
@@ -938,6 +1015,7 @@ export class ArenaGame {
       this.onEvent?.({ kind: 'burp' });
     }
     const you = this.local;
+    if (you && (v === you || a === you)) this.effects.hitStop(FEEL.hitStopRival);
     if (you && v === you) {
       this.effects.addTrauma(0.7);
       this.hud.showBanner(v.lives <= 0 ? L('出局', 'ELIMINATED') : L('你被吞掉了', 'YOU GOT EATEN'), v.lives <= 0 ? L(`被 ${a.name} 吞掉 · 观战中`, `Eaten by ${a.name} · spectating`) : L(`被 ${a.name} 吞掉 · 还剩 ${v.lives} 条命`, `Eaten by ${a.name} · ${v.lives} ${v.lives === 1 ? 'life' : 'lives'} left`), 2.6);
@@ -980,6 +1058,9 @@ export class ArenaGame {
         this.hud.showBanner(L(`进化到 ${tier} 阶`, `TIER ${tier}`), L(`现在能吃：${CLASS_ZH[cls]}`, `NOW EATING: ${SIZE_CLASSES[cls].label.toUpperCase()}`), 2.4);
         this.onEvent?.({ kind: 'tier', tier });
         this.effects.pulse(a.x, a.z, a.targetDiameter * 4, 1);
+        this.effects.pullBack(FEEL.tierPullBack, FEEL.tierPullSeconds);
+        this.effects.addTrauma(feelConfig.tierUpTrauma * 0.6);
+        this.effects.burst(a.x, a.targetDiameter * 0.5, a.z, new THREE.Color(0xffa640), 20, a.targetDiameter * 0.06, 2 + a.targetDiameter * 1.5);
       } else {
         this.hud.showBanner(L(`解锁：${CLASS_ZH[cls]}`, `UNLOCKED: ${SIZE_CLASSES[cls].label.toUpperCase()}`), `SIZE CLASS ${cls}`, 1.6);
         this.onEvent?.({ kind: 'unlock', cls });
@@ -1118,7 +1199,7 @@ export class ArenaGame {
   isBlocked(x: number, z: number, r: number, power: number, ignore: WorldObject | null): boolean {
     for (const b of this.world.staticColliders) if (circleVsObb(x, z, r, b, this.contact)) return true;
     for (const o of this.world.objects) {
-      if (o === ignore || !this.world.isSolid(o, power)) continue;
+      if (o === ignore || !this.world.isSolid(o, this.locked(o) ? 0 : power)) continue;
       if (Math.abs(o.x - x) > o.radius + r || Math.abs(o.z - z) > o.radius + r) continue;
       if (circleVsObb(x, z, r, o.obb, this.contact)) return true;
     }
