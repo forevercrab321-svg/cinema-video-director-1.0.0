@@ -8,6 +8,8 @@ import { L } from '../i18n';
 import type { ArenaSession } from './ArenaSession';
 import { progress } from './progress';
 import { ArenaPanels, type PanelHooks } from './ArenaPanels';
+import { GE_TOKENS } from './uiTokens';
+import type { HubLike } from '../net/Hub';
 
 /**
  * Arena UI (DOM over the canvas): lobby, in-round overlay (timer, scoreboard, kill feed,
@@ -16,11 +18,7 @@ import { ArenaPanels, type PanelHooks } from './ArenaPanels';
  */
 const CSS = `
 /* Design tokens: one type scale, one spacing scale, one radius scale, one accent. */
-#arena { --ge-accent: #ffb347; --ge-accent-ink: #16181a; --ge-ink: #f2efe8; --ge-muted: rgba(242,239,232,.78); --ge-dim: rgba(242,239,232,.62);
-  --ge-panel: rgba(16,18,20,.74); --ge-card: rgba(255,255,255,.05); --ge-line: rgba(255,255,255,.1); --ge-ok: #7be08a; --ge-bad: #ff8a7a; --ge-warn: #ffd27a;
-  --ge-s1: 4px; --ge-s2: 8px; --ge-s3: 12px; --ge-s4: 16px; --ge-s5: 24px; --ge-r1: 8px; --ge-r2: 12px; --ge-r3: 16px;
-  --ge-fs-xs: 11px; --ge-fs-sm: 12.5px; --ge-fs-md: 14px; --ge-fs-lg: 16px; --ge-tap: 44px;
-  --ge-st: env(safe-area-inset-top, 0px); --ge-sr: env(safe-area-inset-right, 0px); --ge-sb: env(safe-area-inset-bottom, 0px); --ge-sl: env(safe-area-inset-left, 0px); }
+#arena { ${GE_TOKENS} }
 #arena { position: fixed; inset: 0; pointer-events: none; font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif; color: var(--ge-ink); -webkit-font-smoothing: antialiased; z-index: 5; }
 #arena .hex { font-variant-numeric: tabular-nums; }
 #arena [hidden] { display: none !important; }
@@ -176,8 +174,19 @@ const CSS = `
 #arena .notice { position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%); z-index: 4; padding: 10px 16px; border-radius: var(--ge-r2); background: rgba(40,16,30,.92); border: 1px solid #ff7eb6; font-size: 14px; font-weight: 800; letter-spacing: .04em; white-space: nowrap; animation: feed 4.2s forwards; }
 #arena .revive { position: absolute; top: calc(40% + 80px); left: 50%; transform: translateX(-50%); white-space: nowrap; }
 #arena .res .earn .btn { margin-left: 10px; padding: 8px 12px; font-size: 12px; }
+/* Site-wide live count (hub directory): lobby top bar and a small HUD corner chip. Hidden unless the number is real. */
+#arena .lead { display: flex; align-items: center; gap: var(--ge-s3); min-width: 0; }
+#arena .btn.back { padding-inline: 12px; white-space: nowrap; }
+#arena .btn.back .bs { display: none; }
+#arena .hubcount { gap: 7px; color: var(--ge-ink); background: rgba(16,18,20,.62); box-shadow: 0 0 0 1px rgba(123,224,138,.32) inset; font-variant-numeric: tabular-nums; }
+#arena .hubcount i { width: 8px; height: 8px; border-radius: 50%; background: var(--ge-ok); flex-shrink: 0; }
+#arena .hubmini { position: absolute; left: calc(16px + var(--ge-sl)); top: calc(14px + var(--ge-st)); display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: rgba(16,18,20,.42); font-size: var(--ge-fs-xs); font-weight: 700; letter-spacing: .03em; color: var(--ge-muted); pointer-events: none; font-variant-numeric: tabular-nums; }
+#arena .hubmini i { width: 6px; height: 6px; border-radius: 50%; background: var(--ge-ok); }
+#arena .pubtog { min-height: 40px; padding: 0 2px; white-space: normal; line-height: 1.3; }
+#arena .pubtog small { display: block; font-weight: 600; color: var(--ge-dim); font-size: var(--ge-fs-xs); }
+#arena .pubstate { font-weight: 700; color: var(--ge-ink); }
 /* ?clip=1 — clean frame for marketing captures: mass HUD, banners and name tags only. */
-body.ge-clip #arena .board, body.ge-clip #arena .map, body.ge-clip #arena .emotes, body.ge-clip #arena .feed, body.ge-clip #arena .combo, body.ge-clip #hud .legend, body.ge-clip .ge-full, body.ge-clip .ge-dash { display: none !important; }
+body.ge-clip #arena .hubmini, body.ge-clip #arena .board, body.ge-clip #arena .map, body.ge-clip #arena .emotes, body.ge-clip #arena .feed, body.ge-clip #arena .combo, body.ge-clip #hud .legend, body.ge-clip .ge-full, body.ge-clip .ge-dash { display: none !important; }
 body.ge-clip #arena .timer { top: auto; bottom: 28px; }
 body:has(#arena .lobby:not([hidden])) .ge-dash, body:has(#arena .res:not([hidden])) .ge-dash, body:has(#arena .lobby:not([hidden])) #hud { display: none; }
 /* The first touch already asks for fullscreen; in the lobby the corner belongs to the rules button. */
@@ -210,12 +219,14 @@ body:has(#arena .lobby:not([hidden])) .ge-full { display: none; }
   #arena .warm { top: calc(50px + var(--ge-st)); font-size: 11px; padding: 3px 4px 3px 10px; gap: 6px; } #arena .warm .btn { min-height: 32px; padding: 4px 9px; font-size: 11px; } #arena .warm .wl { display: none; } #arena .warm .ws { display: inline; }
   #arena .notice { bottom: auto; top: 30%; font-size: 12px; padding: 7px 12px; }
   #arena .tag { font-size: 10px; }
+  #arena .hubmini { top: auto; bottom: calc(6px + var(--ge-sb)); left: calc(8px + var(--ge-sl)); font-size: 9.5px; padding: 2px 7px; }
   #arena .res .card { padding: 14px 18px; } #arena .res h2 { font-size: 22px; } #arena .res table { margin-top: 8px; font-size: 11px; } #arena .res td, #arena .res th { padding: 4px 6px; }
 }
 /* Landscape phones / short windows: compact top bar, three short scrolling columns, pinned action bar. */
 @media (pointer: coarse) and (orientation: landscape) and (min-width: 561px), (max-height: 520px) and (min-width: 561px) {
   #arena .lobby { gap: var(--ge-s2); padding: calc(6px + var(--ge-st)) calc(10px + var(--ge-sr)) calc(6px + var(--ge-sb)) calc(10px + var(--ge-sl)); }
-  #arena .top > div:first-child { display: flex; align-items: baseline; gap: var(--ge-s2); min-width: 0; }
+  #arena .top .bt { display: flex; align-items: baseline; gap: var(--ge-s2); min-width: 0; }
+  #arena .btn.back { min-height: 40px; padding: 4px 10px; } #arena .btn.back .bl { display: none; } #arena .btn.back .bs { display: inline; }
   #arena .title { font-size: 20px; } #arena .brand { font-size: 9.5px; letter-spacing: .2em; } #arena .title small { display: none; }
   #arena .tools .lbl { display: none; } #arena .tools .chip { padding: 4px 10px; }
   #arena .btn { padding: 8px 12px; }
@@ -264,6 +275,10 @@ export class ArenaUi {
   inviteUrl: () => Promise<string> = async () => location.href;
   /** Shop and settings modals (hooks set by the arena entry). */
   panels!: ArenaPanels;
+  /** Site directory (live count); null without a backend. */
+  hub: HubLike | null = null;
+  /** Leave for the hub screen (null where there is no hub: claude.ai rooms, local tabs, tests). */
+  onHub: (() => void) | null = null;
 
   constructor(
     private readonly session: ArenaSession,
@@ -310,7 +325,7 @@ export class ArenaUi {
           : `<span class="net wait">⏳ ${L('正在连接联机服务…', 'Connecting to the online service…')}</span>`;
     const invite =
       s.net.kind === 'online'
-        ? `<div class="rh">${linkLine}</div><div class="code-row">${L('房间号', 'Room')} <b class="code"></b></div><button class="btn outline" data-a="copy">📣 ${L('邀请好友', 'Invite friends')}<span class="apps">${L('（微信 / 抖音 / 小红书…）', ' (WhatsApp / TikTok / IG…)')}</span></button><div>${L('把链接发给好友就能一起玩（最多 4 人）', 'Send the link to friends to play together (up to 4)')}</div><div class="gift">🎁 ${L('分享就送派对帽，和好友打完一局送限定涂装', 'Share for a free Party Hat; play a match with a friend for an exclusive skin')}</div>`
+        ? `<div class="rh">${linkLine}</div><div class="code-row">${L('房间号', 'Room')} <b class="code"></b></div>${this.pubControl()}<button class="btn outline" data-a="copy">📣 ${L('邀请好友', 'Invite friends')}<span class="apps">${L('（微信 / 抖音 / 小红书…）', ' (WhatsApp / TikTok / IG…)')}</span></button><div>${L('把链接发给好友就能一起玩（最多 4 人）', 'Send the link to friends to play together (up to 4)')}</div><div class="gift">🎁 ${L('分享就送派对帽，和好友打完一局送限定涂装', 'Share for a free Party Hat; play a match with a friend for an exclusive skin')}</div>`
         : s.net.kind === 'room'
           ? L('邀请好友：点页面右上角的 <b>Share</b>，给好友「可互动」或更高权限，再把链接发给他们。好友用自己的 Claude 账号登录打开即可加入。', 'Invite friends: click <b>Share</b> (top right), give them “can interact”, and send them the link. They join with their own Claude account.')
           : s.net.kind === 'local'
@@ -327,13 +342,13 @@ export class ArenaUi {
     const hadFocus = this.lobby.contains(document.activeElement);
     this.lobby.innerHTML = `
       <div class="top">
-        <div><div class="brand">GROW EVERYTHING</div><div class="title">${L('竞技场', 'Arena')}<small>${L('最多 4 人 · 吞下整座城市', 'Up to 4 players · eat the city')}</small></div></div>
-        <div class="tools"><span class="chip coins" title="${L('金币', 'Coins')}">◎ ${prog.coins}</span><button class="btn icon" data-a="shop" aria-label="${L('商店', 'Shop')}">🛒<span class="lbl">${L('商店', 'Shop')}</span></button><button class="btn icon" data-a="settings" aria-label="${L('设置', 'Settings')}">⚙</button><button class="btn icon" data-a="story" aria-label="${L('剧情模式', 'Story')}">📖<span class="lbl">${L('剧情模式', 'Story')}</span></button></div>
+        <div class="lead">${this.onHub ? `<button class="btn back" data-a="hub" aria-label="${L('返回房间大厅', 'Back to the room browser')}">← <span class="bl">${L('返回房间大厅', 'Room browser')}</span><span class="bs">${L('大厅', 'Rooms')}</span></button>` : ''}<div class="bt"><div class="brand">GROW EVERYTHING</div><div class="title">${L('竞技场', 'Arena')}<small>${L('最多 4 人 · 吞下整座城市', 'Up to 4 players · eat the city')}</small></div></div></div>
+        <div class="tools"><span class="chip hubcount" hidden><i></i><span></span></span><span class="chip coins" title="${L('金币', 'Coins')}">◎ ${prog.coins}</span><button class="btn icon" data-a="shop" aria-label="${L('商店', 'Shop')}">🛒<span class="lbl">${L('商店', 'Shop')}</span></button><button class="btn icon" data-a="settings" aria-label="${L('设置', 'Settings')}">⚙</button><button class="btn icon" data-a="story" aria-label="${L('剧情模式', 'Story')}">📖<span class="lbl">${L('剧情模式', 'Story')}</span></button></div>
       </div>
       <div class="cols">
         <div class="col c-city"><div class="h"><span class="step">1</span>${L('选关卡', 'Pick a level')}${host ? '' : `<span class="sub">${L('由房主选择', 'host picks')}</span>`}</div><div class="list cities"></div></div>
         <div class="col c-veh"><div class="h"><span class="step">2</span>${L('选车辆', 'Pick a vehicle')}</div><div class="list vehs"></div></div>
-        <div class="col c-room"><div class="h">${L('玩家', 'Players')}<span class="sub">${online} · <b>${peersN}</b> ${L('人在线', 'online')}${specs ? ` · ${specs} ${L('人观战', 'watching')}` : ''}</span></div><div class="list">
+        <div class="col c-room"><div class="h">${L('玩家', 'Players')}<span class="sub">${online}${s.net.kind === 'solo' ? '' : ` · <b>${peersN}</b> ${L('人在房间', 'in room')}`}${specs ? ` · ${specs} ${L('人观战', 'watching')}` : ''}</span></div><div class="list">
           ${onlineRoom ? `<div class="room invite">${invite}</div>` : ''}${s.net.kind === 'room' ? '' : `<label class="nick">${L('昵称', 'Name')} <input maxlength="16" aria-label="${L('昵称', 'Name')}"></label>`}<div class="slots"></div>
           ${onlineRoom ? '' : `<div class="invite">${invite}</div>`}</div></div>
       </div>
@@ -426,6 +441,7 @@ export class ArenaUi {
         else if (a === 'ready') s.setReady(!s.ready);
         else if (a === 'start') void (this.onBeforeStart?.() ?? Promise.resolve()).catch(() => undefined).then(() => s.start());
         else if (a === 'story') this.onStory?.();
+        else if (a === 'hub') return this.onHub?.();
         else if (a === 'shop') return this.panels?.showShop();
         else if (a === 'settings') return this.panels?.showSettings();
         else if (a === 'copy') {
@@ -444,6 +460,39 @@ export class ArenaUi {
       s.setBots(bots.checked);
       this.renderLobby();
     };
+    const pub = this.lobby.querySelector('#arena-pub') as HTMLInputElement | null;
+    if (pub) pub.onchange = () => {
+      s.setPublic(pub.checked);
+      this.onPublic?.(pub.checked);
+      this.renderLobby();
+    };
+    this.updateHubCount();
+  }
+
+  /** Telemetry hook: the host flipped public / friends-only. */
+  onPublic: ((pub: boolean) => void) | null = null;
+
+  /** Online rooms with a hub: the host picks public / friends-only; the others see which it is. */
+  private pubControl(): string {
+    const s = this.session;
+    if (!this.hub || s.net.kind !== 'online') return '';
+    if (s.isHost())
+      return `<label class="tog pubtog"><input type="checkbox" id="arena-pub" ${s.pub ? 'checked' : ''}><span>${s.pub ? `🌐 ${L('公开 · 任何人可加入', 'Public · anyone can join')}` : `🔒 ${L('私密 · 仅邀请链接', 'Private · invite link only')}`}<small>${s.pub ? L('房间显示在房间大厅里；关掉 = 私密', 'Listed in the room browser; untick = private') : L('不在房间大厅里显示；勾上 = 公开', 'Not listed in the room browser; tick = public')}</small></span></label>`;
+    return `<div class="pubstate">${s.pub ? `🌐 ${L('公开房间 · 房间大厅里可见', 'Public room · listed in the room browser')}` : `🔒 ${L('私密房间 · 仅邀请链接', 'Private room · invite link only')}`}</div>`;
+  }
+
+  /** The site-wide live count (lobby top bar + HUD corner); hidden unless the number is real. */
+  updateHubCount(): void {
+    const v = this.hub?.view();
+    this.el.querySelectorAll<HTMLElement>('.hubcount').forEach((el) => {
+      el.hidden = !v?.available;
+      if (!v?.available) return;
+      const n = v.capped ? `${v.online}+` : String(v.online);
+      const rooms = v.rooms.length + v.privateRooms;
+      (el.querySelector('span') as HTMLElement).textContent = el.classList.contains('hubmini')
+        ? L(`${n} 人在线`, `${n} online`)
+        : L(`${n} 人在线 · ${rooms} 个房间`, `${n} online · ${rooms} ${rooms === 1 ? 'room' : 'rooms'}`);
+    });
   }
 
   // ── In round ──────────────────────────────────────────────────────────────
@@ -452,13 +501,14 @@ export class ArenaUi {
     if (s.match.ph === 'lobby') return;
     if (!this.overlay.dataset.built) {
       this.overlay.dataset.built = '1';
-      this.overlay.innerHTML = `<div class="timer"><b class="hex">5:00</b><span></span><em class="lock" hidden></em></div><div class="board"></div><div class="feed"></div><div class="warm" hidden><span class="wl">🔥 ${L('热身中 · 等好友加入，好友一来自动重新开局', 'Warm-up · a friend joining restarts the round')}</span><span class="ws">🔥 ${L('热身中 · 好友来了自动重开', 'Warm-up · restarts when a friend joins')}</span><button class="btn primary" data-w="invite">📣 ${L('邀请', 'Invite')}</button><button class="btn" data-w="leave">${L('退出热身', 'Leave')}</button></div><div class="center"></div><button class="btn primary revive" hidden>📺 ${L('看广告复活 · 保留 75% 质量', 'Watch an ad: revive with 75% mass')}</button><div class="combo"></div><div class="tags"></div><canvas class="map" width="368" height="368" aria-label="minimap"></canvas><div class="emotes" aria-label="emotes"><button data-e="1" title="1">😂</button><button data-e="3" title="3">👋</button><button data-e="4" title="4">🐷</button><button data-e="6" title="H">📯</button><button class="cam" title="V" aria-label="${L('切换视角', 'Switch camera')}">🎥</button></div>`;
+      this.overlay.innerHTML = `<div class="hubmini hubcount" hidden aria-label="${L('在线人数', 'Players online')}"><i></i><span></span></div><div class="timer"><b class="hex">5:00</b><span></span><em class="lock" hidden></em></div><div class="board"></div><div class="feed"></div><div class="warm" hidden><span class="wl">🔥 ${L('热身中 · 等好友加入，好友一来自动重新开局', 'Warm-up · a friend joining restarts the round')}</span><span class="ws">🔥 ${L('热身中 · 好友来了自动重开', 'Warm-up · restarts when a friend joins')}</span><button class="btn primary" data-w="invite">📣 ${L('邀请', 'Invite')}</button><button class="btn" data-w="leave">${L('退出热身', 'Leave')}</button></div><div class="center"></div><button class="btn primary revive" hidden>📺 ${L('看广告复活 · 保留 75% 质量', 'Watch an ad: revive with 75% mass')}</button><div class="combo"></div><div class="tags"></div><canvas class="map" width="368" height="368" aria-label="minimap"></canvas><div class="emotes" aria-label="emotes"><button data-e="1" title="1">😂</button><button data-e="3" title="3">👋</button><button data-e="4" title="4">🐷</button><button data-e="6" title="H">📯</button><button class="cam" title="V" aria-label="${L('切换视角', 'Switch camera')}">🎥</button></div>`;
       this.overlay.querySelectorAll<HTMLButtonElement>('.emotes button[data-e]').forEach((b) => (b.onclick = () => this.onEmote?.(Number(b.dataset.e))));
       (this.overlay.querySelector('.emotes .cam') as HTMLButtonElement).onclick = () => this.onCamera?.();
       g.onFeed = (text, tone) => this.feed(text, tone);
       (this.overlay.querySelector('.revive') as HTMLButtonElement).onclick = () => this.onRevive?.();
       (this.overlay.querySelector('[data-w="invite"]') as HTMLButtonElement).onclick = () => this.onShare?.();
       (this.overlay.querySelector('[data-w="leave"]') as HTMLButtonElement).onclick = () => this.session.leaveWarmup();
+      this.updateHubCount();
     }
     (this.overlay.querySelector('.warm') as HTMLElement).hidden = !(s.match.wu && s.isHost() && s.match.ph !== 'results');
     if (s.match.wj && this.joinedNoticeEp !== s.match.ep) {
