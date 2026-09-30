@@ -48,6 +48,9 @@ async function flush(): Promise<void> {
   flushing = true;
   const batch = queue.splice(0, 50);
   const { error } = await sb.from('events').insert(batch.map((e) => ({ player_id: playerId, session_id: sessionId, name: e.name, props: e.props, ts: e.ts })));
-  if (error) queue.unshift(...batch.slice(0, 50)); // keep for the next try
+  // Keep for the next try only on transient failures; a rejected row (constraint / permission,
+  // Postgres codes 23xxx / 42xxx) would otherwise be re-sent every 5 s forever.
+  if (error && !/^(23|42)/.test(error.code ?? '')) queue.unshift(...batch.slice(0, 50));
+  else if (error) console.warn('[telemetry] dropped batch', error.code, error.message);
   flushing = false;
 }
