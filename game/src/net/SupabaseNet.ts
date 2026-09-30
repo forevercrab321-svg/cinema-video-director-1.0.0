@@ -35,6 +35,8 @@ export const NET_TIMING = {
   stuckMs: 15_000,
   /** Down this long: the status line says the service is unreachable (brief blips stay "connecting"). */
   errorAfterMs: 8_000,
+  /** A same-account peer silent this long is replaced as soon as a new id of that account speaks. */
+  ghostAfterMs: 2_500,
   /** Answer hellos at most this often. */
   helloMinMs: 300,
   pumpMs: 66,
@@ -64,7 +66,26 @@ interface RealtimeInternals {
 
 export class SupabaseNet implements Net {
   readonly kind = 'online' as const;
-  private readonly id = 'p-' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+  /**
+   * Stable per tab and room: a reload (or a phone browser restoring the page) keeps the same id,
+   * so the room never lists a "ghost" of the previous load next to the new one.
+   */
+  private readonly id = SupabaseNet.tabId();
+  private static tabId(): string {
+    const fresh = 'p-' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+    try {
+      const k = 'ge-net-id';
+      // Reuse only on a reload of this tab: a new tab, a duplicated tab or a second iframe
+      // (sessionStorage is shared with same-origin frames) must never share an id.
+      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+      const v = sessionStorage.getItem(k);
+      if (nav?.type === 'reload' && v && /^p-[a-z0-9]{6,16}$/.test(v)) return v;
+      sessionStorage.setItem(k, fresh);
+    } catch {
+      /* storage blocked (private mode / sandboxed iframe): a fresh id per load */
+    }
+    return fresh;
+  }
   private channel: AnyChannel | null = null;
   /** Bumped per channel instance; callbacks and messages from a retired instance are ignored. */
   private joinSeq = 0;
@@ -366,6 +387,7 @@ export class SupabaseNet implements Net {
     if (slow) {
       o.slow = slow;
       o.hasState = true;
+      this.dropGhosts(from, slow);
     } else if (!o.hasState && this.live && Date.now() - this.lastHelloAsk > NET_TIMING.helloMinMs) {
       // Someone we have no state for (we just (re)joined, or missed its hello): ask for it.
       this.lastHelloAsk = Date.now();
@@ -373,6 +395,26 @@ export class SupabaseNet implements Net {
     }
     if (!wasVisible && this.isVisible(o, Date.now())) this.refresh();
     return o;
+  }
+
+  /**
+   * Same device, new id (e.g. the page was reopened in a new tab / app webview without a goodbye):
+   * an older id with the same account that has already missed heartbeats is that device's ghost.
+   * Two live tabs of one browser keep beating, so both stay listed (local multi-tab tests).
+   */
+  private dropGhosts(from: string, slow: Record<string, Json>): void {
+    const uid = typeof slow.uid === 'string' ? slow.uid : null;
+    if (!uid) return;
+    const now = Date.now();
+    let changed = false;
+    for (const [id, o] of this.others) {
+      if (id === from || o.slow.uid !== uid) continue;
+      if (now - o.seen > NET_TIMING.ghostAfterMs) {
+        this.others.delete(id);
+        changed = true;
+      }
+    }
+    if (changed) this.refresh();
   }
 
   private dispatch(topic: string, from: string, data: Json): void {

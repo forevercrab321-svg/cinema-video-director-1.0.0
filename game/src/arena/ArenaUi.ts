@@ -68,7 +68,15 @@ const CSS = `
 #arena .slot .n { font-weight: 800; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #arena .slot .n em { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .12em; color: var(--ge-accent-ink); background: var(--ge-accent); border-radius: 3px; padding: 1px 5px; margin-left: 6px; }
 #arena .slot .v { font-size: var(--ge-fs-xs); color: var(--ge-muted); }
-#arena .slot .st { font-size: var(--ge-fs-xs); font-weight: 800; letter-spacing: .1em; color: var(--ge-muted); }
+#arena .slot .st { font-size: 13px; font-weight: 800; letter-spacing: .04em; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+#arena .slot .st.host { color: #ffd479; background: rgba(255,196,64,.14); }
+#arena .slot .st.ok { color: #0b2a12; background: #5fe08a; }
+#arena .slot .st.no { color: #ffd9c2; background: rgba(255,120,60,.22); border: 1px solid rgba(255,140,80,.55); }
+#arena .slot.ready { box-shadow: inset 0 0 0 2px rgba(95,224,138,.55); }
+#arena .slot.unready { box-shadow: inset 0 0 0 1px rgba(255,140,80,.35); }
+#arena .btn.is-ready { background: #5fe08a; color: #0b2a12; font-weight: 900; border-color: #5fe08a; }
+#arena .btn.is-ready small, #arena .btn.cta small { display: block; font-size: 11px; font-weight: 700; opacity: .8; }
+#arena .chip.wait-host { font-weight: 800; }
 #arena .slot.empty { background: transparent; border: 1px dashed rgba(255,255,255,.14); }
 #arena .slot.empty .n { font-weight: 700; color: var(--ge-muted); }
 #arena .invite { font-size: var(--ge-fs-sm); line-height: 1.6; color: var(--ge-muted); margin-top: var(--ge-s2); }
@@ -309,6 +317,7 @@ export class ArenaUi {
             ? L('本地多开测试：同一浏览器再开一个标签页即可加入。', 'Local test: open another tab in this browser to join.')
             : `${L('单人模式：AI 对手补满 4 个位置。', 'Solo: AI rivals fill the empty slots.')}<br><button class="btn outline" data-a="copy">📣 ${L('分享游戏给好友', 'Share the game')}</button>`;
     const onlineRoom = s.net.kind === 'online';
+    const waiting = players.filter((p) => !p.isMe && p.id !== s.hostId() && !p.ready).length;
     const startLabel = s.warmupReady()
       ? `${L('先和 AI 热身', 'Warm up vs AI')}<small>${L('好友来了自动重开', 'restarts when a friend joins')}</small>`
       : L('开始比赛', 'Start');
@@ -335,8 +344,8 @@ export class ArenaUi {
         )}</div></details>
         <div class="actions">
           <button class="btn${me || host ? '' : ' primary cta'}" data-a="join">${me ? L('离开 · 观战', 'Leave · spectate') : L('加入比赛', 'Join')}</button>
-          ${me && !host ? `<button class="btn${s.ready ? '' : ' primary cta'}" data-a="ready">${s.ready ? L('取消准备', 'Not ready') : L('准备', 'Ready')}</button>` : ''}
-          ${host ? `<label class="tog"><input type="checkbox" id="arena-bots" ${s.bots ? 'checked' : ''}> ${L('AI 对手补位', 'Fill with AI')}</label><button class="btn primary cta" data-a="start" ${s.canStart() ? '' : 'disabled'}>${startLabel}</button>` : `<span class="chip">${L('等待房主开始', 'Waiting for the host')}</span>`}
+          ${me && !host ? `<button class="btn ${s.ready ? 'is-ready' : 'primary cta'}" data-a="ready" aria-pressed="${s.ready}">${s.ready ? `✓ ${L('已准备', 'Ready')}<small>${L('点击取消', 'tap to undo')}</small>` : `${L('点我准备', 'Tap when ready')}<small>${L('房主等你准备好才能开始', 'the host starts once you are ready')}</small>`}</button>` : ''}
+          ${host ? `<label class="tog"><input type="checkbox" id="arena-bots" ${s.bots ? 'checked' : ''}> ${L('AI 对手补位', 'Fill with AI')}</label><button class="btn primary cta" data-a="start" ${s.canStart() ? '' : 'disabled'}>${s.canStart() ? startLabel : `${L('等待准备', 'Waiting')}<small>${L(`${waiting} 人还没准备`, `${waiting} not ready yet`)}</small>`}</button>` : `<span class="chip wait-host">${s.ready ? L('✓ 已准备 · 等待房主开始', '✓ Ready · waiting for the host') : L('准备好后房主才能开始', 'Get ready so the host can start')}</span>`}
         </div>
       </div>`;
     // Cities.
@@ -368,7 +377,11 @@ export class ArenaUi {
         n.textContent = p.name;
         if (p.isMe) n.insertAdjacentHTML('beforeend', `<em>${L('你', 'you')}</em>`);
         (d.querySelector('.v') as HTMLElement).textContent = `${L(VEHICLES[p.vehicle].nameZh, VEHICLES[p.vehicle].name)}${p.guest ? L(' · 访客', ' · guest') : ''}`;
-        (d.querySelector('.st') as HTMLElement).textContent = p.id === s.hostId() ? L('房主', 'Host') : p.ready ? L('已准备', 'Ready') : L('未准备', 'Not ready');
+        const st = d.querySelector('.st') as HTMLElement;
+        const isHostSlot = p.id === s.hostId();
+        st.textContent = isHostSlot ? `👑 ${L('房主', 'Host')}` : p.ready ? `✓ ${L('已准备', 'Ready')}` : `… ${L('未准备', 'Not ready')}`;
+        st.classList.add(isHostSlot ? 'host' : p.ready ? 'ok' : 'no');
+        if (!isHostSlot) d.classList.add(p.ready ? 'ready' : 'unready');
       } else {
         n.textContent = s.bots ? L('AI 对手', 'AI rival') : L('等待玩家…', 'Waiting for a player…');
         (d.querySelector('.v') as HTMLElement).textContent = s.bots ? L('开局时自动补位', 'Joins when the round starts') : L('空位', 'Open slot');
