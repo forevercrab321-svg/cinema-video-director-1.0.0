@@ -23,6 +23,7 @@ import type { CameraMode } from '../systems/CameraRig';
 import { addCoins, award, progress, unlockGift } from './progress';
 import type { GiftRule } from '../config/cosmetics';
 import { createPlatform, PORTAL_BUILD, PUBLIC_GAME_URL } from '../platform/Platform';
+import { boot } from '../ui/boot';
 import type { CrazyGamesPlatform } from '../platform/CrazyGamesPlatform';
 
 /**
@@ -84,6 +85,10 @@ export async function runArena(ctx: AppContext): Promise<void> {
     if (loadedSignal) return;
     loadedSignal = true;
     portal.loadingFinished();
+    // The first screen is up (room browser or lobby). runArena only returns after the player has
+    // chosen in the room browser, so the boot screen must not wait for that (it hid the browser).
+    boot.step('ready');
+    requestAnimationFrame(() => requestAnimationFrame(() => boot.done()));
   };
   if (!testMode) void startTelemetry(nickname, platform);
 
