@@ -1,4 +1,4 @@
-import { L } from '../i18n';
+import { L, otherLangLabel, toggleLang } from '../i18n';
 import { track } from '../backend/telemetry';
 import { cityById } from '../world/cities';
 import { newRoomCode, normalizeCode, type HubLike, type HubRoom } from '../net/Hub';
@@ -182,7 +182,7 @@ export class HubUi {
     this.el.innerHTML = `
       <div class="top">
         <div><div class="brand">GROW EVERYTHING</div><div class="title">${L('房间大厅', 'Room browser')}<small>${L('和 AI 玩、开房间等好友，或加入路人的房间', 'Play vs AI, open a room for friends, or join a stranger’s room')}</small></div></div>
-        <div class="tools"><span class="live wait" role="status" aria-live="polite"><i></i><span class="txt">${L('正在连接大厅…', 'Connecting…')}</span></span>${hooks.onStory ? `<button class="btn" data-a="story" aria-label="${L('剧情模式', 'Story')}">📖</button>` : ''}</div>
+        <div class="tools"><span class="live wait" role="status" aria-live="polite"><i></i><span class="txt">${L('正在连接大厅…', 'Connecting…')}</span></span><button class="btn" data-a="lang" aria-label="${L('Switch to English', '切换到中文')}">${otherLangLabel()}</button>${hooks.onStory ? `<button class="btn" data-a="story" aria-label="${L('剧情模式', 'Story')}">📖</button>` : ''}</div>
       </div>
       <div class="main">
         <section class="panel play" aria-label="${L('开始游戏', 'Play')}">
@@ -256,6 +256,7 @@ export class HubUi {
     q<HTMLButtonElement>('[data-a="create"]').onclick = () => this.create(this.pub);
     const story = this.el.querySelector('[data-a="story"]') as HTMLButtonElement | null;
     if (story) story.onclick = () => this.hooks.onStory?.();
+    (this.el.querySelector('[data-a="lang"]') as HTMLButtonElement).onclick = () => toggleLang();
     this.el.querySelectorAll<HTMLButtonElement>('.seg button').forEach((b) => {
       b.onclick = () => {
         this.pub = b.dataset.pub === '1';

@@ -69,8 +69,7 @@
           var q = /[?&]lang=(zh|en)\b/.exec(location.search);
           var saved = null;
           try { saved = localStorage.getItem('grow-lang'); } catch (e) { /* storage blocked */ }
-          var langs = navigator.languages || [navigator.language];
-          lang = q ? q[1] : saved === 'zh' || saved === 'en' ? saved : [].some.call(langs, function (l) { return l && l.toLowerCase().indexOf('zh') === 0; }) ? 'zh' : 'en';
+          lang = q ? q[1] : saved === 'zh' || saved === 'en' ? saved : 'en'; // English-first (game/src/i18n.ts)
         } catch (e) { /* keep English */ }
         document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
         var T = {
