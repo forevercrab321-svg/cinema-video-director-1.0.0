@@ -1,6 +1,7 @@
 /**
- * Two languages: 简体中文 and English. Portals (CrazyGames, Poki) are English-first, Chinese
- * players get Chinese. Picked from ?lang=, then the saved setting, then the browser language.
+ * Two languages: English (default) and 简体中文. The game is English-first everywhere; players
+ * switch with the 中文 / EN button (room browser, lobby, settings), which is saved. Picked from
+ * ?lang=, then the saved setting, else English.
  * Use L('中文', 'English') at every user-facing string; switching language reloads the page.
  */
 export type Lang = 'zh' | 'en';
@@ -14,13 +15,20 @@ function detect(): Lang {
   } catch {
     /* storage blocked */
   }
-  return (navigator.languages ?? [navigator.language]).some((l) => l?.toLowerCase().startsWith('zh')) ? 'zh' : 'en';
+  return 'en';
 }
 
 export const lang: Lang = detect();
 
 export function L(zh: string, en: string): string {
   return lang === 'zh' ? zh : en;
+}
+
+/** Button label that switches to the other language. */
+export const otherLangLabel = (): string => (lang === 'zh' ? 'EN' : '中文');
+
+export function toggleLang(): void {
+  setLang(lang === 'zh' ? 'en' : 'zh');
 }
 
 export function setLang(l: Lang): void {

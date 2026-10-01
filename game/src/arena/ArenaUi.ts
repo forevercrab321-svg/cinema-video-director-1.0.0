@@ -4,7 +4,7 @@ import { SLOT_COLORS, VEHICLES, VEHICLE_ORDER, type VehicleLook } from '../confi
 import { CITIES } from '../world/cities';
 import type { ArenaGame, Standing } from './ArenaGame';
 import { awards } from './comedy';
-import { L } from '../i18n';
+import { L, otherLangLabel, toggleLang } from '../i18n';
 import type { ArenaSession } from './ArenaSession';
 import { progress } from './progress';
 import { ArenaPanels, type PanelHooks } from './ArenaPanels';
@@ -343,7 +343,7 @@ export class ArenaUi {
     this.lobby.innerHTML = `
       <div class="top">
         <div class="lead">${this.onHub ? `<button class="btn back" data-a="hub" aria-label="${L('返回房间大厅', 'Back to the room browser')}">← <span class="bl">${L('返回房间大厅', 'Room browser')}</span><span class="bs">${L('大厅', 'Rooms')}</span></button>` : ''}<div class="bt"><div class="brand">GROW EVERYTHING</div><div class="title">${L('竞技场', 'Arena')}<small>${L('最多 4 人 · 吞下整座城市', 'Up to 4 players · eat the city')}</small></div></div></div>
-        <div class="tools"><span class="chip hubcount" hidden><i></i><span></span></span><span class="chip coins" title="${L('金币', 'Coins')}">◎ ${prog.coins}</span><button class="btn icon" data-a="shop" aria-label="${L('商店', 'Shop')}">🛒<span class="lbl">${L('商店', 'Shop')}</span></button><button class="btn icon" data-a="settings" aria-label="${L('设置', 'Settings')}">⚙</button><button class="btn icon" data-a="story" aria-label="${L('剧情模式', 'Story')}">📖<span class="lbl">${L('剧情模式', 'Story')}</span></button></div>
+        <div class="tools"><span class="chip hubcount" hidden><i></i><span></span></span><span class="chip coins" title="${L('金币', 'Coins')}">◎ ${prog.coins}</span><button class="btn icon" data-a="shop" aria-label="${L('商店', 'Shop')}">🛒<span class="lbl">${L('商店', 'Shop')}</span></button><button class="btn icon" data-a="lang" aria-label="${L('Switch to English', '切换到中文')}">${otherLangLabel()}</button><button class="btn icon" data-a="settings" aria-label="${L('设置', 'Settings')}">⚙</button><button class="btn icon" data-a="story" aria-label="${L('剧情模式', 'Story')}">📖<span class="lbl">${L('剧情模式', 'Story')}</span></button></div>
       </div>
       <div class="cols">
         <div class="col c-city"><div class="h"><span class="step">1</span>${L('选关卡', 'Pick a level')}${host ? '' : `<span class="sub">${L('由房主选择', 'host picks')}</span>`}</div><div class="list cities"></div></div>
@@ -444,6 +444,7 @@ export class ArenaUi {
         else if (a === 'hub') return this.onHub?.();
         else if (a === 'shop') return this.panels?.showShop();
         else if (a === 'settings') return this.panels?.showSettings();
+        else if (a === 'lang') return toggleLang();
         else if (a === 'copy') {
           this.onShare?.();
           return;
