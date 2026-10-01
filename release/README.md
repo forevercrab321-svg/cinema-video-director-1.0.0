@@ -11,3 +11,4 @@ and copy the zip here; replace, don't accumulate old versions.
 | `crazygames/grow-everything-crazygames.zip` | CrazyGames upload (CrazyGames SDK only — their terms forbid other portals' SDKs; online rooms, SDK v3 rooms/invites/username) | 2026-10-01 rev 3 (same fixes; no GD code in the bundle) |
 | `crazygames/cover-*.png`, `crazygames/*-*s.png` | CrazyGames covers and screenshots | from `marketing/press-kit/` |
 | `crazygames/crazygames-submission-bundle.zip` | One download for the CrazyGames submission: the build zip + 3 covers + 3 screenshots (unzip, then hand the 7 files to the browser agent) | 2026-10-01 |
+| `crazygames/preview-landscape.mp4`, `crazygames/preview-portrait.mp4` | CrazyGames required preview videos (1920×1080 and 1080×1920, 12.5 s, 24 fps, H.264): real gameplay captured frame-exact with `tools/capture-clip.mjs` (New York from 55 s / Shanghai from 40 s) | 2026-10-01 |
