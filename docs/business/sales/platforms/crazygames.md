@@ -28,7 +28,7 @@
 | 不能交叉推广其他游戏/平台；社区链接（Discord、官网）只能放主菜单，且**不能直接指向可玩的网页版** | [S6][S7] | 分享面板会打开小红书/抖音/TikTok/X 等外部网站（分享用，不是推广）；设置页有隐私政策、用户协议链接 | ⚠️ 不确定：分享链接本身走 SDK `inviteLink` 是合规的；打开外部社交网站是否算违规未查到明确条款。稳妥做法：CrazyGames 上把隐私/协议页打进包内（相对路径），分享面板只保留「复制邀请链接」+ 系统分享 |
 | 玩家必须能以游客身份直接开始；「用 CrazyGames 登录」按钮不能是主要行动按钮 | [S8] | 匿名即玩，无登录墙 | ✅ 已满足 |
 | 内购只允许用 Xsolla，且需要平台选中 | [S4] | 目前商店只用游戏金币，Stripe 未接 | ✅ 已满足（平台上**不要**接 Stripe） |
-| 多人：服务器可自备；要进「多人游戏」专区须通过 SDK 上报房间/状态（Join/Invite），并**在游戏里显示 CrazyGames 用户名** | [S10] | 自备 Supabase Realtime 房间 ✅；已接 inviteLink ✅；已读取 CrazyGames 用户名作为默认昵称（`user.getUser()`，游客为空时用随机名）✅；**没有**调用 SDK 的房间状态接口（官方文档打不开，接口名未核实） | ⚠️ 房间状态待改（仅影响多人专区资格，不影响 Basic Launch） |
+| 多人：服务器可自备；要进「多人游戏」专区须通过 SDK 上报房间（`game.updateRoom`）、支持好友邀请/加入（`inviteParams`、`addJoinRoomListener`）、Instant Multiplayer、局间保留房间、`disableChat`，并**在游戏里显示 CrazyGames 用户名** | [S10][S14] | 2026-10-01 已接：`updateRoom({roomId, isJoinable, inviteParams:{room}})`（满 4 人时 isJoinable=false）、`leftRoom()`（离开页面）、底部 Invite 按钮随可加入状态 show/hide（文档标为 deprecated 但仍支持）、`inviteParams`/`getInviteParam` 进好友房间、`addJoinRoomListener` 游戏中被邀请时重载进新房间、`user.getUser()` 默认昵称 + `addAuthListener` 登录后更新（玩家自己输入过昵称则不覆盖）；Instant Multiplayer：默认流程本来就直接进新的私人房间；局间保留房间：结算后回同一房间大厅；无文字聊天（只有表情）→ `disableChat` 不适用 | ✅ 已接入（Chromium + SDK 桩测试通过；正式 QA 前在 CrazyGames 开发者门户的 SDK 预览里再跑一次） |
 
 ## 3. 收入分成与付款
 
@@ -113,3 +113,4 @@ EN:
 - [S11] https://files.crazygames.com/documents/developer_terms_20210211.pdf （旧版条款，仅作历史参考）；现行条款 PDF：https://files.crazygames.com/documents/developer_terms_20250818.pdf （摘要未显示比例）
 - [S12] 第三方：https://app.cinevva.com/guides/publish-game-crazygames （非官方，仅作线索）
 - [S13] https://docs.crazygames.com/payouts/
+- [S14] https://docs.crazygames.com/sdk/game/ （多人房间 API；本环境打不开，接口名按搜索摘要 + 官方 Defold 扩展的 JS 桥 `github.com/defold/extension-crazygames` `crazygames/lib/web/lib_crazygames.js` 核对）

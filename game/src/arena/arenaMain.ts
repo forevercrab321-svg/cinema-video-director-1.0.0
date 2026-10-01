@@ -133,6 +133,8 @@ export async function runArena(ctx: AppContext): Promise<void> {
     nickname,
   );
   const ui = new ArenaUi(session, modeLabel);
+  // [platform-room] Portal login while running (CrazyGames): adopt the account name unless the player typed one.
+  portal.onPlayerNameChange = (n) => void (n && !params.get('name') && !savedName() && (session.setNickname(n), ui.renderLobby()));
   const prog0 = progress();
   session.setCosmetics(prog0.skin, prog0.horn, prog0.hat);
   ui.installPanels({
@@ -273,6 +275,8 @@ export async function runArena(ctx: AppContext): Promise<void> {
       if (playingNow) portal.gameplayStart();
       else portal.gameplayStop();
     }
+    // [platform-room] Room info for the portal (CrazyGames updateRoom / invite button); the adapter forwards changes only.
+    portal.reportRoom?.(net instanceof SupabaseNet ? { code: net.room, players: session.net.peers().length, maxPlayers: A.maxPlayers } : null);
     if (game) {
       game.step(dt);
       audio?.setTension(game.phase === 'playing' && A.roundSeconds - game.matchTime < 30);

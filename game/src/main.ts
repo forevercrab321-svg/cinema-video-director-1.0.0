@@ -28,6 +28,8 @@ const touch = matchMedia('(pointer: coarse)').matches;
 const hashQuality = ['high', 'medium', 'low'].includes(location.hash.slice(1)) ? (location.hash.slice(1) as Quality) : null;
 const quality = (params.get('quality') as Quality | null) ?? hashQuality ?? (touch ? 'medium' : 'high');
 const mode = params.get('mode') ?? (location.hash === '#story' ? 'story' : testMode ? 'story' : 'arena');
+// [platform-room] Start the portal SDK now (download + loadingStart overlap the texture generation); the arena awaits the same instance.
+if (mode !== 'story') void import('./platform/Platform').then((m) => m.createPlatform());
 
 // No WebGL 2 (blocked, hardware acceleration off, old browser): three.js throws while creating
 // the context. Show the bilingual "can't run 3D" screen instead of a blank page.

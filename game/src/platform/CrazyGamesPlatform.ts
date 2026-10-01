@@ -7,9 +7,17 @@
  *   https://docs.crazygames.com/sdk/game/           — gameplayStart/Stop, loadingStart/Stop, happytime,
  *                                                    inviteLink / getInviteParam / showInviteButton, settings.muteAudio
  *   https://docs.crazygames.com/requirements/ads/   — mute audio + pause while an ad plays
- * (docs.crazygames.com was not reachable from the build sandbox; the API was
- *  cross-checked against the docs' search snippets and the typed
- *  @adlad/plugin-crazygames v1.1.0 wrapper, which loads the same v3 script.)
+ *   https://docs.crazygames.com/sdk/game/          — multiplayer: updateRoom({roomId, isJoinable, inviteParams}),
+ *                                                    leftRoom(), addJoinRoomListener(fn(inviteParams)),
+ *                                                    inviteParams, isInstantMultiplayer, hide/showInviteButton
+ *   https://docs.crazygames.com/sdk/user/           — getUser() → {username, profilePictureUrl} | null,
+ *                                                    addAuthListener(fn(user))
+ *   https://docs.crazygames.com/requirements/multiplayer/ — room info, invite link, instant multiplayer,
+ *                                                    keep rooms across rounds, disableChat, show the username
+ * (docs.crazygames.com is blocked from the build sandbox; the API was cross-checked against the
+ *  docs' search snippets, the typed @adlad/plugin-crazygames v1.1.0 wrapper, and the JS bridge of
+ *  the official Defold extension, github.com/defold/extension-crazygames
+ *  crazygames/lib/web/lib_crazygames.js @99601c1 (2026-09-08), which calls the same v3 script.)
  *
  * Rules implemented here:
  *  - Mute/pause only when the ad actually STARTS (adStarted), resume on adFinished OR adError.
@@ -23,14 +31,22 @@ import { loadScript, safeCall, withTimeout } from './loadScript';
 import {
   INVITE_PARAM,
   MIDROLL_MIN_GAP_MS,
-  fallbackInviteUrl,
   roomFromLocation,
   type Platform,
+  type RoomReport,
   type PlatformName,
   type RewardedPlacement,
 } from './Platform';
 
 const SDK_URL = 'https://sdk.crazygames.com/crazygames-sdk-v3.js';
+/**
+ * Also drive CrazyGames' footer "Invite" button (show while the room is joinable, hide otherwise).
+ * The docs mark it deprecated in favour of updateRoom's room data but still supported; keep it on
+ * until CrazyGames QA says the room data alone is enough.
+ */
+const USE_INVITE_BUTTON = true;
+/** Set on the reload that follows an in-game "join friend" request: our URL's room wins then. */
+const JOIN_FLAG = 'cgjoin';
 /** Safety net: if the SDK never calls back, give control back to the game. */
 const AD_SAFETY_TIMEOUT_MS = 120_000;
 
@@ -66,11 +82,25 @@ interface CgSdk {
     hideInviteButton?(): unknown;
     settings?: { muteAudio?: boolean; disableChat?: boolean };
     addSettingsChangeListener?(listener: (settings: { muteAudio?: boolean }) => void): void;
+    /** True when the player arrived through a CrazyGames "play with friends" entry point. */
+    isInstantMultiplayer?: boolean;
+    /** Invite params of the friend this player is joining (parsed by the SDK), or null. */
+    inviteParams?: Record<string, string | number | boolean> | null;
+    /** Only supplied fields are updated. */
+    updateRoom?(room: { roomId?: string; isJoinable?: boolean; inviteParams?: Record<string, string | number | boolean> }): unknown;
+    leftRoom?(): unknown;
+    addJoinRoomListener?(listener: (inviteParams: Record<string, string | number | boolean> | null) => void): unknown;
   };
   /** SDK v3 user module (docs.crazygames.com/sdk/user/); getUser() resolves null for guests. */
   user?: {
-    getUser?(): Promise<{ username?: string } | null>;
+    getUser?(): Promise<CgUser | null>;
+    addAuthListener?(listener: (user: CgUser | null) => void): unknown;
   };
+}
+
+interface CgUser {
+  username?: string;
+  profilePictureUrl?: string;
 }
 
 interface CgWindow {
@@ -81,6 +111,8 @@ export class CrazyGamesPlatform implements Platform {
   readonly name: PlatformName = 'crazygames';
   onPause: (() => void) | null = null;
   onResume: (() => void) | null = null;
+  onPlayerNameChange: ((name: string | null) => void) | null = null;
+  onJoinRoomRequest: ((room: string) => void) | null = null;
   /** Called with true/false when the CrazyGames site-wide mute setting changes (honour it over in-game settings). */
   onMuteSettingChange: ((muted: boolean) => void) | null = null;
 
@@ -90,6 +122,8 @@ export class CrazyGamesPlatform implements Platform {
   private adBusy = false;
   private lastMidrollAt = Date.now();
   private loadingStopped = false;
+  /** Last room state sent to the SDK ('' = none): reportRoom forwards changes only. */
+  private roomKey = '';
 
   get adsAvailable(): boolean {
     return this.ready;
@@ -122,6 +156,63 @@ export class CrazyGamesPlatform implements Platform {
     } catch {
       /* ignore */
     }
+    // Log in / log out on CrazyGames while the game runs: offer the new username to the game.
+    try {
+      sdk.user?.addAuthListener?.((u) => {
+        try {
+          this.onPlayerNameChange?.(usernameOf(u));
+        } catch {
+          /* game handler error */
+        }
+      });
+    } catch {
+      /* ignore */
+    }
+    // "Join friend" from the CrazyGames UI while already playing.
+    try {
+      sdk.game.addJoinRoomListener?.((params) => {
+        const room = params?.[INVITE_PARAM];
+        if (room === undefined || room === null || room === '') return;
+        const code = String(room);
+        if (this.onJoinRoomRequest) {
+          try {
+            this.onJoinRoomRequest(code);
+          } catch {
+            /* ignore */
+          }
+        } else joinByReload(code);
+      });
+    } catch {
+      /* ignore */
+    }
+    // Closing the tab / navigating away: the player is no longer in the room.
+    addEventListener('pagehide', () => {
+      if (this.roomKey) safeCall(() => sdk.game.leftRoom?.());
+    });
+  }
+
+  reportRoom(room: RoomReport | null): void {
+    const sdk = this.sdk;
+    if (!sdk) return;
+    const joinable = !!room && room.open !== false && room.players < room.maxPlayers;
+    const key = room ? `${room.code}|${joinable ? 1 : 0}` : '';
+    if (key === this.roomKey) return;
+    const wasIn = this.roomKey !== '';
+    this.roomKey = key;
+    if (!room) {
+      if (wasIn) safeCall(() => sdk.game.leftRoom?.());
+      if (USE_INVITE_BUTTON) this.hideInviteButton();
+      return;
+    }
+    safeCall(() => sdk.game.updateRoom?.({ roomId: room.code, isJoinable: joinable, inviteParams: { [INVITE_PARAM]: room.code } }));
+    if (USE_INVITE_BUTTON) {
+      if (joinable) this.showInviteButton(room.code);
+      else this.hideInviteButton();
+    }
+  }
+
+  instantMultiplayer(): boolean {
+    return !!this.sdk?.game.isInstantMultiplayer;
   }
 
   async playerName(): Promise<string | null> {
@@ -135,7 +226,7 @@ export class CrazyGamesPlatform implements Platform {
       2000,
       null,
     );
-    return typeof u?.username === 'string' && u.username ? u.username : null;
+    return usernameOf(u);
   }
 
   loadingFinished(): void {
@@ -201,11 +292,15 @@ export class CrazyGamesPlatform implements Platform {
         /* fall through */
       }
     }
-    return fallbackInviteUrl(room);
+    return pageInviteUrl(room);
   }
 
   invitedRoom(): string | null {
     const sdk = this.sdk;
+    // After an in-game "join friend" reload, the SDK still reports the invite the page opened with.
+    if (hasJoinFlag()) return roomFromLocation();
+    const fromParams = sdk?.game.inviteParams?.[INVITE_PARAM];
+    if (fromParams !== undefined && fromParams !== null && fromParams !== '') return String(fromParams);
     if (sdk?.game.getInviteParam) {
       try {
         const v = sdk.game.getInviteParam(INVITE_PARAM);
@@ -273,5 +368,44 @@ export class CrazyGamesPlatform implements Platform {
         finish(false);
       }
     });
+  }
+}
+
+function usernameOf(u: CgUser | null | undefined): string | null {
+  return typeof u?.username === 'string' && u.username ? u.username : null;
+}
+
+function hasJoinFlag(): boolean {
+  try {
+    return new URLSearchParams(location.search).has(JOIN_FLAG);
+  } catch {
+    return false;
+  }
+}
+
+/** Reload this page into room `code` (the online transport cannot switch rooms in place). */
+function joinByReload(code: string): void {
+  try {
+    const u = new URL(location.href);
+    if (u.searchParams.get(INVITE_PARAM) === code) return;
+    u.searchParams.set(INVITE_PARAM, code);
+    u.searchParams.set(JOIN_FLAG, '1');
+    location.replace(u.toString());
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Invite URL when the SDK gives none. On CrazyGames we must not send players to our own site
+ * (no links to a playable off-portal version), so this is this page + ?room=, never PUBLIC_GAME_URL.
+ */
+function pageInviteUrl(room: string): string {
+  try {
+    const u = new URL(location.origin + location.pathname);
+    u.searchParams.set(INVITE_PARAM, room);
+    return u.toString();
+  } catch {
+    return `?${INVITE_PARAM}=${encodeURIComponent(room)}`;
   }
 }
