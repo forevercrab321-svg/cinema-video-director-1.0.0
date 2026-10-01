@@ -33,9 +33,155 @@
     <style>
       html, body { margin: 0; height: 100%; overflow: hidden; background: #cdd3d6; }
       canvas { display: block; touch-action: none; }
+      /* Boot screen: inline so it paints before any bundle arrives (game/src/ui/boot.ts drives it). */
+      #ge-boot { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 2147483000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 24px max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left)); box-sizing: border-box; background: #16181a; color: #e9e4dc;
+        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; text-align: center; transition: opacity .4s ease; }
+      #ge-boot.out { opacity: 0; pointer-events: none; }
+      #ge-boot .logo { font-weight: 900; font-size: 28px; letter-spacing: .14em; color: #ffb347; margin-bottom: 22px; }
+      #ge-boot .bar { width: 240px; max-width: 70vw; height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; }
+      #ge-boot .fill { height: 100%; width: 4%; border-radius: 3px; background: #ffb347; transition: width .3s ease; }
+      #ge-boot .status { margin-top: 12px; font-size: 13px; color: #a9a39a; min-height: 1.5em; }
+      #ge-boot .msg { max-width: 520px; }
+      #ge-boot h1 { font-size: 20px; margin: 0 0 10px; color: #fff; }
+      #ge-boot p { margin: 0 0 10px; }
+      #ge-boot .alt { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.12); font-size: 13px; color: #a9a39a; }
+      #ge-boot .alt h1 { font-size: 15px; color: #d6d0c6; }
+      #ge-boot .detail { margin-top: 14px; font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace; color: #7d786f; word-break: break-word; }
+      #ge-boot button { margin-top: 8px; padding: 10px 22px; border: 0; border-radius: 8px; background: #ffb347; color: #16181a; font: inherit; font-weight: 800; cursor: pointer; }
     </style>
   </head>
   <body>
+    <div id="ge-boot" role="status" aria-live="polite">
+      <div class="logo">GROW EVERYTHING</div>
+      <div class="bar"><div class="fill"></div></div>
+      <div class="status"></div>
+    </div>
+    <script>
+      // Boot screen + startup failure screen. Plain ES5 so it runs (and can explain itself) on
+      // browsers too old to parse the game bundle. Language rule mirrors game/src/i18n.ts.
+      (function () {
+        var root = document.getElementById('ge-boot');
+        var fill = root.querySelector('.fill');
+        var status = root.querySelector('.status');
+        var lang = 'en';
+        try {
+          var q = /[?&]lang=(zh|en)\b/.exec(location.search);
+          var saved = null;
+          try { saved = localStorage.getItem('grow-lang'); } catch (e) { /* storage blocked */ }
+          var langs = navigator.languages || [navigator.language];
+          lang = q ? q[1] : saved === 'zh' || saved === 'en' ? saved : [].some.call(langs, function (l) { return l && l.toLowerCase().indexOf('zh') === 0; }) ? 'zh' : 'en';
+        } catch (e) { /* keep English */ }
+        document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+        var T = {
+          files: { zh: '正在下载游戏文件', en: 'Downloading game files' },
+          textures: { zh: '正在准备材质…', en: 'Preparing materials…' },
+          world: { zh: '正在搭建城市…', en: 'Building the city…' },
+          ready: { zh: '马上就好…', en: 'Almost ready…' },
+          reload: { zh: '刷新页面', en: 'Reload' },
+          webgl: {
+            zh: ['你的浏览器无法运行 3D 画面', '这个游戏需要 WebGL 2，但当前浏览器没有提供。', '请把浏览器更新到最新版本（Chrome、Edge、Firefox 或 Safari），或在浏览器设置中开启“硬件加速 / 使用图形加速”，然后刷新页面。'],
+            en: ["Your browser can't run 3D graphics", 'This game needs WebGL 2, which this browser is not providing right now.', 'Update your browser to the latest version (Chrome, Edge, Firefox or Safari), or turn on hardware / graphics acceleration in the browser settings, then reload the page.'],
+          },
+          crash: {
+            zh: ['游戏启动失败', '启动过程中出现了错误。', '请刷新页面重试。如果一直出现，请把浏览器更新到最新版本，或换一个浏览器（Chrome、Edge、Firefox 或 Safari）。'],
+            en: ['The game could not start', 'Something went wrong while starting up.', 'Please reload the page. If it keeps happening, update your browser to the latest version or try another one (Chrome, Edge, Firefox or Safari).'],
+          },
+        };
+        T.browser = T.crash;
+        var other = lang === 'zh' ? 'en' : 'zh';
+        var started = false;
+        var finished = false;
+        var stepFrac = 0;
+        function set(frac, text) {
+          if (finished) return;
+          stepFrac = Math.max(stepFrac, frac);
+          fill.style.width = Math.round(stepFrac * 100) + '%';
+          if (text) status.textContent = text;
+        }
+        function block(kind, l, cls) {
+          var t = T[kind][l];
+          var d = document.createElement('div');
+          if (cls) d.className = cls;
+          d.lang = l === 'zh' ? 'zh-CN' : 'en';
+          for (var i = 0; i < t.length; i++) {
+            var el = document.createElement(i ? 'p' : 'h1');
+            el.textContent = t[i];
+            d.appendChild(el);
+          }
+          return d;
+        }
+        function fail(kind, detail) {
+          if (finished) return;
+          finished = true;
+          root.className = '';
+          root.setAttribute('role', 'alert');
+          root.innerHTML = '';
+          var msg = document.createElement('div');
+          msg.className = 'msg';
+          msg.appendChild(block(kind, lang));
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = T.reload[lang];
+          btn.onclick = function () { location.reload(); };
+          msg.appendChild(btn);
+          msg.appendChild(block(kind, other, 'alt'));
+          if (detail) {
+            var det = document.createElement('div');
+            det.className = 'detail';
+            det.textContent = String(detail).slice(0, 300);
+            msg.appendChild(det);
+          }
+          root.appendChild(msg);
+        }
+        window.__GROW_BOOT__ = {
+          started: function () { started = true; set(0.55, T.textures[lang]); },
+          step: function (s) { set({ textures: 0.6, world: 0.75, ready: 0.95 }[s] || stepFrac, T[s] && T[s][lang]); },
+          done: function () {
+            if (finished) return;
+            set(1);
+            finished = true;
+            root.className = 'out';
+            setTimeout(function () { if (root.parentNode) root.parentNode.removeChild(root); }, 500);
+          },
+          fail: fail,
+        };
+        // three.js needs WebGL 2: without the API there is no point downloading 1 MB of code.
+        if (typeof WebGL2RenderingContext === 'undefined') { fail('webgl'); return; }
+        // Download progress: game files finished out of those the page declares (entry + preloads).
+        var files = document.querySelectorAll('script[type=module][src], link[rel=modulepreload]');
+        var wanted = {};
+        var total = 0;
+        var loaded = 0;
+        for (var i = 0; i < files.length; i++) { var u = files[i].src || files[i].href; if (u && !wanted[u]) { wanted[u] = 1; total++; } }
+        function tick() { if (!started) set(0.05 + 0.45 * (total ? loaded / total : 0), T.files[lang] + (total ? ' (' + loaded + '/' + total + ')' : '…')); }
+        tick();
+        if (window.PerformanceObserver && total) {
+          try {
+            new PerformanceObserver(function (list) {
+              var es = list.getEntries();
+              for (var j = 0; j < es.length; j++) if (wanted[es[j].name] === 1) { wanted[es[j].name] = 2; loaded++; }
+              tick();
+            }).observe({ type: 'resource', buffered: true });
+          } catch (e) { /* no resource timing: the label still shows */ }
+        }
+        // Fatal before the entry module runs: a game file failed to load (capture phase sees
+        // <script> load errors) or the bundle does not parse in this browser (SyntaxError).
+        // After it runs, main.ts reports its own failures; other errors are left to the game.
+        window.addEventListener('error', function (e) {
+          if (finished) return;
+          var t = e.target;
+          if (t && t.tagName === 'SCRIPT' && t.type === 'module') { fail('crash', 'Failed to load ' + (t.src || 'game script')); return; }
+          if (t !== window && t) return;
+          var err = e.error;
+          var syntax = (err && err.name === 'SyntaxError') || /SyntaxError/.test(e.message || '');
+          if (syntax || (!started && e.filename && e.filename.indexOf(location.origin) === 0)) fail('crash', (err && err.name ? err.name + ': ' + err.message : e.message) || '');
+        }, true);
+      })();
+    </script>
+    <script nomodule>
+      window.__GROW_BOOT__ && window.__GROW_BOOT__.fail('browser');
+    </script>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>
