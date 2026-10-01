@@ -1,34 +1,55 @@
--- Sanity checks for supabase/migrations/0004_lobby_presence.sql.
--- Paste into the Supabase SQL editor after running the migration (everything is rolled back),
+-- Sanity checks for supabase/migrations/0004_lobby_presence.sql (+ 0005_security_hardening.sql).
+-- Paste into the Supabase SQL editor after running the migrations (everything is rolled back),
 -- or run locally: psql -v ON_ERROR_STOP=1 -f supabase/tests/lobby.sql
 -- Each failed check raises an exception; success ends with the snapshot and 'lobby.sql: all checks passed'.
 begin;
 
 -- Start from an empty table inside this transaction (rolled back at the end).
 delete from public.lobby_presence;
+delete from public.lobby_rooms;
+
+-- Since 0005 a room summary is accepted only from a signed-in host (auth.uid()), so each host beat
+-- below runs as its own (fake) account; member / solo / browser beats run anonymous.
 
 -- Room AAAA1 (public, waiting, 2 players): host + guest
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
 select public.lobby_beat('h-host0001', 'room', '{"code":"AAAA1","host":true,"name":"Alice","city":"shanghai","players":2,"max":4,"phase":"waiting","public":true,"bots":true}');
+select set_config('request.jwt.claim.sub', '', true);
 select public.lobby_beat('h-gues0001', 'room', '{"code":"AAAA1"}');
 -- Room BBBB2 (PRIVATE): host + guest
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000002', true);
 select public.lobby_beat('h-host0002', 'room', '{"code":"BBBB2","host":true,"name":"Bob","city":"paris","players":2,"max":4,"phase":"waiting","public":false,"bots":true}');
+select set_config('request.jwt.claim.sub', '', true);
 select public.lobby_beat('h-gues0002', 'room', '{"code":"bbbb2"}');
 -- Room CCCC3 (public, playing, ends in 140 s): host + guest
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000003', true);
 select public.lobby_beat('h-host0003', 'room', '{"code":"CCCC3","host":true,"name":"Chen","city":"newyork","players":2,"max":4,"phase":"playing","public":true,"bots":true,"ends_in":140}');
+select set_config('request.jwt.claim.sub', '', true);
 select public.lobby_beat('h-gues0003', 'room', '{"code":"CCCC3"}');
 -- Two solo pages and one page on the room browser
+select set_config('request.jwt.claim.sub', '', true);
 select public.lobby_beat('h-solo0001', 'solo', null);
+select set_config('request.jwt.claim.sub', '', true);
 select public.lobby_beat('h-solo0002', 'solo', null);
+select set_config('request.jwt.claim.sub', '', true);
 select public.lobby_beat('h-brow0001', 'browser', null);
 
 -- Hostile / malformed calls: all ignored or clamped
+select set_config('request.jwt.claim.sub', '', true);
 select public.lobby_beat('not-an-id', 'browser', null);
+select set_config('request.jwt.claim.sub', '', true);
 select public.lobby_beat('h-evil0001', 'dancing', null);
+select set_config('request.jwt.claim.sub', '', true);
 select public.lobby_beat('h-evil0002', 'room', '"just a string"');
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000004', true);
 select public.lobby_beat('h-evil0003', 'room', '{"code":"ZZZZ9","host":true,"name":"   a\u0007very​long\n name that keeps going","city":"<script>","players":-5,"max":99,"phase":"waiting","public":true,"bots":"yes"}');
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000005', true);
 select public.lobby_beat('h-evil0004', 'room', '{"code":"../x","host":true,"players":3,"phase":"waiting","public":true}');
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000006', true);
 select public.lobby_beat('h-evil0005', 'room', '{"code":"NEG77","host":true,"name":"Neg","players":2,"phase":"playing","public":true,"ends_in":1e12}');
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000007', true);
 select public.lobby_beat('h-evil0006', 'room', '{"code":"BAD00","host":true,"players":2,"phase":"sleeping","public":true}');
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000008', true);
 select public.lobby_beat('h-evil0007', 'room', jsonb_build_object('code', 'HUGE1', 'host', true, 'name', repeat('x', 5000), 'players', 1, 'phase', 'waiting', 'public', true));
 
 do $$
@@ -55,6 +76,7 @@ begin
 end $$;
 
 -- Rate limit: a second beat within 4 s changes nothing.
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
 select public.lobby_beat('h-host0001', 'room', '{"code":"AAAA1","host":true,"name":"Alice","players":1,"max":4,"phase":"waiting","public":true}');
 do $$
 begin
