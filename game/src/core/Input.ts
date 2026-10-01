@@ -12,6 +12,36 @@ export interface Intents {
   restart: boolean;
 }
 
+/** Input types that take typed text (a checkbox/range/button does not). */
+const TEXT_INPUT_TYPES = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number', 'date', 'datetime-local', 'month', 'time', 'week']);
+
+/**
+ * True when a key event is aimed at a field the player is typing into (nickname, chat, …):
+ * text-like `<input>`, `<textarea>`, `<select>` or any contenteditable element. Keyboard
+ * shortcuts and game intents must ignore such events and must not preventDefault them.
+ */
+export function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
+  return target instanceof HTMLInputElement && TEXT_INPUT_TYPES.has(target.type);
+}
+
+let typingGuardInstalled = false;
+/**
+ * Global guard for every `window` keydown shortcut in the app (mute M, emotes 1–6/H, camera V,
+ * game intents): a keydown that starts in a text field stops at `document` during the bubble
+ * phase, after the field's own handlers ran and without preventDefault, so the character is
+ * typed and no window-level shortcut sees it. Escape still bubbles so panels can close.
+ */
+export function installTypingGuard(): void {
+  if (typingGuardInstalled) return;
+  typingGuardInstalled = true;
+  document.addEventListener('keydown', (e) => {
+    if (e.code !== 'Escape' && isTypingTarget(e.target)) e.stopPropagation();
+  });
+}
+
 export class Input {
   private readonly keys = new Set<string>();
   private dashLatch = false;
@@ -26,7 +56,9 @@ export class Input {
   private knobEl: HTMLElement | null = null;
 
   constructor(target: HTMLElement) {
+    installTypingGuard();
     addEventListener('keydown', (e) => {
+      if (isTypingTarget(e.target)) return; // typing a name: no intents, no preventDefault
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
       if (!this.keys.has(e.code)) {
         if (e.code === 'Space') this.dashLatch = true;
@@ -36,6 +68,10 @@ export class Input {
     });
     addEventListener('keyup', (e) => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
+    // Focusing a text field mid-move must not leave a key stuck down (its keyup is still seen).
+    addEventListener('focusin', (e) => {
+      if (isTypingTarget(e.target)) this.keys.clear();
+    });
     let dragging = false;
     let lx = 0;
     let ly = 0;
