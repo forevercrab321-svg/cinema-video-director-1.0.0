@@ -26,6 +26,7 @@ import { EMOTES, GooglyEyes, HORN, killQuip } from './comedy';
 import { hatById, hornById, skinById, type HornSound } from '../config/cosmetics';
 import { Hat } from '../entities/Hat';
 import type { GameEvent } from '../game/Game';
+import { MassLedger } from './massLedger';
 
 /**
  * ARENA — up to four machines in one city. The world is identical on every client (same
@@ -141,8 +142,6 @@ export type WireState = [x: number, z: number, heading: number, diameter: number
 
 const PULL_HOLD_RECLAIM = 1.5;
 
-/** Size class names for the arena HUD (Chinese; English uses SIZE_CLASSES labels). */
-const CLASS_ZH = ['碎屑', '罐子和砖块', '纸箱和垃圾袋', '垃圾桶和街道设施', '大垃圾箱和机器', '汽车', '卡车和集装箱', '房屋', '楼房', '大型建筑', '城市街区'];
 
 /** Starter scrap around each spawn: [type, radius m, count]. */
 const STARTER_RING: [ObjectTypeId, number, number][] = [
@@ -161,7 +160,7 @@ export class ArenaGame {
   readonly camera = new THREE.PerspectiveCamera(56, 16 / 9, 0.03, 700);
   readonly world: World;
   readonly rig: CameraRig;
-  readonly hud = new Hud('<kbd>WASD</kbd> MOVE · <kbd>SPACE</kbd> DASH<br><kbd>DRAG</kbd> LOOK · <kbd>V</kbd> VIEW · <kbd>M</kbd> SOUND');
+  readonly hud = new Hud(L('<kbd>WASD</kbd> 移动 · <kbd>空格</kbd> 冲刺<br><kbd>拖动</kbd> 转视角 · <kbd>V</kbd> 切换视角 · <kbd>M</kbd> 声音', '<kbd>WASD</kbd> MOVE · <kbd>SPACE</kbd> DASH<br><kbd>DRAG</kbd> LOOK · <kbd>V</kbd> VIEW · <kbd>M</kbd> SOUND'));
   readonly effects: Effects;
   readonly sun: THREE.DirectionalLight;
   readonly sky: THREE.Mesh;
@@ -178,6 +177,8 @@ export class ArenaGame {
   readonly outbox: { claims: [number, string][]; eats: [string, string][] } = { claims: [], eats: [] };
   /** Final grants from the host: object id → actor id. */
   readonly grants = new Map<number, string>();
+  /** Most mass / kills each machine can have earned from the host's decisions (massLedger.ts). */
+  readonly ledger = new MassLedger();
   onEvent: ((e: GameEvent | FeelEvent) => void) | null = null;
   /** Kill feed and notices for the arena HUD. */
   onFeed: ((text: string, tone: 'kill' | 'info' | 'bonus' | 'bad') => void) | null = null;
@@ -189,6 +190,12 @@ export class ArenaGame {
   private landmarkAnnounced = false;
   private goBeeped = false;
   private readonly contact: Contact = { nx: 0, nz: 0, depth: 0 };
+  /** Reused broad-phase result (World.near) — no per-query allocation. */
+  private readonly nearBuf: WorldObject[] = [];
+  /** Per-class reward scale for this city (arenaConfig.cityRewardScale). */
+  private readonly rewardScale: readonly number[];
+  /** Landmark parts (fixed per round). */
+  private climaxParts: WorldObject[] = [];
   private shadowExtent = 0;
   private readonly rand: () => number;
   private spectate = 0;
@@ -207,6 +214,7 @@ export class ArenaGame {
     readonly isHost: () => boolean,
   ) {
     const pal = city.palette;
+    this.rewardScale = A.cityRewardScale[city.id] ?? [];
     this.rand = createSeededRandom(seed ^ 0x51f7);
     this.sun = new THREE.DirectionalLight(pal.sunColor, pal.sunIntensity);
     this.world = new World(lib, city);
@@ -237,6 +245,7 @@ export class ArenaGame {
     for (const sp of city.spawns) for (const [type, radius, count] of STARTER_RING) extra.push({ type, x: sp.x, z: sp.z, radius, count });
     for (const type of ['POWER_SPEED', 'POWER_MAGNET', 'POWER_SHIELD'] as const) extra.push({ type, x: (b.minX + b.maxX) / 2, z: (b.minZ + b.maxZ) / 2, radius: Math.min(b.maxX - b.minX, b.maxZ - b.minZ) * 0.47, count: A.powerCount });
     this.world.spawnObjects(seed, extra);
+    this.climaxParts = this.world.objects.filter((o) => o.def.climax);
     const supporting = new Set(this.world.objects.flatMap((o) => o.supports));
     for (const o of this.world.objects) {
       this.homes.push({ x: o.x, y: o.y, z: o.z, yaw: o.yaw });
@@ -332,6 +341,7 @@ export class ArenaGame {
     this.actors.push(a);
     this.byId.set(a.id, a);
     if (kind === 'local') this.local = a;
+    this.ledger.set(a.id, a.mass);
   }
 
   /**
@@ -362,6 +372,7 @@ export class ArenaGame {
     a.tier = tierForClass(a.cls);
     a.model.setTier(a.tier, false);
     a.invulnerableUntil = this.matchTime + A.invulnerableSeconds;
+    this.ledger.set(a.id, a.mass, a.kills);
     if (a.kind === 'local') {
       this.rig.snap(a.x, a.z, a.heading, a.diameter);
       this.world.applyEligibility(a.power);
@@ -410,6 +421,7 @@ export class ArenaGame {
       if (this.local) this.hud.showBanner(L('地标开放！', 'LANDMARK OPEN!'), L(`拆倒${this.city.climaxNameZh}`, `TOPPLE ${this.city.climaxName.replace(/^the /, '').toUpperCase()}`), 2.4);
     }
 
+    this.world.refreshGrid();
     for (const a of this.actors) {
       if (a.kind === 'remote' || (a.kind === 'bot' && !a.owned)) {
         this.followNetwork(a, dt);
@@ -570,7 +582,8 @@ export class ArenaGame {
 
   private collideObjects(a: Actor): void {
     const r = a.diameter * 0.47;
-    for (const o of this.world.objects) {
+    // Broad phase: the machine can be pushed up to ~r while resolving, so look a little wider.
+    for (const o of this.world.near(a.x, a.z, r * 2 + 0.5, this.nearBuf)) {
       if (!this.world.isSolid(o, this.locked(o) ? 0 : a.power)) continue;
       if (Math.abs(o.x - a.x) > o.radius + r || Math.abs(o.z - a.z) > o.radius + r) continue;
       if (!circleVsObb(a.x, a.z, r, o.obb, this.contact)) continue;
@@ -604,7 +617,7 @@ export class ArenaGame {
 
   private proposeCollection(a: Actor): void {
     const reach = this.reach(a);
-    for (const o of this.world.objects) {
+    for (const o of this.world.near(a.x, a.z, reach * Math.max(1, CC.vacuumReachMultiplier), this.nearBuf)) {
       if (o.state !== 'idle' || this.grants.has(o.id) || !this.eligible(o, a.power)) continue;
       const r = o.radius * 2 < a.diameter * CC.vacuumSizeRatio ? reach * CC.vacuumReachMultiplier : reach;
       if (Math.abs(o.x - a.x) > o.radius + r || Math.abs(o.z - a.z) > o.radius + r) continue;
@@ -642,6 +655,11 @@ export class ArenaGame {
     this.grants.set(objectId, actorId);
     const o = this.world.objects[objectId];
     const a = this.byId.get(actorId);
+    if (o) {
+      const lastClimax = !!o.def.climax && !this.world.objects.some((x) => x !== o && x.def.climax && x.state !== 'absorbed' && !this.grants.has(x.id));
+      // The larger of the base and the city-scaled reward: the cap must hold for either (gold crates use the base).
+      this.ledger.grant(actorId, { rewardMass: Math.max(o.def.rewardMass, this.reward(o)), bonus: o.def.bonus, climax: o.def.climax }, lastClimax);
+    }
     if (!o || !a || o.state === 'absorbed') return;
     if (o.state === 'idle') this.startPull(o, a);
     else if (o.owner !== actorId) {
@@ -759,9 +777,9 @@ export class ArenaGame {
         this.onFeed?.(`${L('获得道具：', 'Power-up: ')}${label}`, 'bonus');
       }
     }
-    let gain = o.def.bonus ? Math.max(o.def.rewardMass, a.mass * A.goldCrateShare) : o.def.rewardMass;
+    let gain = o.def.bonus ? Math.max(o.def.rewardMass, a.mass * A.goldCrateShare) : this.reward(o);
     gain *= mult * this.catchUp(a);
-    const climaxLeft = o.def.climax ? this.world.objects.filter((x) => x.def.climax && x.state !== 'absorbed').length : -1;
+    const climaxLeft = o.def.climax ? this.climaxLeft() : -1;
     if (climaxLeft === 0) {
       gain += a.mass * A.landmarkBonus;
       this.landmarkBy = a.id;
@@ -841,7 +859,7 @@ export class ArenaGame {
     Object.assign(o, { state: 'idle', x: h.x, y: h.y, z: h.z, yaw: h.yaw, scale: 1, squash: 0, tilt: 0, spin: 0, vx: 0, vy: 0, vz: 0, pullTime: 0, falling: false, owner: undefined, claimAt: undefined, dirty: true });
     this.grants.delete(id);
     this.absorbedAt.delete(id);
-    if (this.local) this.world.applyEligibility(this.local.power);
+    if (this.local) this.world.applyEligibilityTo(o, this.local.power);
   }
 
   /** Rewarded revive (once per match): only while waiting to respawn with lives left. */
@@ -934,6 +952,11 @@ export class ArenaGame {
     return ahead <= 1 ? 1 : Math.max(A.leaderDragMin, Math.pow(1 / ahead, A.leaderDragExp));
   }
 
+  /** Base mass an object is worth in this city (OBJECT_TYPES × arenaConfig.cityRewardScale). */
+  reward(o: WorldObject): number {
+    return o.def.rewardMass * (this.rewardScale[o.def.objectClass] ?? 1);
+  }
+
   /** The landmark's parts can be eaten from arenaConfig.landmarkOpenSeconds on. */
   landmarkOpen(): boolean {
     return this.matchTime >= A.landmarkOpenSeconds;
@@ -979,6 +1002,7 @@ export class ArenaGame {
     const v = this.byId.get(e.v);
     const a = this.byId.get(e.a);
     if (!v || !a) return;
+    this.ledger.eaten(e.v, e.a, e.gain);
     v.deaths++;
     a.kills++;
     this.effects.shards(v.x, v.diameter * 0.5, v.z, new THREE.Color(v.vehicle.shell), 26, v.diameter * 0.12, 3 + v.diameter * 2);
@@ -1055,14 +1079,14 @@ export class ArenaGame {
     if (a.kind === 'local' && cls > a.cls) {
       const tier = tierForClass(cls);
       if (tier > a.tier) {
-        this.hud.showBanner(L(`进化到 ${tier} 阶`, `TIER ${tier}`), L(`现在能吃：${CLASS_ZH[cls]}`, `NOW EATING: ${SIZE_CLASSES[cls].label.toUpperCase()}`), 2.4);
+        this.hud.showBanner(L(`进化到 ${tier} 阶`, `TIER ${tier}`), L(`现在能吃：${SIZE_CLASSES[cls].labelZh}`, `NOW EATING: ${SIZE_CLASSES[cls].label.toUpperCase()}`), 2.4);
         this.onEvent?.({ kind: 'tier', tier });
         this.effects.pulse(a.x, a.z, a.targetDiameter * 4, 1);
         this.effects.pullBack(FEEL.tierPullBack, FEEL.tierPullSeconds);
         this.effects.addTrauma(feelConfig.tierUpTrauma * 0.6);
         this.effects.burst(a.x, a.targetDiameter * 0.5, a.z, new THREE.Color(0xffa640), 20, a.targetDiameter * 0.06, 2 + a.targetDiameter * 1.5);
       } else {
-        this.hud.showBanner(L(`解锁：${CLASS_ZH[cls]}`, `UNLOCKED: ${SIZE_CLASSES[cls].label.toUpperCase()}`), `SIZE CLASS ${cls}`, 1.6);
+        this.hud.showBanner(L(`解锁：${SIZE_CLASSES[cls].labelZh}`, `UNLOCKED: ${SIZE_CLASSES[cls].label.toUpperCase()}`), L(`体型等级 ${cls}`, `SIZE CLASS ${cls}`), 1.6);
         this.onEvent?.({ kind: 'unlock', cls });
       }
     }
@@ -1086,8 +1110,11 @@ export class ArenaGame {
   applyWire(id: string, s: WireState): void {
     const a = this.byId.get(id);
     if (!a || a.owned || a.left || !Array.isArray(s) || s.length < 12 || !s.every((v) => typeof v === 'number' && Number.isFinite(v))) return;
-    a.net = { x: s[0], z: s[1], heading: s[2], diameter: s[3], speed: s[4], at: this.time };
-    if (s[5] !== a.mass) this.setMass(a, Math.max(growthConfig.startMass, s[5]));
+    // Another player's page reports its own mass and kills: never more than it can have earned.
+    const human = a.kind === 'remote';
+    const mass = human ? this.ledger.clampMass(id, s[5]) : s[5];
+    a.net = { x: s[0], z: s[1], heading: s[2], diameter: human ? Math.min(s[3], diameterForMass(Math.max(growthConfig.startMass, mass)) * 1.02) : s[3], speed: s[4], at: this.time };
+    if (mass !== a.mass) this.setMass(a, Math.max(growthConfig.startMass, mass));
     a.lives = s[6];
     const wasAlive = a.alive;
     a.alive = (s[7] & 1) === 1;
@@ -1106,13 +1133,13 @@ export class ArenaGame {
         if (id === HORN && focus && Math.hypot(focus.x - a.x, focus.z - a.z) < 60 + focus.diameter * 6) this.onEvent?.({ kind: 'horn', horn: a.horn });
       }
     }
-    a.kills = s[8];
+    a.kills = human ? this.ledger.clampKills(id, s[8]) : s[8];
     a.deaths = s[9];
     a.objects = s[10];
     if (!wasAlive && a.alive) {
       a.x = s[0];
       a.z = s[1];
-      a.diameter = s[3];
+      a.diameter = a.net.diameter;
     }
   }
 
@@ -1161,7 +1188,14 @@ export class ArenaGame {
   }
 
   climaxLeft(): number {
-    return this.world.objects.filter((o) => o.def.climax && o.state !== 'absorbed').length;
+    let n = 0;
+    for (const o of this.climaxParts) if (o.state !== 'absorbed') n++;
+    return n;
+  }
+
+  /** How many landmark parts this city has. */
+  climaxTotal(): number {
+    return this.climaxParts.length;
   }
 
   // ── Presentation helpers ───────────────────────────────────────────────────
@@ -1198,7 +1232,7 @@ export class ArenaGame {
 
   isBlocked(x: number, z: number, r: number, power: number, ignore: WorldObject | null): boolean {
     for (const b of this.world.staticColliders) if (circleVsObb(x, z, r, b, this.contact)) return true;
-    for (const o of this.world.objects) {
+    for (const o of this.world.near(x, z, r, this.nearBuf)) {
       if (o === ignore || !this.world.isSolid(o, this.locked(o) ? 0 : power)) continue;
       if (Math.abs(o.x - x) > o.radius + r || Math.abs(o.z - z) > o.radius + r) continue;
       if (circleVsObb(x, z, r, o.obb, this.contact)) return true;

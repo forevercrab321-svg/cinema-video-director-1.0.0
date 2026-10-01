@@ -94,9 +94,14 @@ const CELLS: [number, number][] = [
   [56 + STREET / 2, HALF],
 ];
 
+/** Hot path (ground height under every machine and solid test): no allocation. */
 function onRoad(x: number, z: number): boolean {
-  if (Math.hypot(x, z) < PLAZA_R) return false;
-  for (const [c, w] of ROADS) if (Math.abs(x - c) < w / 2 || Math.abs(z - c) < w / 2) return true;
+  if (x * x + z * z < PLAZA_R * PLAZA_R) return false;
+  for (let i = 0; i < ROADS.length; i++) {
+    const c = ROADS[i][0];
+    const h = ROADS[i][1] / 2;
+    if (Math.abs(x - c) < h || Math.abs(z - c) < h) return true;
+  }
   return false;
 }
 

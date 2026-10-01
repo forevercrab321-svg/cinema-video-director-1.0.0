@@ -33,7 +33,10 @@ export class RenderPipeline {
     readonly quality: Quality,
   ) {
     capShadowMaps(scene, SHADOW_CAP[quality]);
-    if (quality === 'low') return;
+    if (quality === 'low') {
+      this.prewarm(null);
+      return;
+    }
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
     const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: quality === 'high' ? 4 : 2 });
     this.composer = new EffectComposer(renderer, target);
@@ -84,6 +87,20 @@ export class RenderPipeline {
     this.composer.addPass(this.bloom);
     this.output = new CinematicOutputPass(); // tone map + grade + lens finish in the output pass (no extra pass)
     this.composer.addPass(this.output);
+    this.prewarm(this.composer.readBuffer);
+  }
+
+  /**
+   * Compile every scene material now, including objects that start hidden (pooled impact FX,
+   * pulse rings): otherwise their programs compile on the frame of the first big swallow — a
+   * shader-link hitch exactly when the game should feel best. Compiled for the target the
+   * scene pass draws into, so the program variants (tone mapping, colour space) match.
+   */
+  private prewarm(target: THREE.WebGLRenderTarget | null): void {
+    const prev = this.renderer.getRenderTarget();
+    this.renderer.setRenderTarget(target);
+    this.renderer.compile(this.scene, this.camera);
+    this.renderer.setRenderTarget(prev);
   }
 
   setSize(w: number, h: number): void {

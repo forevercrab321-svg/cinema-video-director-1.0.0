@@ -37,6 +37,10 @@ export interface Net {
   connected(): boolean;
   /** Display name for a peer (account name where available, else the nickname in presence). */
   nameOf(peer: NetPeer): string;
+  /** Server-confirmed host (online rooms, 0006 RPC); null = unknown: the client election decides. */
+  lease?(): { peer: string; term: number } | null;
+  /** The client election picks this page as host: claim the server lease when it is free. */
+  wantHost?(want: boolean): void;
 }
 
 const randomId = () => Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);

@@ -118,7 +118,7 @@ export class ArenaBot {
         if ((this.blacklist.get(o.id) ?? 0) > game.time) continue;
         const d = Math.hypot(o.x - me.x, o.z - me.z);
         // Worth the trip: reward mass (diminishing), so growing rivals move on from dust to bigger prizes.
-        const value = Math.sqrt(Math.max(0.05, o.def.rewardMass)) * (o.def.bonus ? 2 : o.def.power ? 6 : 1) * (o.def.objectClass === me.cls ? 1.4 : 1);
+        const value = Math.sqrt(Math.max(0.05, game.reward(o))) * (o.def.bonus ? 2 : o.def.power ? 6 : 1) * (o.def.objectClass === me.cls ? 1.4 : 1);
         // Squared distance: a nearby can beats a prize across the map, unless the prize is much bigger.
         const score = (d + 1.5) * (d + 1.5) / value;
         if (score < bestScore) {

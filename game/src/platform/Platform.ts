@@ -51,6 +51,37 @@ export interface Platform {
   playerName(): Promise<string | null>;
   onPause: (() => void) | null;
   onResume: (() => void) | null;
+
+  // ── Multiplayer room reporting (CrazyGames SDK v3; the other adapters omit these) ──
+  /**
+   * Tell the portal which online room this player is in and whether friends can join it
+   * (CrazyGames: game.updateRoom + invite button; leftRoom when `null`). Cheap to call every
+   * frame: the adapter only forwards changes.
+   */
+  reportRoom?(room: RoomReport | null): void;
+  /** CrazyGames isInstantMultiplayer: the player came from a "play with friends" entry point. */
+  instantMultiplayer?(): boolean;
+  /**
+   * The portal account changed (log in / log out on CrazyGames). The game decides whether to
+   * adopt the name (never over one the player typed in this game).
+   */
+  onPlayerNameChange?: ((name: string | null) => void) | null;
+  /**
+   * The portal asks the player to join a friend's room while already in the game. Unset → the
+   * adapter reloads the page into that room (the transport cannot switch rooms in place).
+   */
+  onJoinRoomRequest?: ((room: string) => void) | null;
+}
+
+/** An online room as reported to the portal. */
+export interface RoomReport {
+  /** Room code (unique within the game at any time). */
+  code: string;
+  /** Humans in the room, me included. */
+  players: number;
+  maxPlayers: number;
+  /** False when the room is closed to newcomers regardless of free seats (default true). */
+  open?: boolean;
 }
 
 /** Query-param name used for room codes in invite links on every platform. */
@@ -166,8 +197,19 @@ export function roomFromLocation(): string | null {
   }
 }
 
-/** Picks the adapter via detectPlatform(), calls init(), returns it. Never throws. */
-export async function createPlatform(): Promise<Platform> {
+let created: Promise<Platform> | null = null;
+
+/**
+ * Picks the adapter via detectPlatform(), calls init(), returns it. Never throws. Memoized: the
+ * entry point may start it early (SDK download + loadingStart overlap the asset generation) and
+ * the mode code awaits the same instance.
+ */
+export function createPlatform(): Promise<Platform> {
+  created ??= buildPlatform();
+  return created;
+}
+
+async function buildPlatform(): Promise<Platform> {
   const name = detectPlatform();
   let platform: Platform;
   if (PORTAL_TARGET === 'gamedistribution') {

@@ -137,31 +137,68 @@ export function bakeSkyEnvironment(renderer: THREE.WebGLRenderer, palette: Palet
   if (!bakes) skyBakes.set(renderer, (bakes = new Map()));
   const cached = bakes.get(palette);
   if (cached) return cached;
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const rt = bakeSky(pmrem, palette);
+  pmrem.dispose();
+  bakes.set(palette, rt.texture);
+  return rt.texture;
+}
+
+/** PMREM of the procedural sky over a dark ground disc (256² cube faces, PMREMGenerator's default). */
+function bakeSky(pmrem: THREE.PMREMGenerator, palette: Palette): THREE.WebGLRenderTarget {
   const envScene = new THREE.Scene();
   envScene.add(createSkyDome(50, palette));
   const ground = new THREE.Mesh(new THREE.CircleGeometry(49, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x3e3b37 }));
   ground.position.y = -0.5;
   envScene.add(ground);
-  const pmrem = new THREE.PMREMGenerator(renderer);
   const rt = pmrem.fromScene(envScene, 0.02);
-  pmrem.dispose();
   envScene.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
-  bakes.set(palette, rt.texture);
-  return rt.texture;
+  return rt;
+}
+
+/** The photographed HDRI's sun sits at azimuth atan2(z, x) = +51°; this turns it onto a palette's sun. */
+const HDRI_SUN_AZ = THREE.MathUtils.degToRad(51.1);
+const hdriRotationFor = (sun: THREE.Vector3): number => HDRI_SUN_AZ - Math.atan2(sun.z, sun.x);
+
+export interface HdriEnvironment {
+  /** PMREM texture, usable at once: a sky bake until the HDRI is in, then the HDRI (same object). */
+  texture: THREE.Texture;
+  rotationFor: (sun: THREE.Vector3) => number;
+  rotationY: number;
+  /** Resolves true once the HDRI replaced the bake, false if it could not load. */
+  loaded: Promise<boolean>;
 }
 
 /**
- * Load the photographed HDRI and prefilter it for PBR. The equirect's sun sits at azimuth
- * atan2(z, x) = +51°; `rotationY` turns it onto SUN_DIRECTION.
+ * Image-based lighting that never blocks the first frame. The texture starts as a sky bake
+ * (golden-hour palette with its sun placed where the HDRI's sun is, so the same `rotationFor`
+ * applies) and the photographed HDRI is prefiltered INTO THE SAME render target when `source`
+ * delivers its URL: scenes that already hold the texture switch to the HDRI untouched.
+ * The HDRI must be 1k (1024 × 512) so its PMREM has the bake's 256² faces.
  */
-export async function loadHdriEnvironment(renderer: THREE.WebGLRenderer, url: string): Promise<{ texture: THREE.Texture; rotationFor: (sun: THREE.Vector3) => number; rotationY: number }> {
-  const hdr = await new HDRLoader().setDataType(THREE.HalfFloatType).loadAsync(url);
-  hdr.mapping = THREE.EquirectangularReflectionMapping;
+export function createProgressiveEnvironment(renderer: THREE.WebGLRenderer, source: Promise<string | null>): HdriEnvironment {
+  // One generator for both passes: re-targeting needs its ping-pong buffer at the matching size.
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const env = pmrem.fromEquirectangular(hdr).texture;
-  pmrem.dispose();
-  hdr.dispose();
-  const hdriSunAz = THREE.MathUtils.degToRad(51.1);
-  const rotationFor = (sun: THREE.Vector3) => hdriSunAz - Math.atan2(sun.z, sun.x);
-  return { texture: env, rotationFor, rotationY: rotationFor(SUN_DIRECTION) };
+  const elevation = Math.asin(SUN_DIRECTION.y);
+  const sunAtHdri = new THREE.Vector3(Math.cos(HDRI_SUN_AZ) * Math.cos(elevation), Math.sin(elevation), Math.sin(HDRI_SUN_AZ) * Math.cos(elevation));
+  const rt = bakeSky(pmrem, { ...GOLDEN_HOUR, sunDirection: sunAtHdri });
+  const loaded = source
+    .then(async (url) => {
+      if (!url) return false;
+      const hdr = await new HDRLoader().setDataType(THREE.HalfFloatType).loadAsync(url);
+      try {
+        if (hdr.image.width !== 1024) throw new Error(`HDRI must be 1024 px wide (got ${hdr.image.width})`);
+        hdr.mapping = THREE.EquirectangularReflectionMapping;
+        pmrem.fromEquirectangular(hdr, rt);
+        return true;
+      } finally {
+        hdr.dispose();
+      }
+    })
+    .catch((e: unknown) => {
+      console.warn('HDRI unavailable, keeping the sky bake', e);
+      return false;
+    })
+    .finally(() => pmrem.dispose());
+  return { texture: rt.texture, rotationFor: hdriRotationFor, rotationY: hdriRotationFor(SUN_DIRECTION), loaded };
 }
