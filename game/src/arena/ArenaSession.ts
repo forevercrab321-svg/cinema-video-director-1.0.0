@@ -12,8 +12,12 @@ import { cleanName } from './nameFilter';
  * Lobby, match flow and host authority on top of a Net.
  *
  * Everyone who opens the page is in the room; up to four JOIN a match (others spectate).
- * The HOST is the joined player with the lowest peer id — deterministic on every client, so
- * when the host leaves the next one takes over without negotiation. The host:
+ * The HOST: in an online room with the backend, the page holding the server lease
+ * (net/HostLease.ts, migration 0006); everyone agrees on it whatever their peer lists say, and
+ * its messages are signed. Without the lease, a client election: the announced host keeps the
+ * job while present; when it is gone the lowest joined peer id takes over with a higher term
+ * (`hg`), and competing claims resolve the same way on every client (higher term, then the
+ * older page, then the lower id). The host:
  *   · owns the match clock and phase (lobby → countdown → playing → results → lobby),
  *   · grants each object to the first machine that claims it,
  *   · validates "A ate B" and broadcasts the result,
@@ -41,6 +45,14 @@ export interface MatchState {
   wu?: boolean;
   /** Names of the friends whose arrival ended a warm-up (announced when the real match starts). */
   wj?: string;
+  /** Host term: the server lease term, or +1 per client-side takeover. Higher wins a conflict. */
+  hg?: number;
+  /** When the host's page opened the room (ms): the older page wins a tie between equal terms. */
+  sn?: number;
+  /** Host, while playing: recent eats [id, victim slot, attacker slot, gain, first] (lost 'eaten' repair). */
+  ev?: number[][];
+  /** Host, while playing: mass / kill caps [slot, kg, kills] (massLedger.ts). */
+  mc?: number[][];
 }
 
 export interface LobbyPlayer {
@@ -88,7 +100,12 @@ export class ArenaSession {
   /** When this page opened the room (the hub lists older rooms first among equals). */
   readonly since = Date.now();
   private readonly grantQueue: [number, string][] = [];
-  private readonly granted = new Set<number>();
+  /** Host: object id → the machine it was granted to (a repeated claim gets the same answer again). */
+  private readonly granted = new Map<number, string>();
+  /** Host: eats of this round, re-sent in the beacon for a few seconds (a lost 'eaten' is repaired). */
+  private recentEaten: { id: number; at: number; row: number[] }[] = [];
+  /** Eat ids already applied this round (the beacon repeats them). */
+  private readonly seenEaten = new Set<number>();
   private readonly lastEaten = new Map<string, number>();
   private firstBlood = false;
   private grantTimer = 0;
@@ -102,6 +119,9 @@ export class ArenaSession {
   private admitTimer = 0;
   /** When this page was hidden during a round (ms timestamp), for away detection. */
   private hiddenAt = 0;
+  /** When this session started, and whether it has heard another page's host beacon since. */
+  private readonly bornAt = performance.now();
+  private heardHost = false;
 
   constructor(
     readonly net: Net,
@@ -160,8 +180,18 @@ export class ArenaSession {
     return this.net.peers().filter((p) => !joined.has(p.id));
   }
 
-  /** The host: lowest peer id among joined players (falls back to lowest peer). */
+  /** The host: the server lease holder when the backend confirms one, else the client election. */
   hostId(): string | null {
+    const lease = this.net.lease?.();
+    if (lease) return lease.peer;
+    return this.electLocal();
+  }
+
+  /**
+   * Client-side election. The announced host keeps the job while it is here (in the lobby too:
+   * a newcomer with a lower id never takes over); otherwise the lowest joined peer id.
+   */
+  private electLocal(): string | null {
     const inMatch = this.match.ph !== 'lobby' ? new Set(this.match.roster.filter((r) => r.kind === 'player').map((r) => r.id)) : null;
     const peers = this.net.peers();
     if (inMatch) {
@@ -172,10 +202,30 @@ export class ArenaSession {
       if (this.match.host && eligible(this.match.host)) return this.match.host;
       const next = peers.filter((p) => eligible(p.id)).map((p) => p.id).sort()[0];
       if (next) return next;
+    } else {
+      const h = this.match.host;
+      if (h && peers.some((p) => p.id === h && p.presence.j === true)) return h;
     }
     const candidates = peers.filter((p) => (inMatch ? inMatch.has(p.id) : p.presence.j === true));
     const pool = candidates.length ? candidates : peers;
     return pool.length ? pool.map((p) => p.id).sort()[0] : this.net.selfId();
+  }
+
+  /**
+   * Without a server lease: does `from`'s beacon beat the host this page follows? A higher term
+   * wins; equal terms go to the page that opened the room first, then the lower id. Every client
+   * ranks two claims the same way, so a split heals at the next beacon.
+   */
+  private outranks(from: string, m: MatchState): boolean {
+    if (m.host !== from) return false;
+    const cur = this.match.host;
+    if (!cur || cur === from || !this.net.peers().some((p) => p.id === cur)) return true;
+    const a = m.hg ?? 0;
+    const b = this.match.hg ?? 0;
+    if (a !== b) return a > b;
+    const sa = m.sn ?? Number.MAX_SAFE_INTEGER;
+    const sb = this.match.sn ?? Number.MAX_SAFE_INTEGER;
+    return sa !== sb ? sa < sb : from < cur;
   }
 
   isHost(): boolean {
@@ -322,7 +372,7 @@ export class ArenaSession {
         roster.push({ id: `bot-${slot}`, slot, kind: 'bot', name, vehicle: VEHICLE_ORDER[(slot + 1) % VEHICLE_ORDER.length], skin, horn, hat });
       }
     }
-    this.match = { ep: this.match.ep + 1, ph: 'countdown', host: this.net.selfId() ?? '', city: this.city, seed: Math.floor(Math.random() * 1e9), bots: this.bots, roster, t: 0, wu: warmup || undefined, wj: joined };
+    this.match = { ep: this.match.ep + 1, ph: 'countdown', host: this.net.selfId() ?? '', city: this.city, seed: Math.floor(Math.random() * 1e9), bots: this.bots, roster, t: 0, wu: warmup || undefined, wj: joined, hg: this.term(), sn: this.since };
     this.net.emit('match', this.match);
   }
 
@@ -341,7 +391,7 @@ export class ArenaSession {
   /** Host: back to the lobby (from results, or to abort). */
   toLobby(): void {
     if (!this.isHost()) return;
-    this.match = { ...this.match, ep: this.match.ep + 1, ph: 'lobby', roster: [], t: 0, standings: undefined, city: this.city, bots: this.bots, wu: undefined, wj: undefined };
+    this.match = { ...this.match, ep: this.match.ep + 1, ph: 'lobby', roster: [], t: 0, standings: undefined, city: this.city, bots: this.bots, wu: undefined, wj: undefined, ev: undefined, mc: undefined };
     this.net.emit('match', this.match);
   }
 
@@ -350,13 +400,35 @@ export class ArenaSession {
   }
 
   // ── Per-frame driver ──────────────────────────────────────────────────────
+  /** My term as host: the server's lease term, else one above the term I last followed. */
+  private term(): number {
+    const lease = this.net.lease?.();
+    const me = this.net.selfId();
+    if (lease && lease.peer === me) return lease.term;
+    return this.match.host === me ? (this.match.hg ?? 0) : (this.match.hg ?? 0) + (this.match.host ? 1 : 0);
+  }
+
   update(dt: number): void {
+    const me = this.net.selfId();
+    // The client election picks this page and the lease holder (if any) has left: claim the server
+    // lease (granted only when it is free or expired).
+    // A page that just arrived first listens for the room's host (hostGraceMs).
+    const lease = this.net.lease?.();
+    const holderHere = !!lease && this.net.peers().some((p) => p.id === lease.peer);
+    const settled = this.heardHost || performance.now() - this.bornAt >= A.hostGraceMs;
+    this.net.wantHost?.(!!me && settled && this.electLocal() === me && (!lease || lease.peer === me || !holderHere));
     const host = this.isHost();
     const g = this.game;
     if (host !== this.wasHost) {
       this.wasHost = host;
+      if (host && me && this.match.host !== me) {
+        // Taking over (the old host left, or the server moved the lease): a higher term, the room's
+        // settings as last announced (city / bots mirror the beacon), and an announcement right now.
+        this.match = { ...this.match, host: me, hg: this.term(), sn: this.since };
+        this.beaconTimer = A.matchBeaconMs;
+      }
       g?.refreshOwnership();
-      if (host && g) for (const [id, actor] of g.grants) this.granted.add(id), void actor;
+      if (host && g) for (const [id, actor] of g.grants) this.granted.set(id, actor);
     }
     if (g) {
       // Publish my machine (and the AI rivals when hosting).
@@ -467,7 +539,15 @@ export class ArenaSession {
         m.bots = this.bots;
       }
       m.host = this.net.selfId() ?? m.host;
-      m.abs = m.ph === 'playing' && g ? g.absorbedBits() : undefined;
+      m.hg = this.term();
+      m.sn = this.since;
+      const playing = m.ph === 'playing' && g;
+      m.abs = playing ? g.absorbedBits() : undefined;
+      // Recent eats ride along for a few seconds: a page that lost the 'eaten' message applies it now.
+      const now = g?.matchTime ?? 0;
+      this.recentEaten = this.recentEaten.filter((e) => e.at > now - A.eatenReplaySeconds);
+      m.ev = playing && this.recentEaten.length ? this.recentEaten.map((e) => e.row) : undefined;
+      m.mc = playing ? g.ledger.toWire((id) => this.slotOf(id)) : undefined;
       this.net.emit('match', m);
     }
   }
@@ -480,11 +560,19 @@ export class ArenaSession {
   // ── Message handlers ──────────────────────────────────────────────────────
   private onMatch(from: string, m: MatchState): void {
     if (!m || typeof m !== 'object' || typeof m.ep !== 'number') return;
-    // Only the current host speaks for the match (a stale host's beacon is ignored).
-    if (from !== this.hostId() && from !== this.net.selfId()) {
-      if (m.ep <= this.match.ep) return;
+    const me = this.net.selfId();
+    // Only the host speaks for the match. With a server lease, only its holder (whose messages the
+    // transport has verified); without one, the current host or a claim that outranks it.
+    let newTerm = false;
+    if (from !== me) {
+      if (this.net.lease?.()) {
+        if (from !== this.hostId()) return;
+      } else if (from !== this.hostId() && !this.outranks(from, m) && m.ep <= this.match.ep) return;
+      newTerm = (m.hg ?? 0) > (this.match.hg ?? 0);
+      this.heardHost = true;
     }
-    if (m.ep < this.match.ep) return;
+    // A new host (higher term) may continue from an older epoch than a stale host had reached.
+    if (m.ep < this.match.ep && !newTerm) return;
     const newEpoch = m.ep !== this.match.ep;
     const prev = this.match;
     this.match = { ...m, roster: Array.isArray(m.roster) ? m.roster.slice(0, A.maxPlayers) : [] };
@@ -495,13 +583,22 @@ export class ArenaSession {
     }
     if (m.ph === 'lobby') {
       if (this.game) this.endGame();
-      this.ready = false;
-      this.publishLobbyPresence();
+      // Ready resets only when the room (re)enters the lobby: the host repeats the lobby beacon
+      // every second, and clearing on each one meant the host could never start.
+      if (newEpoch || prev.ph !== 'lobby') {
+        this.ready = false;
+        this.publishLobbyPresence();
+      }
     } else if (newEpoch || !this.game) {
       if (this.game) this.endGame();
       this.granted.clear();
       this.grantQueue.length = 0;
       this.lastEaten.clear();
+      this.recentEaten = [];
+      this.seenEaten.clear();
+      // Joining a round in progress: eats that already happened are part of the state we receive,
+      // not news (replaying them could pay a machine twice).
+      if (Array.isArray(m.ev)) for (const row of m.ev) if (Array.isArray(row) && typeof row[0] === 'number') this.seenEaten.add(row[0]);
       this.firstBlood = false;
       const me = this.net.selfId();
       const inRoster = this.match.roster.some((r) => r.id === me);
@@ -524,7 +621,11 @@ export class ArenaSession {
       if (m.ph === 'playing' && g.phase === 'countdown') g.phase = 'playing';
       if (m.ph === 'results') g.phase = 'results';
       if (m.ph === 'playing' && !this.isHost() && Math.abs(g.matchTime - m.t) > 0.35) g.matchTime = m.t;
-      if (m.ph === 'playing' && from !== this.net.selfId() && typeof m.abs === 'string' && m.abs.length < 8000) g.syncAbsorbed(m.abs);
+      if (m.ph === 'playing' && from !== me && typeof m.abs === 'string' && m.abs.length < 8000) g.syncAbsorbed(m.abs);
+      if (m.ph === 'playing' && from !== me) {
+        g.ledger.fromWire(m.mc, (slot) => this.idOf(slot));
+        if (Array.isArray(m.ev)) for (const row of m.ev.slice(0, 32)) if (Array.isArray(row)) this.applyEatenRow(row);
+      }
     }
     if (prev.ph !== this.match.ph || newEpoch) this.hooks.changed();
   }
@@ -584,12 +685,18 @@ export class ArenaSession {
       if (!Array.isArray(pair)) continue;
       const id = pair[0];
       const actor = this.idOf(pair[1]);
-      if (typeof id !== 'number' || !actor || this.granted.has(id)) continue;
+      if (typeof id !== 'number' || !actor) continue;
+      const prior = this.granted.get(id);
+      if (prior !== undefined) {
+        // Asked again: the grant (or the redirect to whoever won it) was lost. Same answer again.
+        if (!this.grantQueue.some(([o]) => o === id)) this.grantQueue.push([id, prior]);
+        continue;
+      }
       const o = g.world.objects[id];
       const a = g.byId.get(actor);
       if (!o || !a || !a.alive || o.state === 'absorbed') continue;
       if (!g.world.isEligible(o, a.power * 1.05) && o.owner !== actor) continue; // size check with a little slack for lag
-      this.granted.add(id);
+      this.granted.set(id, actor);
       this.grantQueue.push([id, actor]);
     }
   }
@@ -625,17 +732,30 @@ export class ArenaSession {
       this.firstBlood = true;
       const leader = g.actors.every((b) => b === v || !b.alive || b.mass <= v.mass);
       const gain = v.mass * A.eatGain * (first ? 1 + A.firstBloodBonus : 1) * (leader ? 1 + A.leaderBounty : 1);
-      this.net.emit('eaten', { ep: this.match.ep, v: v.slot, a: a.slot, gain, first });
+      const eid = 1 + Math.floor(Math.random() * 0x7ffffffe);
+      this.recentEaten.push({ id: eid, at: g.matchTime, row: [eid, v.slot, a.slot, Math.round(gain * 10) / 10, first ? 1 : 0] });
+      this.net.emit('eaten', { ep: this.match.ep, id: eid, v: v.slot, a: a.slot, gain, first });
     }
   }
 
-  private onEaten(from: string, d: { ep: number; v: number; a: number; gain: number; first: boolean }): void {
+  private onEaten(from: string, d: { ep: number; id?: number; v: number; a: number; gain: number; first: boolean }): void {
+    if (!this.game || !d || d.ep !== this.match.ep || from !== this.hostId()) return;
+    this.applyEatenRow([typeof d.id === 'number' ? d.id : 0, d.v, d.a, d.gain, d.first ? 1 : 0]);
+  }
+
+  /** Apply one host-confirmed eat once (the 'eaten' message and the beacon both carry it). */
+  private applyEatenRow(row: unknown[]): void {
     const g = this.game;
-    if (!g || !d || d.ep !== this.match.ep || from !== this.hostId()) return;
-    const v = this.idOf(d.v);
-    const a = this.idOf(d.a);
-    if (!v || !a || typeof d.gain !== 'number' || !Number.isFinite(d.gain)) return;
-    const e: EatenEvent = { v, a, gain: Math.max(0, d.gain), first: !!d.first };
+    const [id, vs, as, gain, first] = row;
+    if (!g || typeof id !== 'number' || typeof gain !== 'number' || !Number.isFinite(gain)) return;
+    if (id > 0) {
+      if (this.seenEaten.has(id)) return;
+      this.seenEaten.add(id);
+    }
+    const v = this.idOf(vs);
+    const a = this.idOf(as);
+    if (!v || !a) return;
+    const e: EatenEvent = { v, a, gain: Math.max(0, gain), first: first === 1 || first === true };
     g.applyEaten(e);
   }
 

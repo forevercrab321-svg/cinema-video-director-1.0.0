@@ -116,4 +116,11 @@ export const arenaConfig = {
   /** Network cadence. */
   grantBatchMs: 90,
   matchBeaconMs: 1000,
+  /** Host: each eat is repeated in the match beacon this long, so a lost 'eaten' still lands. */
+  eatenReplaySeconds: 4,
+  /**
+   * A page that just opened an online room listens this long for the host's beacon before it may
+   * claim the server host lease (a newcomer must never take over a room it has not heard yet).
+   */
+  hostGraceMs: 2500,
 } as const;

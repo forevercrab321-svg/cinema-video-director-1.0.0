@@ -26,6 +26,7 @@ import { EMOTES, GooglyEyes, HORN, killQuip } from './comedy';
 import { hatById, hornById, skinById, type HornSound } from '../config/cosmetics';
 import { Hat } from '../entities/Hat';
 import type { GameEvent } from '../game/Game';
+import { MassLedger } from './massLedger';
 
 /**
  * ARENA — up to four machines in one city. The world is identical on every client (same
@@ -178,6 +179,8 @@ export class ArenaGame {
   readonly outbox: { claims: [number, string][]; eats: [string, string][] } = { claims: [], eats: [] };
   /** Final grants from the host: object id → actor id. */
   readonly grants = new Map<number, string>();
+  /** Most mass / kills each machine can have earned from the host's decisions (massLedger.ts). */
+  readonly ledger = new MassLedger();
   onEvent: ((e: GameEvent | FeelEvent) => void) | null = null;
   /** Kill feed and notices for the arena HUD. */
   onFeed: ((text: string, tone: 'kill' | 'info' | 'bonus' | 'bad') => void) | null = null;
@@ -332,6 +335,7 @@ export class ArenaGame {
     this.actors.push(a);
     this.byId.set(a.id, a);
     if (kind === 'local') this.local = a;
+    this.ledger.set(a.id, a.mass);
   }
 
   /**
@@ -362,6 +366,7 @@ export class ArenaGame {
     a.tier = tierForClass(a.cls);
     a.model.setTier(a.tier, false);
     a.invulnerableUntil = this.matchTime + A.invulnerableSeconds;
+    this.ledger.set(a.id, a.mass, a.kills);
     if (a.kind === 'local') {
       this.rig.snap(a.x, a.z, a.heading, a.diameter);
       this.world.applyEligibility(a.power);
@@ -642,6 +647,10 @@ export class ArenaGame {
     this.grants.set(objectId, actorId);
     const o = this.world.objects[objectId];
     const a = this.byId.get(actorId);
+    if (o) {
+      const lastClimax = !!o.def.climax && !this.world.objects.some((x) => x !== o && x.def.climax && x.state !== 'absorbed' && !this.grants.has(x.id));
+      this.ledger.grant(actorId, o.def, lastClimax);
+    }
     if (!o || !a || o.state === 'absorbed') return;
     if (o.state === 'idle') this.startPull(o, a);
     else if (o.owner !== actorId) {
@@ -979,6 +988,7 @@ export class ArenaGame {
     const v = this.byId.get(e.v);
     const a = this.byId.get(e.a);
     if (!v || !a) return;
+    this.ledger.eaten(e.v, e.a, e.gain);
     v.deaths++;
     a.kills++;
     this.effects.shards(v.x, v.diameter * 0.5, v.z, new THREE.Color(v.vehicle.shell), 26, v.diameter * 0.12, 3 + v.diameter * 2);
@@ -1086,8 +1096,11 @@ export class ArenaGame {
   applyWire(id: string, s: WireState): void {
     const a = this.byId.get(id);
     if (!a || a.owned || a.left || !Array.isArray(s) || s.length < 12 || !s.every((v) => typeof v === 'number' && Number.isFinite(v))) return;
-    a.net = { x: s[0], z: s[1], heading: s[2], diameter: s[3], speed: s[4], at: this.time };
-    if (s[5] !== a.mass) this.setMass(a, Math.max(growthConfig.startMass, s[5]));
+    // Another player's page reports its own mass and kills: never more than it can have earned.
+    const human = a.kind === 'remote';
+    const mass = human ? this.ledger.clampMass(id, s[5]) : s[5];
+    a.net = { x: s[0], z: s[1], heading: s[2], diameter: human ? Math.min(s[3], diameterForMass(Math.max(growthConfig.startMass, mass)) * 1.02) : s[3], speed: s[4], at: this.time };
+    if (mass !== a.mass) this.setMass(a, Math.max(growthConfig.startMass, mass));
     a.lives = s[6];
     const wasAlive = a.alive;
     a.alive = (s[7] & 1) === 1;
@@ -1106,13 +1119,13 @@ export class ArenaGame {
         if (id === HORN && focus && Math.hypot(focus.x - a.x, focus.z - a.z) < 60 + focus.diameter * 6) this.onEvent?.({ kind: 'horn', horn: a.horn });
       }
     }
-    a.kills = s[8];
+    a.kills = human ? this.ledger.clampKills(id, s[8]) : s[8];
     a.deaths = s[9];
     a.objects = s[10];
     if (!wasAlive && a.alive) {
       a.x = s[0];
       a.z = s[1];
-      a.diameter = s[3];
+      a.diameter = a.net.diameter;
     }
   }
 
