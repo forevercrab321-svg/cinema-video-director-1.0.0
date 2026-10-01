@@ -62,21 +62,56 @@ export class AudioEngine {
   /** Held by platform ads: silent until released, independent of the player's mute. */
   private adHold = false;
 
+  /** Window/document listeners, removed again in dispose(). */
+  private readonly listeners: [EventTarget, string, EventListener][] = [];
+  /** The context reached 'running' from a gesture unlock (iOS Safari); until then every gesture retries. */
+  private unlocked = false;
+
   constructor() {
-    const start = () => this.start();
-    addEventListener('keydown', start, { once: true });
-    addEventListener('pointerdown', start, { once: true });
-    addEventListener('keydown', (e) => {
-      if (e.code === 'KeyM') this.setMuted(!this.muted);
+    // Mobile Safari only lets audio start inside a gesture it trusts: touchend / pointerup / click
+    // (not touchstart / pointerdown), and a context created or resumed anywhere else stays
+    // suspended. So every gesture (not just the first) creates or resumes the context — iOS also
+    // drops it to 'interrupted' after a call, Siri or the app switcher.
+    const gesture = () => this.start();
+    for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) this.listen(window, type, gesture);
+    this.listen(window, 'keydown', (e) => {
+      if ((e as KeyboardEvent).code === 'KeyM') this.setMuted(!this.muted);
     });
+    // Backgrounded tab or app: silence the whole graph (music, motor, file tracks) and resume
+    // on return. pagehide/pageshow cover the iOS app switcher and the back-forward cache.
+    const sync = () => this.syncRunning();
+    this.listen(document, 'visibilitychange', sync);
+    this.listen(window, 'pagehide', sync);
+    this.listen(window, 'pageshow', sync);
   }
 
+  private listen(target: EventTarget, type: string, fn: EventListener): void {
+    target.addEventListener(type, fn, { passive: true });
+    this.listeners.push([target, type, fn]);
+  }
+
+  /** Run the context only while the page is visible and the player has sound on. */
+  private syncRunning(): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const want = document.visibilityState === 'visible' && !this.muted;
+    if (want && ctx.state !== 'running') void ctx.resume().catch(() => undefined);
+    else if (!want && ctx.state === 'running') void ctx.suspend().catch(() => undefined);
+    if (!want) this.victoryTrack?.pause();
+  }
+
+  /** Called from user gestures: create the context on the first one, resume / unlock it on any. */
   private start(): void {
-    if (this.ctx) return;
+    if (this.ctx) {
+      if (!this.unlocked) this.unlock(this.ctx);
+      this.syncRunning();
+      return;
+    }
     const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!Ctx) return;
     const ctx = new Ctx();
     this.ctx = ctx;
+    this.unlock(ctx);
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -16;
     comp.ratio.value = 4;
@@ -98,6 +133,27 @@ export class AudioEngine {
     this.loadVictory();
     this.nextStepTime = ctx.currentTime + 0.1;
     this.timer = window.setInterval(() => this.schedule(), 25);
+    this.syncRunning();
+  }
+
+  /**
+   * iOS unlock: resume() plus a one-sample silent buffer started inside the gesture. Only counts
+   * once the context actually reports 'running' (a pointerdown alone does not unlock on iOS).
+   * Skipped while muted or hidden: the unmute click / return to the page is a gesture of its own.
+   */
+  private unlock(ctx: AudioContext): void {
+    if (document.visibilityState !== 'visible' || this.muted) return;
+    void ctx
+      .resume()
+      .then(() => {
+        if (ctx.state === 'running') this.unlocked = true;
+      })
+      .catch(() => undefined);
+    const src = ctx.createBufferSource();
+    src.buffer = ctx.createBuffer(1, 1, 22050);
+    src.connect(ctx.destination);
+    src.start(0);
+    src.onended = () => src.disconnect();
   }
 
   /** Switch the BGM to a city's theme. A file at music/<id>.mp3 (e.g. a Suno export) wins if present. */
@@ -165,6 +221,7 @@ export class AudioEngine {
   setMuted(m: boolean): void {
     this.muted = m;
     this.applyMaster();
+    this.syncRunning();
   }
 
   /** Ads (portal SDKs) must play over silence: hold the mix at zero until released. */
@@ -186,6 +243,8 @@ export class AudioEngine {
 
   dispose(): void {
     if (this.timer !== null) clearInterval(this.timer);
+    for (const [target, type, fn] of this.listeners) target.removeEventListener(type, fn);
+    this.listeners.length = 0;
     void this.ctx?.close();
   }
 
