@@ -2,6 +2,7 @@ import { arenaConfig as A } from '../config/arena';
 import { HATS, HORNS, SKINS } from '../config/cosmetics';
 import { VEHICLE_ORDER, type VehicleLook } from '../config/vehicles';
 import type { Net, NetPeer } from '../net/Net';
+import type { HubState, RoomPhase } from '../net/Hub';
 import { L } from '../i18n';
 import { CITIES, cityById } from '../world/cities';
 import type { ArenaGame, EatenEvent, RosterEntry, Standing, WireState } from './ArenaGame';
@@ -77,6 +78,15 @@ export class ArenaSession {
   /** Host-side lobby settings. */
   city = CITIES[0].id;
   bots = true;
+  /**
+   * Public room: listed in the hub, strangers can join. A last-writer-wins register gossiped in
+   * every member's lobby presence (pb, pa), so it survives host changes: whoever set it last
+   * (pa = when) wins, and a member who never chose (pa = 0) adopts it.
+   */
+  pub = false;
+  private pubAt = 0;
+  /** When this page opened the room (the hub lists older rooms first among equals). */
+  readonly since = Date.now();
   private readonly grantQueue: [number, string][] = [];
   private readonly granted = new Set<number>();
   private readonly lastEaten = new Map<string, number>();
@@ -100,7 +110,10 @@ export class ArenaSession {
   ) {
     this.match = { ep: 0, ph: 'lobby', host: '', city: this.city, seed: 1, bots: true, roster: [], t: 0 };
     this.publishLobbyPresence();
-    net.onPeers(() => this.hooks.changed());
+    net.onPeers(() => {
+      this.adoptPublic();
+      this.hooks.changed();
+    });
     net.on('match', (m) => this.onMatch(m.from, m.data as MatchState));
     // Wire format uses roster SLOTS (0–3) for machines, not peer ids: payloads stay small.
     net.on('claim', (m) => this.onClaim(m.data as { ep: number; c: [number, number][] }));
@@ -213,6 +226,55 @@ export class ArenaSession {
     this.beaconTimer = 99;
   }
 
+  /** Someone in the room chose public / friends-only (explicit: a person picked it just now). */
+  setPublic(pub: boolean, explicit = true): void {
+    this.pub = pub;
+    this.pubAt = explicit ? Date.now() : 0;
+    this.publishLobbyPresence();
+  }
+
+  /** Adopt the room's latest public / friends-only choice from any member. */
+  private adoptPublic(): void {
+    let best = this.pubAt;
+    let pub = this.pub;
+    const limit = Date.now() + 86_400_000;
+    for (const p of this.net.peers()) {
+      const at = p.presence.pa;
+      if (p.isMe || typeof at !== 'number' || !Number.isFinite(at) || at <= best || at > limit) continue;
+      best = at;
+      pub = p.presence.pb === 1;
+    }
+    if (best === this.pubAt) return;
+    this.pubAt = best;
+    this.pub = pub;
+    this.publishLobbyPresence();
+  }
+
+  /** The room as the site directory shows it. */
+  roomPhase(): RoomPhase {
+    const m = this.match;
+    if (m.ph === 'lobby') return 'waiting';
+    // A warm-up (even its results card) restarts as soon as someone joins.
+    if (m.wu) return 'warmup';
+    return m.ph === 'results' ? 'results' : 'playing';
+  }
+
+  /** Seconds until this round (or its results screen) ends, for the room browser; null outside a round. */
+  roundLeft(): number | null {
+    const m = this.match;
+    if (m.ph === 'countdown') return A.roundSeconds + A.countdownSeconds;
+    if (m.ph === 'playing') return Math.max(0, A.roundSeconds - (m.t || 0));
+    if (m.ph === 'results') return Math.max(0, A.resultsSeconds - this.resultsTimer);
+    return null;
+  }
+
+  /** What this page is doing, for the site directory's counts. */
+  hubState(): HubState {
+    if (this.match.ph === 'lobby') return 'lobby';
+    const me = this.net.selfId();
+    return this.match.roster.some((r) => r.id === me && r.kind === 'player') ? 'play' : 'watch';
+  }
+
   canStart(): boolean {
     const players = this.lobbyPlayers();
     if (!this.isHost() || this.match.ph !== 'lobby' || !players.length) return false;
@@ -284,7 +346,7 @@ export class ArenaSession {
   }
 
   private publishLobbyPresence(): void {
-    this.net.setPresence({ nk: this.nickname, j: this.joined, v: this.vehicle, k: this.skin, hn: this.horn, ht: this.hat, r: this.ready });
+    this.net.setPresence({ nk: this.nickname, j: this.joined, v: this.vehicle, k: this.skin, hn: this.horn, ht: this.hat, r: this.ready, pb: this.pub ? 1 : 0, pa: this.pubAt });
   }
 
   // ── Per-frame driver ──────────────────────────────────────────────────────
