@@ -8,7 +8,7 @@
 
 | 平台 | 阶段 | 合作方式 | 分成（出处见档案） | 我们的包 | 下一步 | 负责 | 截止 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| CrazyGames | 2 材料就绪 | 广告分成（Basic Launch 期间无广告收入） | 现行比例官方未公开 | `dist-portal.zip` | 用户注册开发者账号 → 提交 | 用户 + BD | D1 |
+| CrazyGames | 3 提交中（rev 3 已上传、Preview 通过、QA 清单已填、Details 已填；差横/竖版预览视频） | 广告分成（Basic Launch 期间无广告收入） | 现行比例官方未公开 | `release/crazygames/grow-everything-crazygames.zip`（rev 3） | 上传两段 ≤20 s 预览视频 → Basic Launch 提交 | BD + 用户 | 10/2 |
 | itch.io | 2 材料就绪 | 自助发布；免费 + 可选打赏 | 默认 10%，可自设 | `dist-portal.zip` | 用户注册 → 发布 | 用户 + BD | D1 |
 | Newgrounds | 2 材料就绪 | 自助发布；曝光为主 | 官方未查到 | `dist-portal.zip` | 用户注册 → 发布 | 用户 + BD | D1 |
 | Y8 | 1 资格确认 | 送审；广告分成 | 开发者 50% | `dist-portal.zip`（SDK 要求待看） | 注册后读门户里的 SDK 要求 | 用户 → 工程 | D2 |
@@ -23,6 +23,8 @@
 ## 推进记录
 
 <!-- 格式：日期 · 平台 · 做了什么 · 对方原话或门户状态 · 下一步 -->
+
+- 2026-10-01 · CrazyGames · rev 3 上传（34 个文件逐个核对）；Preview：Room browser → Quick play 正常；QA 工具自动检测：Loading Start/Stop、Mute、Auth Listener、Get User、Room join listener、Update room、Invite Button、Invite Link、Gameplay Start 全部检测到，Warnings 为空；Instant Multiplayer Test 通过（跳过大厅直接建房）；手机：iPhone Safari 经邀请链接进房、2 人在线、触摸可玩；QA 清单按实际情况填 Yes/N/A（无文字聊天 → N/A）；Details：Category .io，Tags 3D/Arena/Car/Destroy/Grow（门户最多 5 个且无 multiplayer 标签），Min 2 / Max 4 players，Landscape，3 张封面已传（门户提示左上角可能被标签遮住，方形封面的 "GROW" 标题在此区域，待换图），截图无字段 · 门户：Details 未保存，缺必填的横版 + 竖版预览视频（≤20 s，MP4/MOV） · 用 tools/capture-clip.mjs 渲染两段视频，上传后 Basic Launch 提交
 
 - 2026-10-01 · GameDistribution · 复查收件箱发现 9/29 的拒信（之前未读）。原话："we cannot accept the game to be published as it does not fit with our catalog … If you already have any statistics or a proven track record that the game has already performed on other platforms, please kindly share with us via our Customer Support page … so that we could review the game again." · 门户：Denied · 不再上传 rev 3；先上 CrazyGames（Basic Launch）拿游玩次数、平均时长、留存，再通过 GD 的 Customer Support 附数据申请复审。另：GD 登录页已改为 Azerion Connect（idp.azerionconnect.com），用户多次登录被弹回首页，待解决（账号 9/26 已激活，邮箱 cityhunters2025@gmail.com，勿重复注册）
 
