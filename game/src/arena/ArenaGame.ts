@@ -187,6 +187,10 @@ export class ArenaGame {
   private landmarkAnnounced = false;
   private goBeeped = false;
   private readonly contact: Contact = { nx: 0, nz: 0, depth: 0 };
+  /** Reused broad-phase result (World.near) — no per-query allocation. */
+  private readonly nearBuf: WorldObject[] = [];
+  /** Landmark parts (fixed per round). */
+  private climaxParts: WorldObject[] = [];
   private shadowExtent = 0;
   private readonly rand: () => number;
   private spectate = 0;
@@ -235,6 +239,7 @@ export class ArenaGame {
     for (const sp of city.spawns) for (const [type, radius, count] of STARTER_RING) extra.push({ type, x: sp.x, z: sp.z, radius, count });
     for (const type of ['POWER_SPEED', 'POWER_MAGNET', 'POWER_SHIELD'] as const) extra.push({ type, x: (b.minX + b.maxX) / 2, z: (b.minZ + b.maxZ) / 2, radius: Math.min(b.maxX - b.minX, b.maxZ - b.minZ) * 0.47, count: A.powerCount });
     this.world.spawnObjects(seed, extra);
+    this.climaxParts = this.world.objects.filter((o) => o.def.climax);
     const supporting = new Set(this.world.objects.flatMap((o) => o.supports));
     for (const o of this.world.objects) {
       this.homes.push({ x: o.x, y: o.y, z: o.z, yaw: o.yaw });
@@ -408,6 +413,7 @@ export class ArenaGame {
       if (this.local) this.hud.showBanner(L('地标开放！', 'LANDMARK OPEN!'), L(`拆倒${this.city.climaxNameZh}`, `TOPPLE ${this.city.climaxName.replace(/^the /, '').toUpperCase()}`), 2.4);
     }
 
+    this.world.refreshGrid();
     for (const a of this.actors) {
       if (a.kind === 'remote' || (a.kind === 'bot' && !a.owned)) {
         this.followNetwork(a, dt);
@@ -568,7 +574,8 @@ export class ArenaGame {
 
   private collideObjects(a: Actor): void {
     const r = a.diameter * 0.47;
-    for (const o of this.world.objects) {
+    // Broad phase: the machine can be pushed up to ~r while resolving, so look a little wider.
+    for (const o of this.world.near(a.x, a.z, r * 2 + 0.5, this.nearBuf)) {
       if (!this.world.isSolid(o, this.locked(o) ? 0 : a.power)) continue;
       if (Math.abs(o.x - a.x) > o.radius + r || Math.abs(o.z - a.z) > o.radius + r) continue;
       if (!circleVsObb(a.x, a.z, r, o.obb, this.contact)) continue;
@@ -602,7 +609,7 @@ export class ArenaGame {
 
   private proposeCollection(a: Actor): void {
     const reach = this.reach(a);
-    for (const o of this.world.objects) {
+    for (const o of this.world.near(a.x, a.z, reach * Math.max(1, CC.vacuumReachMultiplier), this.nearBuf)) {
       if (o.state !== 'idle' || this.grants.has(o.id) || !this.eligible(o, a.power)) continue;
       const r = o.radius * 2 < a.diameter * CC.vacuumSizeRatio ? reach * CC.vacuumReachMultiplier : reach;
       if (Math.abs(o.x - a.x) > o.radius + r || Math.abs(o.z - a.z) > o.radius + r) continue;
@@ -759,7 +766,7 @@ export class ArenaGame {
     }
     let gain = o.def.bonus ? Math.max(o.def.rewardMass, a.mass * A.goldCrateShare) : o.def.rewardMass;
     gain *= mult * this.catchUp(a);
-    const climaxLeft = o.def.climax ? this.world.objects.filter((x) => x.def.climax && x.state !== 'absorbed').length : -1;
+    const climaxLeft = o.def.climax ? this.climaxLeft() : -1;
     if (climaxLeft === 0) {
       gain += a.mass * A.landmarkBonus;
       this.landmarkBy = a.id;
@@ -839,7 +846,7 @@ export class ArenaGame {
     Object.assign(o, { state: 'idle', x: h.x, y: h.y, z: h.z, yaw: h.yaw, scale: 1, squash: 0, tilt: 0, spin: 0, vx: 0, vy: 0, vz: 0, pullTime: 0, falling: false, owner: undefined, claimAt: undefined, dirty: true });
     this.grants.delete(id);
     this.absorbedAt.delete(id);
-    if (this.local) this.world.applyEligibility(this.local.power);
+    if (this.local) this.world.applyEligibilityTo(o, this.local.power);
   }
 
   /** Rewarded revive (once per match): only while waiting to respawn with lives left. */
@@ -1159,7 +1166,14 @@ export class ArenaGame {
   }
 
   climaxLeft(): number {
-    return this.world.objects.filter((o) => o.def.climax && o.state !== 'absorbed').length;
+    let n = 0;
+    for (const o of this.climaxParts) if (o.state !== 'absorbed') n++;
+    return n;
+  }
+
+  /** How many landmark parts this city has. */
+  climaxTotal(): number {
+    return this.climaxParts.length;
   }
 
   // ── Presentation helpers ───────────────────────────────────────────────────
@@ -1196,7 +1210,7 @@ export class ArenaGame {
 
   isBlocked(x: number, z: number, r: number, power: number, ignore: WorldObject | null): boolean {
     for (const b of this.world.staticColliders) if (circleVsObb(x, z, r, b, this.contact)) return true;
-    for (const o of this.world.objects) {
+    for (const o of this.world.near(x, z, r, this.nearBuf)) {
       if (o === ignore || !this.world.isSolid(o, this.locked(o) ? 0 : power)) continue;
       if (Math.abs(o.x - x) > o.radius + r || Math.abs(o.z - z) > o.radius + r) continue;
       if (circleVsObb(x, z, r, o.obb, this.contact)) return true;

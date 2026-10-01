@@ -89,6 +89,8 @@ export class Hud {
   private readonly objBarWrap: HTMLElement;
   private readonly end: HTMLElement;
   private shownMass = -1;
+  private shownWidth = '';
+  private shownKey = '';
   private hintStage = -1;
   private objectiveKey = '';
   private endAnim: Animation | null = null;
@@ -139,7 +141,16 @@ export class Hud {
       this.mass.firstChild!.nodeValue = formatMass(mass);
       this.mass.querySelector('small')!.textContent = mass >= 10000 ? 'T' : 'KG';
     }
-    this.bar.style.width = `${(fraction * 100).toFixed(1)}%`;
+    // Called every simulation tick: touch the DOM only when something visible changed
+    // (rewriting innerHTML 60×/s re-parsed the panel and fed the GC for nothing).
+    const width = (fraction * 100).toFixed(1);
+    if (width !== this.shownWidth) {
+      this.shownWidth = width;
+      this.bar.style.width = `${width}%`;
+    }
+    const key = `${tier}|${nextClass}|${nextMass}`;
+    if (key === this.shownKey) return;
+    this.shownKey = key;
     this.tier.textContent = L(`${tier} 阶`, `TIER ${tier}`);
     const t = growthConfig.tiers[tier - 1];
     this.tierName.textContent = L(t.nameZh, t.name);

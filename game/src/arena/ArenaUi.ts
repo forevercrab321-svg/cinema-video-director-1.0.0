@@ -468,7 +468,7 @@ export class ArenaUi {
     (this.overlay.querySelector('.revive') as HTMLElement).hidden = !(this.adsAvailable && g.canRevive());
     const left = Math.max(0, A.roundSeconds - g.matchTime);
     (this.overlay.querySelector('.timer b') as HTMLElement).textContent = `${Math.floor(left / 60)}:${Math.floor(left % 60).toString().padStart(2, '0')}`;
-    const climax = g.world.objects.filter((o) => o.def.climax).length;
+    const climax = g.climaxTotal();
     (this.overlay.querySelector('.timer span') as HTMLElement).textContent = `${L(g.city.nameZh, g.city.name)} · ${L(g.city.climaxNameZh, g.city.climaxName.replace(/^the /, ''))} ${climax - g.climaxLeft()}/${climax}`;
     // Landmark lock cue: countdown while it is solid, then a short "open" highlight.
     const lock = this.overlay.querySelector('.timer .lock') as HTMLElement;
