@@ -1,7 +1,10 @@
 # Backend migrations — operator note
 
-Production state (2026-09-30): `0001`–`0003` applied. Still to run: **`0004`, `0005`, then `0006`**,
-then redeploy the `submit-match` edge function. Never edit a migration that has already been applied;
+Production state (2026-10-01): `0001`–`0006` applied to project `fcpqnxfggafwelioyldo`, and the
+`submit-match` edge function redeployed (dashboard editor, JWT verification on). Checks after the
+run: `lobby_snapshot()` → `{"list":[],"rooms":0,"online":0,"public":0}`,
+`room_host('TEST1','p-test000001')` → `{"peer":null,"term":0}`, tables `lobby_presence`,
+`lobby_rooms`, `room_hosts` present. Never edit a migration that has already been applied;
 fixes go into a new numbered file.
 
 ## 1. Run the SQL (Supabase dashboard → SQL Editor)
