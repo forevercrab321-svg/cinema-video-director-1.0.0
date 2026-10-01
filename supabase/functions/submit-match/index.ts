@@ -1,55 +1,63 @@
-// Supabase Edge Function: the match host posts the final standings; the server records the
-// match and grants coins. Runs with the service role, so the browser never writes results or
-// currency directly. Deploy: `supabase functions deploy submit-match`.
+// Supabase Edge Function: a player posts the final standings of a finished online match; the
+// server records it and grants coins. Deploy: `supabase functions deploy submit-match`.
+//
+// All validation, clamping, de-duplication, rate limiting and the coin grant happen inside one
+// Postgres function, public.submit_match (supabase/migrations/0005_security_hardening.sql), so the
+// match row, its player rows and the coins are written in a single transaction or not at all.
+// This function only authenticates the caller and passes its verified uid along:
+//   · the caller is credited for its own row only (other rows are stored without an account id);
+//   · one submission per (caller, room, match start); ≥ 120 s between submissions; ≤ 1500 coins
+//     per 24 h; duration ≤ 330 s, kills ≤ 3 × opponents, mass ≤ 1e6 kg.
+// Request body (unchanged, see game/src/arena/arenaMain.ts submitMatch):
+//   {room, city, durationS, endReason, build, startedAt?, rows: [{slot, playerId, vehicle, rank,
+//    mass, kills, deaths, objects, leftEarly}]}
+// Response: 200 {matchId, coins[, duplicate]} · 400 · 401 · 403 · 413 · 429 {retryAfter} · 500.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const COINS_BY_RANK = [100, 60, 35, 20];
-const COINS_PER_KILL = 15;
-const CITIES = new Set(['shanghai', 'newyork', 'paris', 'scrap']);
+const MAX_BODY_BYTES = 8192;
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
-interface Row {
-  slot: number;
-  playerId: string | null; // auth uid, null for AI
-  vehicle: string;
-  rank: number;
-  mass: number;
-  kills: number;
-  deaths: number;
-  objects: number;
-  leftEarly?: boolean;
+function reply(status: number, body: Record<string, unknown>, extra: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json', ...extra } });
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') return new Response('method', { status: 405 });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  if (req.method !== 'POST') return reply(405, { error: 'method' });
+
   const auth = req.headers.get('Authorization') ?? '';
+  if (!/^Bearer \S+$/.test(auth)) return reply(401, { error: 'unauthenticated' });
   const url = Deno.env.get('SUPABASE_URL')!;
-  const asCaller = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: auth } } });
-  const { data: who } = await asCaller.auth.getUser();
-  if (!who.user) return new Response('unauthenticated', { status: 401 });
+  const asCaller = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: { headers: { Authorization: auth } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: who, error: authErr } = await asCaller.auth.getUser(auth.slice(7));
+  const uid = who?.user?.id;
+  if (authErr || !uid) return reply(401, { error: 'unauthenticated' });
 
-  const body = (await req.json().catch(() => null)) as { room?: string; city?: string; startedAt?: string; durationS?: number; endReason?: string; build?: string; rows?: Row[] } | null;
-  const rows = Array.isArray(body?.rows) ? body!.rows.slice(0, 4) : [];
-  if (!body || !CITIES.has(String(body.city)) || !rows.length) return new Response('bad request', { status: 400 });
-  // The caller must be one of the human players in the match it reports.
-  if (!rows.some((r) => r.playerId === who.user!.id)) return new Response('not in match', { status: 403 });
-  const dur = Math.max(0, Math.min(900, Number(body.durationS) || 0));
-
-  const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-  const { data: match, error } = await admin
-    .from('matches')
-    .insert({ room: String(body.room ?? '').slice(0, 64), city: body.city, started_at: body.startedAt ?? new Date(Date.now() - dur * 1000).toISOString(), ended_at: new Date().toISOString(), duration_s: dur, end_reason: String(body.endReason ?? '').slice(0, 24), humans: rows.filter((r) => r.playerId).length, bots: rows.filter((r) => !r.playerId).length, build: String(body.build ?? '').slice(0, 32) })
-    .select('id')
-    .single();
-  if (error || !match) return new Response('db', { status: 500 });
-
-  await admin.from('match_players').insert(
-    rows.map((r) => ({ match_id: match.id, slot: r.slot, player_id: r.playerId, is_bot: !r.playerId, vehicle: String(r.vehicle).slice(0, 16), rank: r.rank, mass_kg: Math.max(0, Number(r.mass) || 0), kills: Math.max(0, r.kills | 0), deaths: Math.max(0, r.deaths | 0), objects: Math.max(0, r.objects | 0), left_early: !!r.leftEarly })),
-  );
-  // Coins for human players (server-side so they cannot be forged by a client).
-  for (const r of rows) {
-    if (!r.playerId) continue;
-    const coins = (COINS_BY_RANK[r.rank - 1] ?? 10) + Math.min(20, r.kills | 0) * COINS_PER_KILL;
-    await admin.rpc('grant_coins', { p_player: r.playerId, p_coins: coins });
+  const text = await req.text().catch(() => '');
+  if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) return reply(413, { error: 'too_large' });
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return reply(400, { error: 'bad_json' });
   }
-  return Response.json({ matchId: match.id });
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return reply(400, { error: 'bad_body' });
+
+  const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data, error } = await admin.rpc('submit_match', { p_caller: uid, p_body: body });
+  if (error || !data || typeof data !== 'object') {
+    console.error('submit_match failed', error?.message ?? 'no result');
+    return reply(500, { error: 'db' });
+  }
+  const res = data as { status?: number; retryAfter?: number } & Record<string, unknown>;
+  const status = typeof res.status === 'number' ? res.status : 500;
+  const { status: _s, ...out } = res;
+  return reply(status, out, status === 429 && res.retryAfter ? { 'Retry-After': String(res.retryAfter) } : {});
 });
