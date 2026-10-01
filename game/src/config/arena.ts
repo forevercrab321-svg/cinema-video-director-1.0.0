@@ -36,6 +36,17 @@ export const arenaConfig = {
   /** Golden crates: worth this share of the collector's current mass (minimum rewardMass). */
   goldCrateShare: 0.08,
   goldCrateCount: 12,
+  /**
+   * Arena-only object reward scale per city, indexed by size class (missing = 1; story mode keeps
+   * OBJECT_TYPES values). Scrap City is the story map: a linear alley → street → lot path laid
+   * out for one player, so its class 3–4 street furniture (chairs, bins, café tables, bikes,
+   * motorbikes, barriers, pallets) sits packed along the spawns' first 40 m — ~10× the other
+   * cities' density there, chained into combos (tools/spawn-food.mjs). Audit (tools/arena-balance.mjs,
+   * median leader mass): Scrap 913 / 15,537 / 47,195 kg at 30 / 90 / 120 s and a first car at 62 s,
+   * vs ~150 / ~1,900 / 2,700–9,400 kg and 104–120 s in the other cities. Scaling class 3 to 0.3 and
+   * class 4 to 0.6 brings Scrap to ~300 / ~2,000 / ~4,700 kg and a first car at ~119 s.
+   */
+  cityRewardScale: { scrap: [1, 1, 0.9, 0.3, 0.6] } as Readonly<Record<string, readonly number[]>>,
   /** The machine that recycles the last landmark part gains this share of its mass. */
   landmarkBonus: 0.25,
   /** Penalty: slamming a locked object while dashing stuns and sheds mass. */

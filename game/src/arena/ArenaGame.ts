@@ -189,6 +189,8 @@ export class ArenaGame {
   private readonly contact: Contact = { nx: 0, nz: 0, depth: 0 };
   /** Reused broad-phase result (World.near) — no per-query allocation. */
   private readonly nearBuf: WorldObject[] = [];
+  /** Per-class reward scale for this city (arenaConfig.cityRewardScale). */
+  private readonly rewardScale: readonly number[];
   /** Landmark parts (fixed per round). */
   private climaxParts: WorldObject[] = [];
   private shadowExtent = 0;
@@ -209,6 +211,7 @@ export class ArenaGame {
     readonly isHost: () => boolean,
   ) {
     const pal = city.palette;
+    this.rewardScale = A.cityRewardScale[city.id] ?? [];
     this.rand = createSeededRandom(seed ^ 0x51f7);
     this.sun = new THREE.DirectionalLight(pal.sunColor, pal.sunIntensity);
     this.world = new World(lib, city);
@@ -764,7 +767,7 @@ export class ArenaGame {
         this.onFeed?.(`${L('获得道具：', 'Power-up: ')}${label}`, 'bonus');
       }
     }
-    let gain = o.def.bonus ? Math.max(o.def.rewardMass, a.mass * A.goldCrateShare) : o.def.rewardMass;
+    let gain = o.def.bonus ? Math.max(o.def.rewardMass, a.mass * A.goldCrateShare) : this.reward(o);
     gain *= mult * this.catchUp(a);
     const climaxLeft = o.def.climax ? this.climaxLeft() : -1;
     if (climaxLeft === 0) {
@@ -937,6 +940,11 @@ export class ArenaGame {
     if (lead > a.mass) return 1 + A.catchUpMax * Math.min(1, Math.log(lead / a.mass) / Math.log(A.catchUpFullRatio));
     const ahead = a.mass / (lead * A.leaderDragFrom);
     return ahead <= 1 ? 1 : Math.max(A.leaderDragMin, Math.pow(1 / ahead, A.leaderDragExp));
+  }
+
+  /** Base mass an object is worth in this city (OBJECT_TYPES × arenaConfig.cityRewardScale). */
+  reward(o: WorldObject): number {
+    return o.def.rewardMass * (this.rewardScale[o.def.objectClass] ?? 1);
   }
 
   /** The landmark's parts can be eaten from arenaConfig.landmarkOpenSeconds on. */
