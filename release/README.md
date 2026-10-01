@@ -10,3 +10,4 @@ and copy the zip here; replace, don't accumulate old versions.
 | `gamedistribution/cover-*.png` | GD Assets page | from `marketing/press-kit/covers/` |
 | `crazygames/grow-everything-crazygames.zip` | CrazyGames upload (CrazyGames SDK only — their terms forbid other portals' SDKs; online rooms, SDK v3 rooms/invites/username) | 2026-10-01 rev 3 (same fixes; no GD code in the bundle) |
 | `crazygames/cover-*.png`, `crazygames/*-*s.png` | CrazyGames covers and screenshots | from `marketing/press-kit/` |
+| `crazygames/crazygames-submission-bundle.zip` | One download for the CrazyGames submission: the build zip + 3 covers + 3 screenshots (unzip, then hand the 7 files to the browser agent) | 2026-10-01 |

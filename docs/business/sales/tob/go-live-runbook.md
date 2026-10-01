@@ -7,14 +7,14 @@
 
 | # | 渠道 | 怎么赚钱 | 最快多久有收入 | 卡在哪 |
 | --- | --- | --- | --- | --- |
-| 1 | **GameDistribution** | 游戏被分发到它的几千个合作网站，广告收入分成（开发者约净收入 33%，出处见 `platforms/gamedistribution.md`） | 审核最长 3 周，上线即有广告收入 | 需要你注册拿 Game ID |
+| 1 | **GameDistribution** | 游戏被分发到它的几千个合作网站，广告收入分成（开发者约净收入 33%，出处见 `platforms/gamedistribution.md`） | **9/29 被拒**（"不符合目录"）；对方说有其他平台的数据可申请复审 | 等 CrazyGames 数据后复审 |
 | 2 | **CrazyGames** | 广告分成；先过 Basic Launch（≥7 天、≥500 次游玩）才进正式上线 | 试运行期间**没有**广告收入，约 3–5 周后 | 需要你注册、提交 |
 | 3 | **Armor Games / Addicting Games 赞助** | 一次性赞助或授权费 | 谈成即付 | Armor 未回复（9/30 跟进） |
 | 4 | **itch.io、Newgrounds** | 曝光和评价为主，收入很少 | 当天上线 | 需要你注册 |
 | 5 | 自有网站广告（Google H5 Games Ads） | 插屏 + 激励广告 | 数周（要申请 beta、AdSense 审核） | 需要**自己的域名**（vercel.app 子域名不行）和 AdSense 账号 |
 | 6 | 外观内购 | 卖皮肤，不卖数值 | 平台邀请后（CrazyGames 通过 Xsolla） | 等平台数据 |
 
-**结论**：本周全力做 1、2、4，并行推进 3；5、6 放到第 2–4 周。
+**结论（2026-10-01 更新）**：GD 被拒后，本周全力做 2（CrazyGames）和 4（itch.io、Newgrounds），并行推进 3；拿到 CrazyGames 数据后回头申请 GD 复审；5、6 放到第 2–4 周。
 
 ## 2. 已完成（团队，2026-09-26）
 
