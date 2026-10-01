@@ -126,6 +126,20 @@ export class World {
   /** Instances drawn last frame (after culling), for diagnostics. */
   visibleInstances = 0;
 
+  // ── Broad phase: uniform grid over the city (see near()) ─────────────────
+  private gridX0 = 0;
+  private gridZ0 = 0;
+  private gridCols = 1;
+  private gridRows = 1;
+  private cells: WorldObject[][] = [];
+  /** Per object id: the cell rectangle it is binned in [cx0, cz0, cx1, cz1]. */
+  private binned = new Int32Array(0);
+  /** Per object id: the last query that returned it (dedup for objects spanning cells). */
+  private seen = new Uint32Array(0);
+  private stamp = 0;
+  /** Per object id: 1 = drawn desaturated (locked), 0 = full colour, −1 = never tinted. */
+  private tintLocked = new Int8Array(0);
+
   constructor(
     private readonly lib: MaterialLibrary,
     readonly city: CityDef,
@@ -237,6 +251,7 @@ export class World {
       }
       if (p.tag) byTag.set(p.tag, obj);
     }
+    this.buildGrid();
     pending.forEach((p, i) => {
       if (!p.supports) return;
       const o = this.objects[i];
@@ -387,15 +402,116 @@ export class World {
     return out;
   }
 
-  /** Tint: absorbable objects show full paint colour, locked ones are desaturated and darker. */
+  /**
+   * Tint: absorbable objects show full paint colour, locked ones are desaturated and darker.
+   * Only objects whose locked/unlocked state changed are rewritten (a class-up used to rewrite
+   * every instance colour of ~1,700 objects in the frame of the swallow that caused it).
+   */
   applyEligibility(power: number): void {
-    const grey = new THREE.Color(0x6d6e70);
-    for (const o of this.objects) {
-      if (o.state === 'absorbed') continue;
-      o.tint.copy(o.baseColor);
-      if (!(power >= o.requiredPower && !o.anchored)) o.tint.lerp(grey, 0.32).multiplyScalar(0.94);
-      for (const inst of o.instances) if (inst.batch.tinted) inst.batch.mesh.setColorAt(inst.id, o.tint);
+    for (const o of this.objects) if (o.state !== 'absorbed') this.applyEligibilityTo(o, power);
+  }
+
+  /** Tint one object for `power` (revived props; applyEligibility for all of them). */
+  applyEligibilityTo(o: WorldObject, power: number): void {
+    const locked = power >= o.requiredPower && !o.anchored ? 0 : 1;
+    if (this.tintLocked[o.id] === locked) return;
+    this.tintLocked[o.id] = locked;
+    o.tint.copy(o.baseColor);
+    if (locked) o.tint.lerp(LOCKED_GREY, 0.32).multiplyScalar(0.94);
+    for (const inst of o.instances) if (inst.batch.tinted) inst.batch.mesh.setColorAt(inst.id, o.tint);
+  }
+
+  /**
+   * Objects whose bounding square may overlap the square (x ± r, z ± r), in id order (the
+   * order a full scan would visit them), written into `out`. Callers still run their exact
+   * test; this only replaces "check all ~1,700 objects" per machine per tick with the few
+   * cells around it. Positions are re-binned by refreshGrid() (once per simulation step).
+   */
+  near(x: number, z: number, r: number, out: WorldObject[]): WorldObject[] {
+    out.length = 0;
+    const stamp = ++this.stamp;
+    const cx0 = this.cellX(x - r);
+    const cx1 = this.cellX(x + r);
+    const cz0 = this.cellZ(z - r);
+    const cz1 = this.cellZ(z + r);
+    for (let cz = cz0; cz <= cz1; cz++) {
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const cell = this.cells[cz * this.gridCols + cx];
+        for (let i = 0; i < cell.length; i++) {
+          const o = cell[i];
+          if (this.seen[o.id] === stamp) continue;
+          this.seen[o.id] = stamp;
+          out.push(o);
+        }
+      }
     }
+    if (out.length > 1) out.sort(byId);
+    return out;
+  }
+
+  /** Re-bin every object that moved to other cells since the last call (falling, dropped, revived). */
+  refreshGrid(): void {
+    const b = this.binned;
+    for (const o of this.objects) {
+      const k = o.id * 4;
+      const cx0 = this.cellX(o.x - o.radius);
+      const cz0 = this.cellZ(o.z - o.radius);
+      const cx1 = this.cellX(o.x + o.radius);
+      const cz1 = this.cellZ(o.z + o.radius);
+      if (b[k] === cx0 && b[k + 1] === cz0 && b[k + 2] === cx1 && b[k + 3] === cz1) continue;
+      this.unbin(o);
+      this.bin(o, cx0, cz0, cx1, cz1);
+    }
+  }
+
+  private buildGrid(): void {
+    const bd = this.city.bounds;
+    const margin = GRID_CELL * 2;
+    this.gridX0 = bd.minX - margin;
+    this.gridZ0 = bd.minZ - margin;
+    this.gridCols = Math.max(1, Math.ceil((bd.maxX - bd.minX + margin * 2) / GRID_CELL));
+    this.gridRows = Math.max(1, Math.ceil((bd.maxZ - bd.minZ + margin * 2) / GRID_CELL));
+    this.cells = Array.from({ length: this.gridCols * this.gridRows }, () => []);
+    const n = this.objects.length;
+    this.binned = new Int32Array(n * 4).fill(-1);
+    this.seen = new Uint32Array(n);
+    this.stamp = 0;
+    this.tintLocked = new Int8Array(n).fill(-1);
+    for (const o of this.objects) this.bin(o, this.cellX(o.x - o.radius), this.cellZ(o.z - o.radius), this.cellX(o.x + o.radius), this.cellZ(o.z + o.radius));
+  }
+
+  private cellX(x: number): number {
+    return Math.min(this.gridCols - 1, Math.max(0, Math.floor((x - this.gridX0) / GRID_CELL)));
+  }
+
+  private cellZ(z: number): number {
+    return Math.min(this.gridRows - 1, Math.max(0, Math.floor((z - this.gridZ0) / GRID_CELL)));
+  }
+
+  private bin(o: WorldObject, cx0: number, cz0: number, cx1: number, cz1: number): void {
+    const k = o.id * 4;
+    this.binned[k] = cx0;
+    this.binned[k + 1] = cz0;
+    this.binned[k + 2] = cx1;
+    this.binned[k + 3] = cz1;
+    for (let cz = cz0; cz <= cz1; cz++) for (let cx = cx0; cx <= cx1; cx++) this.cells[cz * this.gridCols + cx].push(o);
+  }
+
+  private unbin(o: WorldObject): void {
+    const k = o.id * 4;
+    const b = this.binned;
+    if (b[k] < 0) return;
+    for (let cz = b[k + 1]; cz <= b[k + 3]; cz++) {
+      for (let cx = b[k]; cx <= b[k + 2]; cx++) {
+        const cell = this.cells[cz * this.gridCols + cx];
+        const i = cell.indexOf(o);
+        if (i >= 0) {
+          cell[i] = cell[cell.length - 1];
+          cell.pop();
+        }
+      }
+    }
+    b[k] = -1;
   }
 
   /** Rebuild the instance transform of every object that moved or changed. */
@@ -495,6 +611,11 @@ export class World {
     return true;
   }
 }
+
+/** Broad-phase cell edge, metres: a few small props per cell, a car spans 1–2, a warehouse wall ~4. */
+const GRID_CELL = 8;
+const LOCKED_GREY = new THREE.Color(0x6d6e70);
+const byId = (a: WorldObject, b: WorldObject): number => a.id - b.id;
 
 function footprintRadius(def: ObjectType): number {
   return Math.hypot(def.size[0], def.size[2]) / 2;

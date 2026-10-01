@@ -1,6 +1,7 @@
 import { SIZE_CLASSES } from '../config/classes';
 import { growthConfig } from '../config/growth';
 import { massForDiameter } from '../systems/growth';
+import { L } from '../i18n';
 
 /**
  * HUD (design §43): mass, growth bar, tier, next unlock (bottom-left); the run objective
@@ -88,6 +89,8 @@ export class Hud {
   private readonly objBarWrap: HTMLElement;
   private readonly end: HTMLElement;
   private shownMass = -1;
+  private shownWidth = '';
+  private shownKey = '';
   private hintStage = -1;
   private objectiveKey = '';
   private endAnim: Animation | null = null;
@@ -99,9 +102,9 @@ export class Hud {
     document.head.appendChild(style);
     this.el.id = 'hud';
     this.el.innerHTML = `
-      <div class="obj"><div class="label">Objective</div><div class="txt"></div><div class="bar"><i></i></div></div>
+      <div class="obj"><div class="label">${L('目标', 'Objective')}</div><div class="txt"></div><div class="bar"><i></i></div></div>
       <div class="panel">
-        <div class="row"><div class="label">Mass</div><div class="tierchip"></div></div>
+        <div class="row"><div class="label">${L('质量', 'Mass')}</div><div class="tierchip"></div></div>
         <div class="mass">0<small>KG</small></div>
         <div class="bar"><i></i><b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b></div>
         <div class="label tiername"></div>
@@ -112,7 +115,7 @@ export class Hud {
       <div class="hint"></div>
       <div class="toast"></div>
       <div class="end"></div>
-      <div class="legend"><kbd>WASD</kbd> MOVE · <kbd>SPACE</kbd> DASH<br><kbd>DRAG</kbd> CAMERA · <kbd>M</kbd> SOUND · <kbd>R</kbd> RESTART</div>`;
+      <div class="legend">${L('<kbd>WASD</kbd> 移动 · <kbd>空格</kbd> 冲刺<br><kbd>拖动</kbd> 视角 · <kbd>M</kbd> 声音 · <kbd>R</kbd> 重来', '<kbd>WASD</kbd> MOVE · <kbd>SPACE</kbd> DASH<br><kbd>DRAG</kbd> CAMERA · <kbd>M</kbd> SOUND · <kbd>R</kbd> RESTART')}</div>`;
     if (legend) (this.el.querySelector('.legend') as HTMLElement).innerHTML = legend;
     document.body.appendChild(this.el);
     const q = (s: string) => this.el.querySelector(s) as HTMLElement;
@@ -138,10 +141,21 @@ export class Hud {
       this.mass.firstChild!.nodeValue = formatMass(mass);
       this.mass.querySelector('small')!.textContent = mass >= 10000 ? 'T' : 'KG';
     }
-    this.bar.style.width = `${(fraction * 100).toFixed(1)}%`;
-    this.tier.textContent = `TIER ${tier}`;
-    this.tierName.textContent = growthConfig.tiers[tier - 1].name;
-    this.next.innerHTML = nextClass === null ? 'MAX SIZE' : `NEXT · <em>${SIZE_CLASSES[nextClass].label.toUpperCase()}</em> · ${formatMass(nextMass!)} ${nextMass! >= 10000 ? 't' : 'kg'}`;
+    // Called every simulation tick: touch the DOM only when something visible changed
+    // (rewriting innerHTML 60×/s re-parsed the panel and fed the GC for nothing).
+    const width = (fraction * 100).toFixed(1);
+    if (width !== this.shownWidth) {
+      this.shownWidth = width;
+      this.bar.style.width = `${width}%`;
+    }
+    const key = `${tier}|${nextClass}|${nextMass}`;
+    if (key === this.shownKey) return;
+    this.shownKey = key;
+    this.tier.textContent = L(`${tier} 阶`, `TIER ${tier}`);
+    const t = growthConfig.tiers[tier - 1];
+    this.tierName.textContent = L(t.nameZh, t.name);
+    const nc = nextClass === null ? null : SIZE_CLASSES[nextClass];
+    this.next.innerHTML = !nc ? L('已达最大体型', 'MAX SIZE') : `${L('下一级', 'NEXT')} · <em>${L(nc.labelZh, nc.label.toUpperCase())}</em> · ${formatMass(nextMass!)} ${nextMass! >= 10000 ? 't' : 'kg'}`;
   }
 
   /** The run goal, always visible: the warehouse promise, then the tear-down progress. */
@@ -151,15 +165,15 @@ export class Hud {
     this.objectiveKey = key;
     const need = massForDiameter(SIZE_CLASSES[7].requiredPower);
     if (won) {
-      this.objText.innerHTML = 'WAREHOUSE DESTROYED · <em>FREE ROAM</em>';
+      this.objText.innerHTML = L('仓库已摧毁 · <em>自由漫游</em>', 'WAREHOUSE DESTROYED · <em>FREE ROAM</em>');
       this.objBarWrap.style.display = 'none';
     } else if (cls >= 6) {
       const done = partsTotal - partsLeft;
-      this.objText.innerHTML = cls >= 7 ? `TEAR DOWN THE WAREHOUSE · <em>${done}/${partsTotal}</em>` : `RIP THE SIGN OFF THE WAREHOUSE · <em>${done}/${partsTotal}</em>`;
+      this.objText.innerHTML = cls >= 7 ? L(`拆掉仓库 · <em>${done}/${partsTotal}</em>`, `TEAR DOWN THE WAREHOUSE · <em>${done}/${partsTotal}</em>`) : L(`扯下仓库招牌 · <em>${done}/${partsTotal}</em>`, `RIP THE SIGN OFF THE WAREHOUSE · <em>${done}/${partsTotal}</em>`);
       this.objBarWrap.style.display = 'block';
       this.objBar.style.width = `${((done / Math.max(1, partsTotal)) * 100).toFixed(1)}%`;
     } else {
-      this.objText.innerHTML = `RECYCLE THE WAREHOUSE · <em>NEEDS ${formatMass(need)} t</em>`;
+      this.objText.innerHTML = L(`回收仓库 · <em>需要 ${formatMass(need)} t</em>`, `RECYCLE THE WAREHOUSE · <em>NEEDS ${formatMass(need)} t</em>`);
       this.objBarWrap.style.display = 'none';
     }
   }
@@ -193,8 +207,8 @@ export class Hud {
   setHint(stage: number): void {
     if (stage === this.hintStage) return;
     this.hintStage = stage;
-    if (stage === 0) this.hint.innerHTML = '<kbd>WASD</kbd> MOVE';
-    else if (stage === 1) this.hint.innerHTML = 'ROLL INTO THE GLOWING SCRAP';
+    if (stage === 0) this.hint.innerHTML = L('<kbd>WASD</kbd> 移动', '<kbd>WASD</kbd> MOVE');
+    else if (stage === 1) this.hint.innerHTML = L('滚进发光的废料', 'ROLL INTO THE GLOWING SCRAP');
     this.hint.style.opacity = stage >= 2 ? '0' : '1';
   }
 
@@ -202,15 +216,15 @@ export class Hud {
     const mins = Math.floor(s.time / 60);
     const secs = Math.floor(s.time % 60).toString().padStart(2, '0');
     this.end.innerHTML = `
-      <h2>SCRAP CITY RECYCLED</h2>
-      <div class="sub">THE WAREHOUSE IS GONE</div>
+      <h2>${L('废料城回收完毕', 'SCRAP CITY RECYCLED')}</h2>
+      <div class="sub">${L('仓库没了', 'THE WAREHOUSE IS GONE')}</div>
       <div class="stats">
-        <div><b>${mins}:${secs}</b><span>TIME</span></div>
-        <div><b>${formatMass(s.mass)}</b><span>${s.mass >= 10000 ? 'TONNES' : 'KG'}</span></div>
-        <div><b>${s.objects}</b><span>OBJECTS</span></div>
-        <div><b>${s.tier}</b><span>TIER</span></div>
+        <div><b>${mins}:${secs}</b><span>${L('用时', 'TIME')}</span></div>
+        <div><b>${formatMass(s.mass)}</b><span>${s.mass >= 10000 ? L('吨', 'TONNES') : 'KG'}</span></div>
+        <div><b>${s.objects}</b><span>${L('物件', 'OBJECTS')}</span></div>
+        <div><b>${s.tier}</b><span>${L('阶', 'TIER')}</span></div>
       </div>
-      <div class="keys"><kbd>R</kbd> PLAY AGAIN · KEEP ROLLING TO EXPLORE</div>`;
+      <div class="keys">${L('<kbd>R</kbd> 再玩一次 · 继续滚动探索', '<kbd>R</kbd> PLAY AGAIN · KEEP ROLLING TO EXPLORE')}</div>`;
     this.endAnim?.cancel();
     this.endAnim = this.end.animate(
       [

@@ -13,11 +13,11 @@ export const growthConfig = {
   visualGrowthRate: 6,
   /** Tier = character evolution. A tier is reached when its size class unlocks. */
   tiers: [
-    { tier: 1, name: 'Scrap Collector', unlockClass: 0 },
-    { tier: 2, name: 'Intake Chassis', unlockClass: 2 },
-    { tier: 3, name: 'Reinforced Hauler', unlockClass: 5 },
-    { tier: 4, name: 'Industrial Recycler', unlockClass: 7 },
-    { tier: 5, name: 'City Recycler', unlockClass: 9 },
+    { tier: 1, name: 'Scrap Collector', nameZh: '拾荒机', unlockClass: 0 },
+    { tier: 2, name: 'Intake Chassis', nameZh: '吞吐底盘', unlockClass: 2 },
+    { tier: 3, name: 'Reinforced Hauler', nameZh: '加固运载机', unlockClass: 5 },
+    { tier: 4, name: 'Industrial Recycler', nameZh: '工业回收机', unlockClass: 7 },
+    { tier: 5, name: 'City Recycler', nameZh: '城市回收机', unlockClass: 9 },
   ],
 } as const;
 
