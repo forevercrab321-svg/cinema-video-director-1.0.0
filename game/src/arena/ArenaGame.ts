@@ -141,8 +141,6 @@ export type WireState = [x: number, z: number, heading: number, diameter: number
 
 const PULL_HOLD_RECLAIM = 1.5;
 
-/** Size class names for the arena HUD (Chinese; English uses SIZE_CLASSES labels). */
-const CLASS_ZH = ['碎屑', '罐子和砖块', '纸箱和垃圾袋', '垃圾桶和街道设施', '大垃圾箱和机器', '汽车', '卡车和集装箱', '房屋', '楼房', '大型建筑', '城市街区'];
 
 /** Starter scrap around each spawn: [type, radius m, count]. */
 const STARTER_RING: [ObjectTypeId, number, number][] = [
@@ -161,7 +159,7 @@ export class ArenaGame {
   readonly camera = new THREE.PerspectiveCamera(56, 16 / 9, 0.03, 700);
   readonly world: World;
   readonly rig: CameraRig;
-  readonly hud = new Hud('<kbd>WASD</kbd> MOVE · <kbd>SPACE</kbd> DASH<br><kbd>DRAG</kbd> LOOK · <kbd>V</kbd> VIEW · <kbd>M</kbd> SOUND');
+  readonly hud = new Hud(L('<kbd>WASD</kbd> 移动 · <kbd>空格</kbd> 冲刺<br><kbd>拖动</kbd> 转视角 · <kbd>V</kbd> 切换视角 · <kbd>M</kbd> 声音', '<kbd>WASD</kbd> MOVE · <kbd>SPACE</kbd> DASH<br><kbd>DRAG</kbd> LOOK · <kbd>V</kbd> VIEW · <kbd>M</kbd> SOUND'));
   readonly effects: Effects;
   readonly sun: THREE.DirectionalLight;
   readonly sky: THREE.Mesh;
@@ -1055,14 +1053,14 @@ export class ArenaGame {
     if (a.kind === 'local' && cls > a.cls) {
       const tier = tierForClass(cls);
       if (tier > a.tier) {
-        this.hud.showBanner(L(`进化到 ${tier} 阶`, `TIER ${tier}`), L(`现在能吃：${CLASS_ZH[cls]}`, `NOW EATING: ${SIZE_CLASSES[cls].label.toUpperCase()}`), 2.4);
+        this.hud.showBanner(L(`进化到 ${tier} 阶`, `TIER ${tier}`), L(`现在能吃：${SIZE_CLASSES[cls].labelZh}`, `NOW EATING: ${SIZE_CLASSES[cls].label.toUpperCase()}`), 2.4);
         this.onEvent?.({ kind: 'tier', tier });
         this.effects.pulse(a.x, a.z, a.targetDiameter * 4, 1);
         this.effects.pullBack(FEEL.tierPullBack, FEEL.tierPullSeconds);
         this.effects.addTrauma(feelConfig.tierUpTrauma * 0.6);
         this.effects.burst(a.x, a.targetDiameter * 0.5, a.z, new THREE.Color(0xffa640), 20, a.targetDiameter * 0.06, 2 + a.targetDiameter * 1.5);
       } else {
-        this.hud.showBanner(L(`解锁：${CLASS_ZH[cls]}`, `UNLOCKED: ${SIZE_CLASSES[cls].label.toUpperCase()}`), `SIZE CLASS ${cls}`, 1.6);
+        this.hud.showBanner(L(`解锁：${SIZE_CLASSES[cls].labelZh}`, `UNLOCKED: ${SIZE_CLASSES[cls].label.toUpperCase()}`), L(`体型等级 ${cls}`, `SIZE CLASS ${cls}`), 1.6);
         this.onEvent?.({ kind: 'unlock', cls });
       }
     }

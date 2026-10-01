@@ -9,6 +9,7 @@ import { CameraRig } from '../systems/CameraRig';
 import { Effects } from '../systems/Effects';
 import { classForPower, diameterForMass, massForDiameter, progressToNextClass, tierForClass } from '../systems/growth';
 import { Hud } from '../ui/Hud';
+import { L } from '../i18n';
 import type { CityDef } from '../world/city';
 import { SCRAP_CITY } from '../world/cities/scrap';
 import type { MaterialLibrary } from '../art/materials';
@@ -293,10 +294,10 @@ export class Game {
         p.speed *= 0.35;
         this.effects.addTrauma(feelConfig.bumpTrauma);
         this.onEvent?.({ kind: 'bump', size: p.diameter });
-        if (o.anchored && p.power >= o.requiredPower) this.hud.toast(`${o.def.label.toUpperCase()} · HELD UP · TEAR DOWN ITS WALLS FIRST`);
+        if (o.anchored && p.power >= o.requiredPower) this.hud.toast(L(`${o.def.label.toUpperCase()} · 被撑着 · 先拆掉它的墙`, `${o.def.label.toUpperCase()} · HELD UP · TEAR DOWN ITS WALLS FIRST`));
         else {
           const needed = Math.ceil(massForDiameter(o.requiredPower));
-          this.hud.toast(`${o.def.label.toUpperCase()} · TOO BIG · GROW TO ${needed.toLocaleString('en-US')} KG`);
+          this.hud.toast(L(`${o.def.label.toUpperCase()} · 太大了 · 长到 ${needed.toLocaleString('en-US')} KG`, `${o.def.label.toUpperCase()} · TOO BIG · GROW TO ${needed.toLocaleString('en-US')} KG`));
         }
       }
     }
@@ -382,7 +383,7 @@ export class Game {
     if (o.def.climax) this.climaxPartAbsorbed();
     this.effects.addTrauma(big ? feelConfig.largePickupTrauma * Math.min(1, size / p.diameter) : feelConfig.pickupTrauma);
     if (o.def.objectClass >= 4 && this.metrics.firstAbsorbOfClassAt[o.def.objectClass] === this.time) {
-      this.hud.showBanner(`${o.def.label.toUpperCase()} RECYCLED`, `+${o.def.rewardMass} KG`, 2);
+      this.hud.showBanner(L(`回收 ${o.def.label.toUpperCase()}`, `${o.def.label.toUpperCase()} RECYCLED`), `+${o.def.rewardMass} KG`, 2);
       this.effects.pulse(p.x, p.z, p.diameter * 2.5);
     }
     this.hud.punch(o.def.rewardMass);
@@ -420,7 +421,7 @@ export class Game {
       this.effects.shards(o.x, o.y + 0.5, o.z, o.baseColor, 10, size * 0.05, 3 + size * 0.4);
       this.effects.addTrauma(Math.min(0.6, 0.15 + size * 0.02));
       this.onEvent?.({ kind: 'collapse', size });
-      if (o.def.climax) this.hud.toast(`${o.def.label.toUpperCase()} COLLAPSED`);
+      if (o.def.climax) this.hud.toast(L(`${o.def.label.toUpperCase()} 倒塌了`, `${o.def.label.toUpperCase()} COLLAPSED`));
     }
     this.world.applyEligibility(this.player.power);
   }
@@ -432,7 +433,7 @@ export class Game {
     this.won = true;
     m.climaxAt = this.time;
     const p = this.player;
-    this.hud.showBanner('WAREHOUSE DESTROYED', 'SCRAP CITY RECYCLED', 4);
+    this.hud.showBanner(L('仓库已摧毁', 'WAREHOUSE DESTROYED'), L('废料城回收完毕', 'SCRAP CITY RECYCLED'), 4);
     this.hud.showEnd({ time: this.time, mass: p.mass, objects: m.objectsCollected, tier: p.tier });
     this.effects.pulse(p.x, p.z, p.diameter * 6, 1.6);
     this.effects.dust(p.x, p.z, p.diameter * 2, 20);
@@ -472,12 +473,12 @@ export class Game {
         this.metrics.tierAt[tier] = this.time;
         this.model.setTier(tier, true);
         this.onEvent?.({ kind: 'tier', tier });
-        this.hud.showBanner(`TIER ${tier} REACHED`, `${SIZE_CLASSES[cls].label.toUpperCase()} UNLOCKED`, 2.6);
+        this.hud.showBanner(L(`进化到 ${tier} 阶`, `TIER ${tier} REACHED`), L(`解锁：${SIZE_CLASSES[cls].labelZh}`, `${SIZE_CLASSES[cls].label.toUpperCase()} UNLOCKED`), 2.6);
         this.effects.pulse(p.x, p.z, p.targetDiameter * 4, 1);
         this.effects.burst(p.x, p.targetDiameter * 0.5, p.z, new THREE.Color(0xffa640), 28, p.targetDiameter * 0.07, 3 + p.targetDiameter * 2);
         this.effects.addTrauma(feelConfig.tierUpTrauma);
       } else {
-        this.hud.showBanner(`${SIZE_CLASSES[cls].label.toUpperCase()} UNLOCKED`, `SIZE CLASS ${cls}`, 1.8);
+        this.hud.showBanner(L(`解锁：${SIZE_CLASSES[cls].labelZh}`, `${SIZE_CLASSES[cls].label.toUpperCase()} UNLOCKED`), L(`体型等级 ${cls}`, `SIZE CLASS ${cls}`), 1.8);
         this.onEvent?.({ kind: 'unlock', cls });
         this.effects.pulse(p.x, p.z, p.targetDiameter * 3);
       }
