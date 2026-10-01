@@ -26,6 +26,8 @@ const hashQuality = ['high', 'medium', 'low'].includes(location.hash.slice(1)) ?
 const quality = (params.get('quality') as Quality | null) ?? hashQuality ?? (touch ? 'medium' : 'high');
 
 const mode = params.get('mode') ?? (location.hash === '#story' ? 'story' : testMode ? 'story' : 'arena');
+// [platform-room] Start the portal SDK now (download + loadingStart overlap the texture generation); the arena awaits the same instance.
+if (mode !== 'story') void import('./platform/Platform').then((m) => m.createPlatform());
 // Code-split by mode, fetched now so the chunk downloads while the textures below are generated.
 const modeModule = mode === 'story' ? import('./story').then((m) => () => m.runStory(ctx)) : import('./arena/arenaMain').then((m) => () => m.runArena(ctx));
 

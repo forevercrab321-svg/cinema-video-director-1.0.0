@@ -32,8 +32,12 @@ if (target === 'crazygames') {
   const leaks = readdirSync(resolve(out, 'assets')).filter((f) => /Poki|GameDistribution/.test(f) || /poki-sdk|game-cdn\.poki|gamedistribution\.com/.test(readFileSync(resolve(out, 'assets', f), 'latin1')));
   if (leaks.length) throw new Error(`crazygames build still references another portal SDK: ${leaks.join(', ')}`);
 }
+if (target === 'gamedistribution') {
+  const leaks = readdirSync(resolve(out, 'assets')).filter((f) => /CrazyGames|Poki/.test(f) || /sdk\.crazygames|CrazyGames\??\.SDK|updateRoom|poki-sdk|game-cdn\.poki/.test(readFileSync(resolve(out, 'assets', f), 'latin1')));
+  if (leaks.length) throw new Error(`gamedistribution build still references another portal SDK: ${leaks.join(', ')}`);
+}
 if (target === 'nosdk') {
-  const leaks = readdirSync(resolve(out, 'assets')).filter((f) => /CrazyGames|Poki|GameDistribution/.test(f) || /sdk\.crazygames|poki-sdk|gamedistribution\.com/.test(readFileSync(resolve(out, 'assets', f), 'latin1')));
+  const leaks = readdirSync(resolve(out, 'assets')).filter((f) => /CrazyGames|Poki|GameDistribution/.test(f) || /sdk\.crazygames|CrazyGames\??\.SDK|updateRoom|poki-sdk|gamedistribution\.com/.test(readFileSync(resolve(out, 'assets', f), 'latin1')));
   if (leaks.length) throw new Error(`nosdk build still references a portal SDK: ${leaks.join(', ')}`);
 }
 rmSync(resolve(root, zipName), { force: true });
