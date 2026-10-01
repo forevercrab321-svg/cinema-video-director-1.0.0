@@ -38,6 +38,12 @@ export function setLang(l: Lang): void {
     /* storage blocked */
   }
   const url = new URL(location.href);
+  // A plain reload when the URL does not change: the page keeps its room peer id (tabId), so in a
+  // round the player gets their own machine back instead of joining as a newcomer.
+  if (!url.searchParams.has('lang')) {
+    location.reload();
+    return;
+  }
   url.searchParams.delete('lang');
   location.href = url.toString();
 }
