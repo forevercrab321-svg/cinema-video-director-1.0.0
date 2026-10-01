@@ -285,7 +285,12 @@ export class SupabaseNet implements Net {
         const key = lease.key;
         this.verifyChain = this.verifyChain.then(async () => {
           if (await hl.verify(key, topic, from, m.data, m.n, m.sig)) this.dispatch(topic, from, m.data);
-          else this.rejected++;
+          else {
+            // Usually our view of the lease is a few seconds stale (the host reloaded with a new
+            // key, or just took over and spoke before its claim landed): refresh it now.
+            this.rejected++;
+            hl.nudge();
+          }
         });
         return;
       }
