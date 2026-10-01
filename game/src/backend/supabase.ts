@@ -30,8 +30,34 @@ export function supabase(): SupabaseClient | null {
   // Realtime protocol 1.0.0 (JSON frames). The 2.0.0 default sends broadcasts as binary frames;
   // in the field presence synced but no broadcast (heartbeats, match state) ever arrived, so every
   // client dropped its peers after the heartbeat timeout and played alone.
-  client ??= createClient(URL!, KEY!, { auth: { persistSession: true, autoRefreshToken: true }, realtime: { vsn: '1.0.0' } });
+  if (!client) {
+    client = createClient(URL!, KEY!, { auth: { persistSession: true, autoRefreshToken: true }, realtime: { vsn: '1.0.0' } });
+    client.auth.onAuthStateChange((_event, session) => {
+      accessToken = session?.access_token ?? '';
+    });
+  }
   return client;
+}
+
+/** The signed-in session's token, cached for rpcBeacon (a closing page cannot await getSession). */
+let accessToken = '';
+
+/**
+ * Fire-and-forget RPC that survives the page closing (fetch keepalive), e.g. releasing the room
+ * host lease on pagehide so the next host takes over at once. Best effort: the lease also expires.
+ */
+export function rpcBeacon(fn: string, args: Record<string, unknown>): void {
+  if (!backendConfigured() || !accessToken) return;
+  try {
+    void fetch(`${URL}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      keepalive: true,
+      headers: { apikey: KEY!, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(args),
+    }).catch(() => undefined);
+  } catch {
+    /* page is going away */
+  }
 }
 
 /** Realtime socket heartbeat outcomes (window.__NET__): timeouts mean the socket was dropped. */

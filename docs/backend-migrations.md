@@ -1,7 +1,7 @@
 # Backend migrations — operator note
 
-Production state (2026-09-30): `0001`–`0003` applied. Still to run: **`0004` then `0005`**, then
-redeploy the `submit-match` edge function. Never edit a migration that has already been applied;
+Production state (2026-09-30): `0001`–`0003` applied. Still to run: **`0004`, `0005`, then `0006`**,
+then redeploy the `submit-match` edge function. Never edit a migration that has already been applied;
 fixes go into a new numbered file.
 
 ## 1. Run the SQL (Supabase dashboard → SQL Editor)
@@ -12,6 +12,10 @@ Run each file as one query, in this order, waiting for “Success” before the 
 2. `supabase/migrations/0005_security_hardening.sql` — security fixes from the 2026-09-30 audit.
    It refuses to run if 0004 is missing, runs inside one transaction (all or nothing) and is
    idempotent: running it again is harmless.
+3. `supabase/migrations/0006_room_host.sql` — server-confirmed room host (2026-10-01 netcode
+   audit): the `room_hosts` lease table and the `room_host` RPC. Refuses to run without 0005,
+   one transaction, idempotent. The game works without it (the client election decides, as
+   before) and starts using it as soon as it exists — no redeploy needed.
 
 Optional check afterwards: paste `supabase/tests/lobby.sql` into the editor. It rolls itself back
 and ends with `lobby.sql: all checks passed`.
@@ -39,9 +43,10 @@ tools/sql-security-test.sh
 ```
 
 Starts a throw-away Postgres, loads a Supabase stand-in (`tools/sql-security/stub.sql`), applies
-0001 → 0005 (0005 twice), runs `supabase/tests/lobby.sql`, replays every audit exploit
-(`tools/sql-security/exploits.sql`) and runs the real edge function under Node with a mocked
-supabase-js (`tools/sql-security/submit-match-test.mjs`). Ends with `ALL SECURITY CHECKS PASSED`.
+0001 → 0006 (0005 and 0006 twice), runs `supabase/tests/lobby.sql`, replays every audit exploit
+(`tools/sql-security/exploits.sql`), checks the room host lease (`tools/sql-security/room-host.sql`)
+and runs the real edge function under Node with a mocked supabase-js
+(`tools/sql-security/submit-match-test.mjs`). Ends with `ALL SECURITY CHECKS PASSED`.
 
 ## What 0005 changes for clients
 
@@ -56,6 +61,17 @@ supabase-js (`tools/sql-security/submit-match-test.mjs`). Ends with `ALL SECURIT
 
 RPC names and signatures used by `game/src/net/Hub.ts` are unchanged. The `submit-match` request
 body is unchanged.
+
+## What 0006 changes for clients
+
+| Area | Before | After |
+| --- | --- | --- |
+| Room host | each client elected one from its own peer list: a host back from a < 5 s tab-out became a second host; a newcomer with a lower id took over and reset the city | the server holds one lease per room code (peer id, account, public key, term); claimed only while free / expired, renewed every 2 s while visible, released on hide / close, expires 6 s after the last renewal; ≤ 3 rooms per account; signed-in pages only |
+| Host messages | anyone could write the host's id into `from` | `match` / `grant` / `eaten` are ECDSA P-256 signed with the key stored with the lease; unsigned, wrong-key or replayed ones are dropped (`game/src/net/HostLease.ts`) |
+
+Load: every room page calls `room_host` about every 3 s (the host every 2 s) — linear in open
+room pages, no Realtime. Tests: `node tools/net-room-test.mjs` (client, both with and without the
+RPC) and `tools/sql-security/room-host.sql` (server).
 
 Known limits:
 - A room is listed only once its host has finished the anonymous sign-in (normally within a

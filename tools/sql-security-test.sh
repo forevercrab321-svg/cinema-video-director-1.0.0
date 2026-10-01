@@ -3,7 +3,7 @@
 #
 # Spins up a throw-away Postgres cluster, loads a minimal Supabase stand-in (roles anon /
 # authenticated / service_role, auth.users, auth.uid() from request.jwt.claim.sub, Supabase's
-# default grants), applies supabase/migrations 0001 → 0005 (0005 twice: it must be idempotent),
+# default grants), applies supabase/migrations 0001 → 0006 (0005 and 0006 twice: idempotent),
 # then:
 #   1. supabase/tests/lobby.sql            — the lobby sanity checks (normal flows + clamping)
 #   2. tools/sql-security/exploits.sql     — every audit exploit must fail, normal flows must work
@@ -74,11 +74,20 @@ echo "  applied 0005"
 "${PSQL[@]}" -f "$ROOT/supabase/migrations/0005_security_hardening.sql"
 echo "  applied 0005 again"
 
+step "Migration 0006 (twice: idempotent)"
+"${PSQL[@]}" -f "$ROOT/supabase/migrations/0006_room_host.sql"
+echo "  applied 0006"
+"${PSQL[@]}" -f "$ROOT/supabase/migrations/0006_room_host.sql"
+echo "  applied 0006 again"
+
 step "supabase/tests/lobby.sql"
 "${PSQL[@]}" -t -f "$ROOT/supabase/tests/lobby.sql" | grep -E 'passed' | sed 's/^ */  /'
 
 step "tools/sql-security/exploits.sql"
 PGOPTIONS="-c client_min_messages=notice" "${PSQL[@]}" -t -f "$HERE/exploits.sql" 2>&1 | sed -n -e 's/^.*NOTICE:  /  /p' -e '/ERROR/p'
+
+step "tools/sql-security/room-host.sql (0006: server-confirmed room host)"
+PGOPTIONS="-c client_min_messages=notice" "${PSQL[@]}" -t -f "$HERE/room-host.sql" 2>&1 | sed -n -e 's/^.*NOTICE:  /  /p' -e '/ERROR/p' -e 's/^ *\(room-host.sql: .*\)/  \1/p'
 
 step "submit-match edge function (node mock → this database)"
 node "$HERE/submit-match-test.mjs"

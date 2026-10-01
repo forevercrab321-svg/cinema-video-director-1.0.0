@@ -1,4 +1,5 @@
-import { authError, authStatus, currentUser, socketBeats, supabase } from '../backend/supabase';
+import { authError, authStatus, currentUser, rpcBeacon, socketBeats, supabase } from '../backend/supabase';
+import { HOST_TOPICS, HostLease, type LeaseView, type RpcFn } from './HostLease';
 import type { Json, Net, NetMessage, NetPeer } from './Net';
 import { RealtimeLink, tabId, type LinkStatus } from './RealtimeLink';
 
@@ -91,6 +92,20 @@ export class SupabaseNet implements Net {
   /** Nobody else heard recently: game messages stay on this page (see emit). */
   private solo = true;
   private readonly local = { msg: 0, st: 0 };
+  /** Server-confirmed host + signed host messages (HostLease.ts); null without the backend RPC. */
+  private readonly hostLease: HostLease | null;
+  /** Host messages are signed / verified asynchronously, in order. */
+  private signChain: Promise<void> = Promise.resolve();
+  private verifyChain: Promise<void> = Promise.resolve();
+  /** Host messages dropped because the signature or counter did not check out. */
+  private rejected = 0;
+  /**
+   * Nonces of the messages this page sent (→ send time). A message that names this page as its
+   * sender is only accepted with one of them: otherwise anyone could write our id into `from` and
+   * have this page treat it as its own echo (a host would apply a forged beacon, grant or eat).
+   */
+  private readonly sentNonces = new Map<string, number>();
+  private spoofed = 0;
 
   private constructor(
     readonly room: string,
@@ -98,15 +113,20 @@ export class SupabaseNet implements Net {
   ) {
     this.setSlow({ nk: nickname });
     this.link = new RealtimeLink(`arena:${room}`, this.id, ['msg', 'st', 'hb', 'bye'], { receive: (e, p, f) => this.onReceive(e, p, f), up: (w) => this.onUp(w), changed: () => this.refresh() }, NET_TIMING);
+    const sb = supabase();
+    const rpc: RpcFn | null = sb && typeof sb.rpc === 'function' ? (fn, args) => sb.rpc(fn, args) as unknown as ReturnType<RpcFn> : null;
+    this.hostLease = rpc ? new HostLease(room, this.id, rpc, () => this.refresh(), rpcBeacon) : null;
     // Remote diagnosis: window.__NET__() in the console (or a browser agent) reports the link state.
     (window as unknown as Record<string, unknown>).__NET__ = () => this.diagnostics();
     setInterval(() => this.pump(), NET_TIMING.pumpMs); // ~15 Hz state, presence changes debounced into the same tick
-    const goodbye = () => {
+    const goodbye = (closing: boolean) => {
+      // The next host takes over at once instead of waiting for the lease to expire.
+      this.hostLease?.release(closing);
       if (this.live) this.push('bye', { from: this.id });
     };
-    addEventListener('pagehide', goodbye);
+    addEventListener('pagehide', () => goodbye(true));
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') goodbye();
+      if (document.visibilityState === 'hidden') goodbye(false);
       else {
         // Back: re-announce everything at once and ask the others for theirs.
         this.slowDirty = this.fastDirty = true;
@@ -171,7 +191,41 @@ export class SupabaseNet implements Net {
       queueMicrotask(() => this.dispatch(topic, this.id, data));
       return;
     }
-    this.push('msg', { topic, from: this.id, data });
+    if (HOST_TOPICS.has(topic) && this.hostLease?.holds()) {
+      this.sendSigned(this.hostLease, topic, data);
+      return;
+    }
+    this.pushMsg({ topic, from: this.id, data });
+  }
+
+  private pushMsg(payload: Record<string, Json>): void {
+    const k = Math.random().toString(36).slice(2, 12);
+    this.sentNonces.set(k, Date.now());
+    this.push('msg', { ...payload, k });
+  }
+
+  /** Server-confirmed host of this room, or null (unknown: the client election decides). */
+  lease(): LeaseView | null {
+    return this.hostLease?.current() ?? null;
+  }
+
+  /** The client election picks this page as host: claim the lease as soon as it is free. */
+  wantHost(want: boolean): void {
+    this.hostLease?.setWant(want);
+  }
+
+  /** Host message signed with the key the server stored with our lease (order kept). */
+  private sendSigned(lease: HostLease, topic: string, live: Json): void {
+    // Snapshot now: the caller keeps mutating its state (the match object) while we sign.
+    const data = JSON.parse(JSON.stringify(live)) as Json;
+    this.signChain = this.signChain.then(async () => {
+      const s = await lease.sign(topic, this.id, data).catch(() => null);
+      if (!this.live) {
+        this.dispatch(topic, this.id, data); // went down while signing: this page still needs it
+        return;
+      }
+      this.pushMsg(s ? { topic, from: this.id, data, n: s.n, sig: s.sig } : { topic, from: this.id, data });
+    });
   }
   on(topic: string, fn: (m: NetMessage) => void): void {
     const list = this.handlers.get(topic) ?? [];
@@ -213,10 +267,32 @@ export class SupabaseNet implements Net {
 
   // ── Receive ───────────────────────────────────────────────────────────────
   private onMsg(payload: unknown, from: string | null): void {
-    const m = payload as { topic?: unknown; data?: Json };
+    const m = payload as { topic?: unknown; data?: Json; n?: unknown; sig?: unknown; k?: unknown };
     if (!from || typeof m.topic !== 'string') return;
-    if (from !== this.id) this.heard(from);
-    this.dispatch(m.topic, from, m.data);
+    if (from === this.id) {
+      // Our own echo only if we sent it (see sentNonces).
+      if (typeof m.k !== 'string' || !this.sentNonces.delete(m.k)) {
+        this.spoofed++;
+        return;
+      }
+    } else this.heard(from);
+    const topic = m.topic;
+    if (from !== this.id && HOST_TOPICS.has(topic) && this.hostLease) {
+      const lease = this.hostLease.current();
+      if (lease?.key && lease.peer === from) {
+        // The lease names this sender: only messages signed with its key count (no forged `from`).
+        const hl = this.hostLease;
+        const key = lease.key;
+        this.verifyChain = this.verifyChain.then(async () => {
+          if (await hl.verify(key, topic, from, m.data, m.n, m.sig)) this.dispatch(topic, from, m.data);
+          else this.rejected++;
+        });
+        return;
+      }
+      // A host message from someone the lease does not name: our view may be stale.
+      this.hostLease.nudge();
+    }
+    this.dispatch(topic, from, m.data);
   }
 
   private onState(payload: unknown, from: string | null): void {
@@ -333,10 +409,12 @@ export class SupabaseNet implements Net {
         else if (visible) this.push('st', { from: this.id, st: this.fast });
       }
     }
+    this.hostLease?.tick(now, document.visibilityState === 'visible');
     if (now - this.lastSlowTick < 1000) return;
     this.lastSlowTick = now;
     this.link.tick(now);
     for (const [id, o] of this.others) if (now - o.seen > 10 * 60_000) this.others.delete(id);
+    for (const [k, t] of this.sentNonces) if (now - t > 30_000) this.sentNonces.delete(k);
     this.refresh(); // expiry: someone went silent (or came back)
   }
 
@@ -395,6 +473,8 @@ export class SupabaseNet implements Net {
       sig: this.visibleSig,
       history: [...link.history],
       socket: { ...socketBeats },
+      host: this.hostLease ? { lease: this.hostLease.last, holds: this.hostLease.holds(), rpc: this.hostLease.available, signed: !!this.hostLease.pub, rejected: this.rejected } : null,
+      spoofed: this.spoofed,
     };
   }
 }
