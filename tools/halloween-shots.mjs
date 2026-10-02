@@ -1,5 +1,5 @@
 // Halloween Town gameplay stills (solo autopilot): grow, scores locked, villains rising, chase.
-// node tools/halloween-shots.mjs → renders/review/halloween/game-*.png
+// node tools/halloween-shots.mjs → renders/review/halloween/game-*.jpg
 import { chromium } from 'playwright';
 const root = '/home/user/cinema-video-director-1.0.0';
 const vite = await import('vite');
@@ -16,7 +16,7 @@ const out = root + '/renders/review/halloween/';
 for (const [t, name] of [[25, 'game-grow-25s'], [160, 'game-grow-160s'], [301.5, 'game-locked'], [304.5, 'game-rise'], [312, 'game-chase']]) {
   for (;;) { const s = await p.evaluate(() => window.__ARENA__.step(1)); if (s.t >= t || s.phase === 'results') break; }
   await p.evaluate(() => window.__ARENA__.render());
-  await p.screenshot({ path: out + name + '.png' });
+  await p.screenshot({ path: out + name + '.jpg' });
   console.log(name, JSON.stringify(await p.evaluate(() => window.__ARENA__.stats())));
 }
 await b.close(); await server.close();

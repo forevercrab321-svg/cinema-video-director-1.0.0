@@ -357,8 +357,8 @@ export class ArenaUi {
       </div>
       <div class="foot">
         <details class="rules"><summary><span class="rk">📖 ${L('规则', 'Rules')}</span><span class="rc">🦷 ${L('大 <b>25%</b> 就能吞掉对手', '<b>25%</b> bigger eats')}</span><span class="rc">♥ ${L('每人 <b>3</b> 条命', '<b>3</b> lives')}</span><span class="rc">⏱ <b>${roundSecondsFor(s.city) / 60}</b> ${L('分钟一局', 'min')}</span>${isHalloween(s.city) ? `<span class="rc">👻 ${L('下半场被抓 = <b>0 分</b>', 'Caught in the 2nd half = <b>0</b>')}</span>` : ''}<span class="rc">⚡🧲🛡 ${L('道具', 'Power-ups')}</span><span class="more">${L('详情', 'Details')}</span></summary><div class="full">${L(
-          `${isHalloween(s.city) ? `万圣节小镇：一局 ${roundSecondsFor(s.city) / 60} 分钟，最多 ${HW.maxPlayers} 人。上半场（${HW.huntAt / 60} 分钟）照常吃东西长大，结束时你的质量就是你的分数。下半场所有车变回小车，${HUNTERS.map((h) => hunterName(h)[0]).join('、')} 从中央广场爬出来追人：被抓到分数清零并出局。最后按分数排名——上半场落后的人，只要活到最后，就可能反超。<br>` : ''}规则：比对手大 25% 就能把它整个吞掉（得到它 60% 的质量）。每人 3 条命，被吞后留 45% 质量重生。${A.roundSeconds / 60} 分钟结束，或只剩一人，或地标被拆完。金色箱子、连击、第一滴血、吞掉第一名（悬赏）、拆掉地标最后一块都有奖励；落后的人吃东西有追赶加成；道具箱：⚡加速、🧲强磁、🛡护盾（不会被吃）；冲刺撞上吃不动的东西会被眩晕并掉质量。`,
-          `${isHalloween(s.city) ? `Halloween Town: a ${roundSecondsFor(s.city) / 60}-minute round for up to ${HW.maxPlayers} players. First half (${HW.huntAt / 60} min): eat and grow as usual — your mass at half time is your score. Second half: every machine shrinks back to small and ${HUNTERS.map((h) => hunterName(h)[1]).join(', ')} crawl out of the central plaza to hunt you. Caught = score 0 and you're out. Final ranking is by score, so whoever is behind can still win by surviving.<br>` : ''}Rules: be 25% bigger than a rival to swallow it whole (you get 60% of its mass). 3 lives each; when eaten you respawn with 45% of your mass. The round ends after ${A.roundSeconds / 60} minutes, when one machine is left, or when the landmark is torn down. Golden crates, combos, first blood, the leader's bounty and the last landmark piece all pay extra; machines behind the leader get a catch-up bonus. Power-ups: ⚡ speed, 🧲 magnet, 🛡 shield (can't be eaten). Dashing into something you can't eat stuns you and costs mass.`,
+          `${isHalloween(s.city) ? `万圣节小镇：一局 ${roundSecondsFor(s.city) / 60} 分钟，最多 ${HW.maxPlayers} 人。上半场（${HW.huntAt / 60} 分钟）照常吃东西长大，结束时你的质量就是你的分数。下半场所有车变回小车，${HUNTERS.map((h) => hunterName(h)[0]).join('、')} 三个最恐怖的 BOSS 从中央广场爬出来追人：被抓到分数清零并出局。BOSS 吃不掉也打不过；地图上其他所有万圣节东西（南瓜、墓碑、骷髅、吸血鬼、狼人、女巫……）上半场都能被你的车吃掉。最后按分数排名——上半场落后的人，只要活到最后，就可能反超。<br>` : ''}规则：比对手大 25% 就能把它整个吞掉（得到它 60% 的质量）。每人 3 条命，被吞后留 45% 质量重生。${A.roundSeconds / 60} 分钟结束，或只剩一人，或地标被拆完。金色箱子、连击、第一滴血、吞掉第一名（悬赏）、拆掉地标最后一块都有奖励；落后的人吃东西有追赶加成；道具箱：⚡加速、🧲强磁、🛡护盾（不会被吃）；冲刺撞上吃不动的东西会被眩晕并掉质量。`,
+          `${isHalloween(s.city) ? `Halloween Town: a ${roundSecondsFor(s.city) / 60}-minute round for up to ${HW.maxPlayers} players. First half (${HW.huntAt / 60} min): eat and grow as usual — your mass at half time is your score. Second half: every machine shrinks back to small and the three bosses — ${HUNTERS.map((h) => hunterName(h)[1]).join(', ')} — crawl out of the central plaza to hunt you. Caught = score 0 and you're out. Bosses can't be eaten or beaten; everything else on the map (pumpkins, tombstones, skeletons, vampires, werewolves, witches…) is food for your machine in the first half. Final ranking is by score, so whoever is behind can still win by surviving.<br>` : ''}Rules: be 25% bigger than a rival to swallow it whole (you get 60% of its mass). 3 lives each; when eaten you respawn with 45% of your mass. The round ends after ${A.roundSeconds / 60} minutes, when one machine is left, or when the landmark is torn down. Golden crates, combos, first blood, the leader's bounty and the last landmark piece all pay extra; machines behind the leader get a catch-up bonus. Power-ups: ⚡ speed, 🧲 magnet, 🛡 shield (can't be eaten). Dashing into something you can't eat stuns you and costs mass.`,
         )}</div></details>
         <div class="actions">
           <button class="btn${me || host ? '' : ' primary cta'}" data-a="join">${me ? L('离开 · 观战', 'Leave · spectate') : L('加入比赛', 'Join')}</button>
@@ -717,7 +717,7 @@ export class ArenaUi {
       if (onScreen) {
         tag.classList.remove('edge');
         tag.style.transform = '';
-        tag.textContent = `☠ ${L(zh, en)}`;
+        tag.textContent = `☠ BOSS · ${L(zh, en)}`;
         tag.style.left = `${((v.x + 1) / 2) * innerWidth}px`;
         tag.style.top = `${((1 - v.y) / 2) * innerHeight}px`;
       } else {
@@ -729,7 +729,7 @@ export class ArenaUi {
         if (ex > 0.6) ey = Math.max(ey, -0.2);
         const arrow = Math.abs(ex) > Math.abs(ey) ? (ex > 0 ? '▶' : '◀') : ey > 0 ? '▲' : '▼';
         tag.classList.add('edge');
-        tag.textContent = `${arrow} ☠ ${L(zh, en)} · ${Math.round(dist)} m`;
+        tag.textContent = `${arrow} ☠ BOSS · ${L(zh, en)} · ${Math.round(dist)} m`;
         tag.style.left = `${((ex + 1) / 2) * innerWidth}px`;
         tag.style.top = `${((1 - ey) / 2) * innerHeight + 12}px`;
         tag.style.transform = ex < -0.6 ? 'translate(0, -50%)' : ex > 0.6 ? 'translate(-100%, -50%)' : 'translate(-50%, -50%)';

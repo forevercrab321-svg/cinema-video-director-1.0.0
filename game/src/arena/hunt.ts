@@ -133,6 +133,7 @@ export class Hunt {
     if (st !== 'locked' && !this.announced.rise) {
       this.announced.rise = true;
       g.onEvent?.({ kind: 'hunterRise' });
+      g.hud.showBanner(L('三个 BOSS 苏醒了', '3 BOSSES AWAKEN'), L('吃不掉，打不过——只能逃', "Can't eat them. Can't beat them. RUN."), 2.4);
       g.atmosphere?.onHuntStart();
       g.effects.pulse(0, 0, 30, 1.6);
       g.effects.addTrauma(0.35);

@@ -4,6 +4,7 @@ The Creative Director asked for this on 2026-10-02.
 
 - **Map:** a Halloween map built entirely from Halloween elements: slime ghosts, graveyard, skeletons, vampire, werewolf, pumpkins, witch.
 - **Centre:** the central plaza stays **empty** for now. Something hidden will go there later.
+- **Bosses vs food** (2026-10-02): the three villains are the only bosses — scariest things on the map, never edible, never beatable. Every other Halloween element, monsters included (vampires, werewolves, witches, skeletons, the giant skeleton…), is food for the player's machine in the first half. UI: villain tags read `☠ BOSS · name`; rise banner "3 BOSSES AWAKEN".
 - **Only Halloween elements** (2026-10-02 correction): no houses, cars, street furniture, roads or city skyline. Graveyard and pumpkin-patch landscape; every size class is a Halloween object.
 - **Round length:** doubled.
 - **Second half:** every machine shrinks back to small, and three horror characters chase everyone.
@@ -73,3 +74,15 @@ Each owner applies the shrink and revive to its own machine (as with mass today)
   - `lobby_beat` accepts up to 6 players.
   - `submit_match` accepts up to 6 rows and up to 630 s.
   - Until 0007 is applied, a 6-player room still plays. The directory shows at most 4, and a 5–6-row result submission is rejected (coins are client-side anyway).
+
+## Status (2026-10-02)
+
+| Part | State | Evidence |
+| --- | --- | --- |
+| Hunt mode (lock, shrink, rise, chase, catch, ranking) | DONE | `node tools/halloween-test.mjs` — solo (6 machines, full 10 min) + duo over LocalNet, all checks pass; 4 of 6 caught per round, trailing machines can win |
+| Map (Halloween-only, 541 placements, classes 0–8) | DONE | `renders/review/halloween/*.jpg`; other cities hash-identical |
+| Villains (3 bosses) | DONE, NEEDS CD REVIEW | `renders/review/hunters/` |
+| Atmosphere / VFX | DONE | `renders/review/halloween-fx/`, 8–10 draw calls |
+| Music / SFX | DONE (procedural); Suno tracks optional | `docs/music/suno-prompts.md` §7 |
+| Migration 0007 | WRITTEN, tested locally; **CD applies in Supabase** | `bash tools/sql-security-test.sh` |
+| Perf | High tier 258–339 draw calls in play (6 machines × ~30 parts dominate); world itself 43 | `tools/halloween-shots.mjs` |

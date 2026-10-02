@@ -9,7 +9,7 @@
 //   duo    two pages in one browser over LocalNet (?net=local): the guest follows the host's hunt
 //          start, locked scores, villain positions and catches.
 //
-// Screenshots: renders/review/halloween/test-*.png · exit 1 on any failed check.
+// Screenshots: renders/review/halloween/test-*.jpg · exit 1 on any failed check.
 //   node tools/halloween-test.mjs [--only solo|duo] [--runs N]
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
@@ -72,7 +72,7 @@ async function solo(run) {
   s = await stepTo(p, 120);
   const grew = Math.max(...s.actors.map((a) => a.mass));
   ok(grew > 500, `[solo ${run}] machines grow in the first half (top ${grew} kg at 120 s)`);
-  if (run === 1) await p.screenshot({ path: `${shots}/test-grow-120s.png` });
+  if (run === 1) await p.screenshot({ path: `${shots}/test-grow-120s.jpg` });
   s = await stepTo(p, HUNT_AT - 1);
   ok(s.hunt && s.hunt.start === null && s.hunt.stage === 'grow', `[solo ${run}] no hunt before ${HUNT_AT} s`);
   const before = Object.fromEntries(s.actors.map((a) => [a.id, a.mass]));
@@ -85,10 +85,10 @@ async function solo(run) {
   ok(s.actors.every((a) => a.mass === HUNT_MASS && a.alive && !a.out), `[solo ${run}] everyone shrank to ${HUNT_MASS} kg and is back in play [${s.actors.map((a) => `${a.mass}${a.alive ? '' : ' dead'}${a.out ? ' out' : ''}`).join(', ')}]`);
   s = await stepTo(p, HUNT_AT + 4.5, 0.5);
   ok(s.hunt.stage === 'rise', `[solo ${run}] villains rise at +3 s [${s.hunt.stage}]`);
-  if (run === 1) await p.screenshot({ path: `${shots}/test-rise.png` });
+  if (run === 1) await p.screenshot({ path: `${shots}/test-rise.jpg` });
   s = await stepTo(p, HUNT_AT + 8, 0.5);
   ok(s.hunt.stage === 'chase' && s.hunt.hunters.every((h) => h.target), `[solo ${run}] chase from +6 s, every villain has a target`);
-  if (run === 1) await p.screenshot({ path: `${shots}/test-chase-start.png` });
+  if (run === 1) await p.screenshot({ path: `${shots}/test-chase-start.jpg` });
   // Eating stops once the scores lock.
   const huntMasses = s.actors.map((a) => a.mass);
   ok(huntMasses.every((m) => m === HUNT_MASS), `[solo ${run}] no mass gained during the hunt`);
@@ -99,7 +99,7 @@ async function solo(run) {
     curve.push(`${Math.round(s.t)}s:${s.hunt?.caught.length ?? '?'}`);
     if (run === 1 && !shotAt && s.hunt?.caught.length) {
       shotAt = s.t;
-      await p.screenshot({ path: `${shots}/test-first-catch.png` });
+      await p.screenshot({ path: `${shots}/test-first-catch.jpg` });
     }
     if (s.phase === 'results') break;
   }
@@ -115,7 +115,7 @@ async function solo(run) {
   const runners = st.filter((x) => !caught.has(x.id));
   ok(runners.every((x, i) => i === 0 || runners[i - 1].mass >= x.mass), `[solo ${run}] runners ranked by locked score`);
   console.log(`      results: ${st.map((x) => `${x.rank}.${x.name} ${x.mass}${caught.has(x.id) ? '👻' : ''}`).join('  ')}`);
-  if (run === 1) await p.screenshot({ path: `${shots}/test-results.png` });
+  if (run === 1) await p.screenshot({ path: `${shots}/test-results.jpg` });
   ok(errors.length === 0, `[solo ${run}] no page errors${errors.length ? `: ${errors.slice(0, 3).join(' | ')}` : ''}`);
   await ctx.close();
   return { caught: caught.size, curve };
@@ -165,20 +165,27 @@ async function duo() {
   const drift = Math.max(...H.hunt.hunters.map((h, i) => Math.hypot(h.x - G.hunt.hunters[i].x, h.z - G.hunt.hunters[i].z)));
   ok(G.hunt.stage === 'chase' && drift < 4, `[duo] guest mirrors the villains (max drift ${drift.toFixed(2)} m)`);
   // Put the guest's machine right in front of a villain: the host decides the catch, both pages agree.
-  const v = H.hunt.hunters[0];
-  await guestPage.p.evaluate(({ x, z }) => {
-    const g = window.__ARENA__.game();
-    g.local.x = x + 0.3;
-    g.local.z = z;
-    g.local.invulnerableUntil = 0;
-  }, v);
-  [a, b] = await both(2, 0.1);
+  // Keep the guest's machine parked on villain 0 (as the host sees it) until the host decides.
+  for (let i = 0; i < 40; i++) {
+    const v = (await hostPage.p.evaluate(() => window.__ARENA__.summary())).hunt.hunters[0];
+    await guestPage.p.evaluate(({ x, z }) => {
+      const g = window.__ARENA__.game();
+      if (!g.local?.alive) return;
+      g.local.x = x + 0.2;
+      g.local.z = z;
+      g.local.invulnerableUntil = 0;
+    }, v);
+    [a, b] = await both(0.1, 0.1);
+    const G = hostPage === A ? b : a;
+    if (G.hunt.caught.includes(G.me)) break;
+  }
+  [a, b] = await both(0.5, 0.1);
   const H2 = hostPage === A ? a : b;
   const G2 = hostPage === A ? b : a;
   ok(H2.hunt.caught.includes(G2.me) && G2.hunt.caught.includes(G2.me), `[duo] host catches the guest and the guest agrees [host ${H2.hunt.caught.length}, guest ${G2.hunt.caught.length}]`);
   const meG2 = G2.actors.find((x) => x.id === G2.me);
   ok(meG2 && !meG2.alive && meG2.out, '[duo] the caught guest is out (spectating)');
-  await guestPage.p.screenshot({ path: `${shots}/test-duo-guest-caught.png` });
+  await guestPage.p.screenshot({ path: `${shots}/test-duo-guest-caught.jpg` });
   ok(A.errors.length === 0 && B.errors.length === 0, `[duo] no page errors${[...A.errors, ...B.errors].slice(0, 3).join(' | ')}`);
   await ctx.close();
 }
