@@ -39,8 +39,30 @@ export const HALLOWEEN = {
   leadSeconds: 0.45,
   /** Coins by final rank 1..6 (the 4-player table extended). */
   coinsByRank: [120, 80, 55, 35, 25, 15],
+  /** Spots this close to the centre are the villains' plaza: nothing hides there. */
+  huntSafeRadius: 36,
   /** Heartbeat: villain closer than this (m) raises the proximity cue from 0 to 1. */
   dreadRange: 22,
+} as const;
+
+/**
+ * 蛋之谷 / Egg Valley: an invisible girl hidden somewhere new each round (second half only).
+ * Honk next to her to wake her: her fried-egg backpack makes the machine invisible to the bosses
+ * for stealthSeconds and adds scoreBonus × its locked score. Once per round.
+ */
+export const EGG = {
+  name: 'Egg Valley',
+  nameZh: '蛋之谷',
+  height: 2.0,
+  /** Golden egg sparkles give her away within hintRange m; a translucent ghost within ghostRange. */
+  hintRange: 15,
+  ghostRange: 6,
+  /** Honk within this distance (m, plus the machine's radius) to wake her. */
+  wakeRange: 4,
+  stealthSeconds: 10,
+  scoreBonus: 1 / 3,
+  /** An AI rival next to her honks with this chance per second. */
+  botHonkChance: 0.35,
 } as const;
 
 export type HunterKind = 'shock' | 'cannibal' | 'motel';

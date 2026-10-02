@@ -259,7 +259,10 @@ export class ArenaGame {
       if (!o.def.climax && o.def.objectClass <= A.refillMaxClass && !o.supports.length && !supporting.has(o)) this.refillable.add(o.id);
     }
     for (const r of roster) this.addActor(r, localId);
-    if (isHalloween(city.id)) this.hunt = new Hunt(this);
+    if (isHalloween(city.id)) {
+      this.hunt = new Hunt(this);
+      this.hunt.initEgg();
+    }
     this.world.applyEligibility(this.local?.power ?? diameterForMass(growthConfig.startMass));
     const me = this.local ?? this.actors[0];
     if (me) this.rig.snap(me.x, me.z, me.heading, me.diameter);

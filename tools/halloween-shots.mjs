@@ -19,4 +19,15 @@ for (const [t, name] of [[25, 'game-grow-25s'], [160, 'game-grow-160s'], [301.5,
   await p.screenshot({ path: out + name + '.jpg' });
   console.log(name, JSON.stringify(await p.evaluate(() => window.__ARENA__.stats())));
 }
+// Egg Valley: drive up to her hiding place, see the ghost, honk, get the backpack and turn invisible.
+const egg = await p.evaluate(() => { const g = window.__ARENA__.game(); window.__ARENA__.autopilot(false); return { x: g.hunt.egg.x, z: g.hunt.egg.z }; });
+const park = () => p.evaluate(({ x, z }) => { const g = window.__ARENA__.game(); if (!g.local?.alive) return; g.local.x = x + 2; g.local.z = z + 2; g.local.heading = Math.atan2(2, 2); g.local.speed = 0; g.rig.yaw = g.local.heading; }, egg);
+await park(); await p.evaluate(() => window.__ARENA__.step(0.6)); await park();
+await p.evaluate(() => window.__ARENA__.render()); await p.screenshot({ path: out + 'game-egg-hint.jpg' });
+await p.evaluate(() => window.__ARENA__.game().emote(6));
+for (let i = 0; i < 6; i++) { await park(); await p.evaluate(() => window.__ARENA__.step(0.15)); }
+await p.evaluate(() => window.__ARENA__.render()); await p.screenshot({ path: out + 'game-egg-reveal.jpg' });
+for (let i = 0; i < 12; i++) { await park(); await p.evaluate(() => window.__ARENA__.step(0.2)); }
+await p.evaluate(() => window.__ARENA__.render()); await p.screenshot({ path: out + 'game-egg-stealth.jpg' });
+console.log('egg', JSON.stringify(await p.evaluate(() => window.__ARENA__.summary().hunt.egg)));
 await b.close(); await server.close();

@@ -60,6 +60,8 @@ export interface MatchState {
   hs?: number[][];
   /** Halloween map: catches [slot, match time, villain index]. */
   hc?: number[][];
+  /** Halloween map: Egg Valley woken by [slot, match time]. */
+  eg?: number[];
 }
 
 export interface LobbyPlayer {
@@ -404,7 +406,7 @@ export class ArenaSession {
   /** Host: back to the lobby (from results, or to abort). */
   toLobby(): void {
     if (!this.isHost()) return;
-    this.match = { ...this.match, ep: this.match.ep + 1, ph: 'lobby', roster: [], t: 0, standings: undefined, city: this.city, bots: this.bots, wu: undefined, wj: undefined, ev: undefined, mc: undefined, hk: undefined, hs: undefined, hc: undefined };
+    this.match = { ...this.match, ep: this.match.ep + 1, ph: 'lobby', roster: [], t: 0, standings: undefined, city: this.city, bots: this.bots, wu: undefined, wj: undefined, ev: undefined, mc: undefined, hk: undefined, hs: undefined, hc: undefined, eg: undefined };
     this.net.emit('match', this.match);
   }
 
@@ -596,6 +598,17 @@ export class ArenaSession {
       }
       return;
     }
+    // Egg Valley: AI rivals next to her honk; the first machine to honk beside her wakes her.
+    h.egg.botsHonk();
+    const woke = !m.eg ? h.egg.detect() : null;
+    if (woke) {
+      const at = Math.round(g.matchTime * 100) / 100;
+      if (h.egg.apply(woke.id, at)) {
+        m.eg = [this.slotOf(woke.id), at];
+        m.t = g.matchTime;
+        this.net.emit('match', m);
+      }
+    }
     const caught = h.detectCatches();
     if (caught.length) {
       const hc = [...(m.hc ?? [])];
@@ -704,6 +717,10 @@ export class ArenaSession {
       if (id && typeof row[1] === 'number' && Number.isFinite(row[1])) scores.set(id, Math.max(0, row[1]));
     }
     h.setStart(m.hk, scores);
+    if (Array.isArray(m.eg) && typeof m.eg[1] === 'number' && Number.isFinite(m.eg[1])) {
+      const id = this.idOf(m.eg[0]);
+      if (id) h.egg.apply(id, m.eg[1]);
+    }
     for (const row of Array.isArray(m.hc) ? m.hc.slice(0, MAX_SEATS * 2) : []) {
       if (!Array.isArray(row) || typeof row[1] !== 'number') continue;
       const id = this.idOf(row[0]);

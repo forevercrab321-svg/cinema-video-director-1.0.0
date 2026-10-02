@@ -165,6 +165,36 @@ async function duo() {
   const drift = Math.max(...H.hunt.hunters.map((h, i) => Math.hypot(h.x - G.hunt.hunters[i].x, h.z - G.hunt.hunters[i].z)));
   ok(G.hunt.stage === 'chase' && drift < 4, `[duo] guest mirrors the villains (max drift ${drift.toFixed(2)} m)`);
   // Put the guest's machine right in front of a villain: the host decides the catch, both pages agree.
+  // Egg Valley: the host drives up to her hiding place and honks; both pages agree on who woke her,
+  // the host's machine turns invisible (the bosses ignore it) and its locked score gains 1/3.
+  {
+    const egg = H.hunt.egg;
+    ok(egg && Math.hypot(egg.x, egg.z) > 30 && egg.x === G.hunt.egg.x && egg.z === G.hunt.egg.z, `[duo] Egg Valley hides at the same spot on both pages, outside the plaza [${egg?.x?.toFixed(1)}, ${egg?.z?.toFixed(1)}]`);
+    // Park next to her and honk (the autopilot would drive away between steps).
+    for (let i = 0; i < 20; i++) {
+      const st = await hostPage.p.evaluate(({ x, z, i }) => {
+        const g = window.__ARENA__.game();
+        g.local.x = x + 1.5;
+        g.local.z = z;
+        g.local.speed = 0;
+        if (i % 5 === 0) g.emote(6);
+        return { by: g.hunt.egg.by, stage: g.hunt.stage(), d: Math.hypot(g.local.x - x, g.local.z - z) };
+      }, { ...egg, i });
+      if (st.by) break;
+      if (i === 19) console.log('      egg debug', JSON.stringify(st));
+      await both(0.1, 0.1);
+    }
+    [a, b] = await both(0.5, 0.1);
+    const H3 = hostPage === A ? a : b;
+    const G3 = hostPage === A ? b : a;
+    ok(H3.hunt.egg.by === H3.me && G3.hunt.egg.by === H3.me, `[duo] honking next to her wakes her, both pages agree [${H3.hunt.egg.by} / ${G3.hunt.egg.by}]`);
+    ok(H3.hunt.egg.stealth.includes(H3.me) && G3.hunt.egg.stealth.includes(H3.me), '[duo] the waker is invisible on both pages');
+    ok(Math.abs((H3.hunt.bonus[H3.me] ?? 0) - 1 / 3) < 1e-9 && Math.abs((G3.hunt.bonus[H3.me] ?? 0) - 1 / 3) < 1e-9, '[duo] +1/3 score bonus on both pages');
+    const chasing = H3.hunt.hunters.filter((h) => h.target === H3.me).length;
+    [a, b] = await both(1, 0.25);
+    const H4 = hostPage === A ? a : b;
+    ok(H4.hunt.hunters.every((h) => h.target !== H4.me), `[duo] no boss targets the invisible machine [${chasing} before, ${H4.hunt.hunters.filter((h) => h.target === H4.me).length} after]`);
+  }
   // Keep the guest's machine parked on villain 0 (as the host sees it) until the host decides.
   for (let i = 0; i < 40; i++) {
     const v = (await hostPage.p.evaluate(() => window.__ARENA__.summary())).hunt.hunters[0];

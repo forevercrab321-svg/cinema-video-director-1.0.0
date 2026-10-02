@@ -530,7 +530,7 @@ export async function runArena(ctx: AppContext): Promise<void> {
       actors: g?.actors.map((a) => ({ id: a.id, name: a.name, kind: a.kind, owned: a.owned, mass: Math.round(a.mass), d: +a.diameter.toFixed(2), x: +a.x.toFixed(1), z: +a.z.toFixed(1), lives: a.lives, alive: a.alive, out: a.eliminated, kills: a.kills, objects: a.objects })) ?? [],
       standings: session.match.standings ?? null,
       hunt: g?.hunt
-        ? { start: g.hunt.start, stage: g.hunt.stage(), caught: [...g.hunt.caught.keys()], scores: Object.fromEntries(g.hunt.scores), hunters: g.hunt.hunters.map((h) => ({ x: +h.x.toFixed(1), z: +h.z.toFixed(1), pose: h.pose, target: h.target?.id ?? null })) }
+        ? { egg: { x: g.hunt.egg.x, z: g.hunt.egg.z, by: g.hunt.egg.by, stealth: g.actors.filter((a) => g.hunt!.egg.stealthed(a)).map((a) => a.id) }, bonus: Object.fromEntries(g.hunt.bonus), start: g.hunt.start, stage: g.hunt.stage(), caught: [...g.hunt.caught.keys()], scores: Object.fromEntries(g.hunt.scores), hunters: g.hunt.hunters.map((h) => ({ x: +h.x.toFixed(1), z: +h.z.toFixed(1), pose: h.pose, target: h.target?.id ?? null })) }
         : null,
     };
   }

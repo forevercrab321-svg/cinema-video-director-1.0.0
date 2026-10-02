@@ -5,6 +5,7 @@ import { growthConfig, movementConfig as MC } from '../config/growth';
 import { HunterModel, type HunterPose } from '../entities/HunterModel';
 import { diameterForMass } from '../systems/growth';
 import { L } from '../i18n';
+import { EggValley } from './egg';
 import type { Actor, ArenaGame } from './ArenaGame';
 
 /**
@@ -48,6 +49,10 @@ export class Hunt {
   readonly scores = new Map<string, number>();
   /** Caught machines: id → match time. */
   readonly caught = new Map<string, number>();
+  /** Bonus share of the locked score per machine (Egg Valley). */
+  readonly bonus = new Map<string, number>();
+  /** 蛋之谷 / Egg Valley: hides somewhere new each round, grants invisibility + 1/3 score. */
+  egg!: EggValley;
   readonly hunters: Hunter[] = [];
   private shrunk = false;
   private announced: Record<string, boolean> = {};
@@ -64,6 +69,11 @@ export class Hunt {
       g.scene.add(model.root);
       this.hunters.push({ def, model, x: Math.cos(a) * ring, z: Math.sin(a) * ring, heading: Math.atan2(-Math.cos(a), -Math.sin(a)), speed: 0, pose: 'rise', target: null, thinkAt: 0, lungeUntil: 0, lungeReadyAt: 0, restUntil: 0, net: null, inProp: false });
     });
+  }
+
+  /** Created after the villains (needs the scene and the world). */
+  initEgg(): void {
+    this.egg = new EggValley(this.g);
   }
 
   // ── Timeline ────────────────────────────────────────────────────────────────
@@ -100,12 +110,17 @@ export class Hunt {
   scoreOf(a: Actor): number {
     if (this.caught.has(a.id)) return 0;
     if (this.start === null) return a.mass;
-    return this.scores.get(a.id) ?? 0;
+    return Math.round((this.scores.get(a.id) ?? 0) * (1 + (this.bonus.get(a.id) ?? 0)));
   }
 
-  /** A runner the villains may catch right now. */
+  /** Extra share of the locked score (Egg Valley's backpack: +1/3). Applied once per machine. */
+  addBonus(id: string, share: number): void {
+    if (!this.bonus.has(id)) this.bonus.set(id, share);
+  }
+
+  /** A runner the villains may catch right now (invisible machines are safe). */
   private prey(a: Actor): boolean {
-    return a.alive && !a.left && !this.caught.has(a.id) && this.g.matchTime >= a.invulnerableUntil;
+    return a.alive && !a.left && !this.caught.has(a.id) && this.g.matchTime >= a.invulnerableUntil && !this.egg.stealthed(a);
   }
 
   /** Standard machine top speed at the hunt mass (villain speeds are a share of it). */
@@ -161,6 +176,7 @@ export class Hunt {
 
   /** Presentation (every frame, after the simulation). */
   present(dt: number): void {
+    this.egg.update(dt);
     const st = this.stage();
     if (st === 'grow' || st === 'locked') return;
     const riseT = st === 'rise' ? Math.min(1, (this.g.matchTime - this.start! - H.riseDelay) / (H.chaseDelay - H.riseDelay)) : 1;
@@ -217,7 +233,7 @@ export class Hunt {
       let best: Actor | null = null;
       let bestScore = Infinity;
       for (const a of g.actors) {
-        if (!a.alive || a.left || this.caught.has(a.id)) continue;
+        if (!a.alive || a.left || this.caught.has(a.id) || this.egg.stealthed(a)) continue;
         const taken = this.hunters.some((o) => o !== h && o.target === a);
         const score = Math.hypot(a.x - h.x, a.z - h.z) + (taken ? H.spreadPenalty : 0);
         if (score < bestScore) {
@@ -370,6 +386,7 @@ export class Hunt {
   }
 
   dispose(): void {
+    this.egg.dispose();
     for (const h of this.hunters) {
       this.g.scene.remove(h.model.root);
       h.model.dispose();
