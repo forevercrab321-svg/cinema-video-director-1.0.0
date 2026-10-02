@@ -9,7 +9,7 @@ const base = `${server.resolvedUrls.local[0]}game/`;
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await b.newPage({ viewport: { width: 1280, height: 720 } });
 p.on('pageerror', (e) => console.log('pageerror', e.message));
-await p.goto(`${base}?mode=arena&net=solo&test=1&quality=high&name=You&lang=zh`);
+await p.goto(`${base}?mode=arena&net=solo&test=1&quality=high&name=You&lang=en`);
 await p.waitForFunction(() => window.__ARENA__?.ready, null, { timeout: 180000 });
 await p.evaluate(() => { const S = window.__ARENA__.session; S.setCity('halloween'); S.start(); window.__ARENA__.step(0.1); window.__ARENA__.autopilot(true); });
 const out = root + '/renders/review/halloween/';
