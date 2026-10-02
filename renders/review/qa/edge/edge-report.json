@@ -1,0 +1,271 @@
+{
+ "leak": [
+  {
+   "at": "lobby",
+   "textures": 34,
+   "geometries": 0,
+   "programs": 70,
+   "sceneChildren": 11,
+   "materials": 67,
+   "transparentClones": 4,
+   "names": {
+    "Hunter_shock": 1,
+    "Hunter_cannibal": 1,
+    "Hunter_motel": 1,
+    "EggGirl": 1,
+    "EggGirl_Body": 1,
+    "EggBackpack_Holder": 1,
+    "EggBackpack": 1,
+    "EggBackpack_Outline": 1,
+    "EggGirl_Outline": 1,
+    "EggGirl_Sparkles": 1,
+    "EggGirl_GroundGlow": 1
+   }
+  },
+  {
+   "at": "round1-stealth",
+   "eggBy": true,
+   "textures": 127,
+   "geometries": 202,
+   "programs": 75,
+   "sceneChildren": 29,
+   "materials": 164,
+   "transparentClones": 63,
+   "names": {
+    "EggBackpack_Copy": 1,
+    "EggBackpack": 2,
+    "EggBackpack_Outline": 2,
+    "Hunter_shock": 1,
+    "Hunter_cannibal": 1,
+    "Hunter_motel": 1,
+    "EggGirl": 1,
+    "EggGirl_Body": 1,
+    "EggBackpack_Holder": 1,
+    "EggGirl_Outline": 1,
+    "EggGirl_Sparkles": 1,
+    "EggGirl_GroundGlow": 1
+   }
+  },
+  {
+   "at": "round1-results",
+   "phase": "results",
+   "textures": 127,
+   "geometries": 202,
+   "programs": 75,
+   "sceneChildren": 29,
+   "materials": 109,
+   "transparentClones": 11,
+   "names": {
+    "Hunter_shock": 1,
+    "Hunter_cannibal": 1,
+    "Hunter_motel": 1,
+    "EggGirl": 1,
+    "EggGirl_Body": 1,
+    "EggBackpack_Holder": 1,
+    "EggBackpack": 1,
+    "EggBackpack_Outline": 1,
+    "EggGirl_Outline": 1,
+    "EggGirl_Sparkles": 1,
+    "EggGirl_GroundGlow": 1
+   }
+  },
+  {
+   "at": "round2-stealth",
+   "eggBy": true,
+   "textures": 119,
+   "geometries": 133,
+   "programs": 83,
+   "sceneChildren": 29,
+   "materials": 169,
+   "transparentClones": 63,
+   "names": {
+    "EggBackpack_Copy": 1,
+    "EggBackpack": 2,
+    "EggBackpack_Outline": 2,
+    "Hunter_shock": 1,
+    "Hunter_cannibal": 1,
+    "Hunter_motel": 1,
+    "EggGirl": 1,
+    "EggGirl_Body": 1,
+    "EggBackpack_Holder": 1,
+    "EggGirl_Outline": 1,
+    "EggGirl_Sparkles": 1,
+    "EggGirl_GroundGlow": 1
+   }
+  },
+  {
+   "at": "round2-results",
+   "phase": "results",
+   "textures": 119,
+   "geometries": 133,
+   "programs": 75,
+   "sceneChildren": 29,
+   "materials": 114,
+   "transparentClones": 11,
+   "names": {
+    "Hunter_shock": 1,
+    "Hunter_cannibal": 1,
+    "Hunter_motel": 1,
+    "EggGirl": 1,
+    "EggGirl_Body": 1,
+    "EggBackpack_Holder": 1,
+    "EggBackpack": 1,
+    "EggBackpack_Outline": 1,
+    "EggGirl_Outline": 1,
+    "EggGirl_Sparkles": 1,
+    "EggGirl_GroundGlow": 1
+   }
+  },
+  {
+   "at": "round3-stealth",
+   "eggBy": true,
+   "textures": 122,
+   "geometries": 106,
+   "programs": 83,
+   "sceneChildren": 29,
+   "materials": 170,
+   "transparentClones": 63,
+   "names": {
+    "EggBackpack_Copy": 1,
+    "EggBackpack": 2,
+    "EggBackpack_Outline": 2,
+    "Hunter_shock": 1,
+    "Hunter_cannibal": 1,
+    "Hunter_motel": 1,
+    "EggGirl": 1,
+    "EggGirl_Body": 1,
+    "EggBackpack_Holder": 1,
+    "EggGirl_Outline": 1,
+    "EggGirl_Sparkles": 1,
+    "EggGirl_GroundGlow": 1
+   }
+  },
+  {
+   "at": "round3-results",
+   "phase": "results",
+   "textures": 122,
+   "geometries": 106,
+   "programs": 75,
+   "sceneChildren": 29,
+   "materials": 115,
+   "transparentClones": 11,
+   "names": {
+    "Hunter_shock": 1,
+    "Hunter_cannibal": 1,
+    "Hunter_motel": 1,
+    "EggGirl": 1,
+    "EggGirl_Body": 1,
+    "EggBackpack_Holder": 1,
+    "EggBackpack": 1,
+    "EggBackpack_Outline": 1,
+    "EggGirl_Outline": 1,
+    "EggGirl_Sparkles": 1,
+    "EggGirl_GroundGlow": 1
+   }
+  },
+  {
+   "at": "round4-start",
+   "textures": 127,
+   "geometries": 108,
+   "programs": 75,
+   "sceneChildren": 29,
+   "materials": 118,
+   "transparentClones": 10,
+   "names": {
+    "Hunter_shock": 1,
+    "Hunter_cannibal": 1,
+    "Hunter_motel": 1,
+    "EggGirl": 1,
+    "EggGirl_Body": 1,
+    "EggBackpack_Holder": 1,
+    "EggBackpack": 1,
+    "EggBackpack_Outline": 1,
+    "EggGirl_Outline": 1,
+    "EggGirl_Sparkles": 1,
+    "EggGirl_GroundGlow": 1
+   }
+  }
+ ],
+ "switch": {
+  "hw": {
+   "city": "halloween",
+   "fog": {
+    "type": "Fog",
+    "color": "3d3558",
+    "near": 70,
+    "far": 400
+   },
+   "bg": null,
+   "lights": "DirectionalLight,HemisphereLight",
+   "nLights": 2,
+   "fxRoots": 20,
+   "atmosphere": true,
+   "children": 11,
+   "envIntensity": 1.4
+  },
+  "after": {
+   "city": "paris",
+   "fog": {
+    "type": "Fog",
+    "color": "e0c8b0",
+    "near": 90,
+    "far": 500
+   },
+   "bg": null,
+   "lights": "DirectionalLight,HemisphereLight",
+   "nLights": 2,
+   "fxRoots": 11,
+   "atmosphere": false,
+   "children": 6,
+   "envIntensity": 1.05
+  },
+  "fresh": {
+   "city": "paris",
+   "fog": {
+    "type": "Fog",
+    "color": "e0c8b0",
+    "near": 90,
+    "far": 500
+   },
+   "bg": null,
+   "lights": "DirectionalLight,HemisphereLight",
+   "nLights": 2,
+   "fxRoots": 11,
+   "atmosphere": false,
+   "children": 6,
+   "envIntensity": 1.05
+  },
+  "ra": {
+   "city": "paris",
+   "fog": {
+    "type": "Fog",
+    "color": "e0c8b0",
+    "near": 90,
+    "far": 500
+   },
+   "bg": null,
+   "lights": "DirectionalLight,HemisphereLight",
+   "nLights": 2,
+   "fxRoots": 23,
+   "atmosphere": false,
+   "children": 18,
+   "envIntensity": 1.05
+  },
+  "rb": {
+   "city": "paris",
+   "fog": {
+    "type": "Fog",
+    "color": "e0c8b0",
+    "near": 90,
+    "far": 500
+   },
+   "bg": null,
+   "lights": "DirectionalLight,HemisphereLight",
+   "nLights": 2,
+   "fxRoots": 23,
+   "atmosphere": false,
+   "children": 18,
+   "envIntensity": 1.05
+  }
+ }
+}

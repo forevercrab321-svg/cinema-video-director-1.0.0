@@ -22,13 +22,13 @@ export const HALLOWEEN = {
   huntMass: 120,
   /** Villain size (m) and catch reach (m, added to the runner's radius). */
   hunterHeight: 3.0,
-  hunterReach: 0.75,
+  hunterReach: 0.6,
   /** Villain speed as a share of a standard machine's top speed at huntMass, ramping over the hunt. */
-  speedStart: 0.92,
-  speedEnd: 1.12,
+  speedStart: 0.85,
+  speedEnd: 1.0,
   /** Close to its target a villain lunges: speed × lungeMul for lungeSeconds, then cools down. */
   lungeRange: 6,
-  lungeMul: 1.7,
+  lungeMul: 1.35,
   lungeSeconds: 0.6,
   lungeCooldown: 3,
   /** Villains walk through props (they are horror villains) but slower inside one. */
@@ -56,13 +56,13 @@ export const EGG = {
   height: 2.0,
   /** Golden egg sparkles give her away within hintRange m; a translucent ghost within ghostRange. */
   hintRange: 15,
-  ghostRange: 6,
+  ghostRange: 8,
   /** Honk within this distance (m, plus the machine's radius) to wake her. */
-  wakeRange: 4,
+  wakeRange: 8,
   stealthSeconds: 10,
   scoreBonus: 1 / 3,
   /** An AI rival next to her honks with this chance per second. */
-  botHonkChance: 0.35,
+  botHonkChance: 0.8,
 } as const;
 
 export type HunterKind = 'shock' | 'cannibal' | 'motel';

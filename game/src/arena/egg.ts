@@ -31,6 +31,15 @@ export class EggValley {
   private backpack: THREE.Object3D | null = null;
   private hintedLocal = false;
   private botHonkAt = 0;
+  /**
+   * Shader prewarm for the stealth look: hidden stand-ins that carry one faded copy of every
+   * machine material (and the backpack's). RenderPipeline's prewarm compiles the whole scene
+   * graph, hidden objects included, so the transparent program variants exist before the honk
+   * and stay referenced all round: no shader-link hitch the moment someone turns invisible.
+   * The group is never drawn (visible = false); the stand-ins share the machines' geometry.
+   */
+  private readonly prewarm = new THREE.Group();
+  private readonly prewarmMats: THREE.Material[] = [];
 
   constructor(private readonly g: ArenaGame) {
     const spot = pickSpot(g);
@@ -41,6 +50,37 @@ export class EggValley {
     skipAO(this.model.root);
     this.model.root.visible = false;
     g.scene.add(this.model.root);
+    this.buildPrewarm();
+  }
+
+  private buildPrewarm(): void {
+    const seen = new Set<string>();
+    const add = (m: THREE.Mesh, mat: THREE.Material) => {
+      const geo = m.geometry;
+      const key = `${mat.uuid}|${m.type}|${Object.keys(geo.attributes).sort().join(',')}|${Object.keys(geo.morphAttributes).join(',')}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const c = fadeCopy(mat, 0.12);
+      this.prewarmMats.push(c);
+      const p = m.clone(false) as THREE.Mesh;
+      p.material = c;
+      p.name = `EggPrewarm_${mat.name || mat.type}`;
+      p.matrixAutoUpdate = false;
+      p.castShadow = p.receiveShadow = false;
+      this.prewarm.add(p);
+    };
+    const collect = (root: THREE.Object3D) =>
+      root.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh || (o as THREE.Sprite).isSprite) return;
+        for (const mat of Array.isArray(m.material) ? m.material : [m.material]) add(m, mat);
+      });
+    for (const a of this.g.actors) collect(a.model.root);
+    collect(this.model.backpack); // the backpack copy rides on the machine and fades with it
+    this.prewarm.name = 'EggStealth_Prewarm';
+    this.prewarm.visible = false;
+    this.prewarm.matrixAutoUpdate = false;
+    this.g.scene.add(this.prewarm);
   }
 
   /** She is out (hint / ghost) from the chase until someone wakes her. */
@@ -113,6 +153,12 @@ export class EggValley {
     this.backpack = pack;
   }
 
+  /** Take the backpack copy off its machine (it shares the girl's bag geometry: nothing to free). */
+  private dropBackpack(): void {
+    this.backpack?.parent?.remove(this.backpack);
+    this.backpack = null;
+  }
+
   private setState(s: EggGirlState): void {
     if (this.state === s) return;
     this.state = s;
@@ -144,10 +190,7 @@ export class EggValley {
       if (on !== this.ghosted.has(a.id)) this.ghost(a, on);
       if (on) a.ring.visible = a === g.local;
     }
-    if (this.backpack && this.by && !this.stealthed(g.byId.get(this.by)!)) {
-      this.backpack.parent?.remove(this.backpack);
-      this.backpack = null;
-    }
+    if (this.backpack && this.by && !this.stealthed(g.byId.get(this.by)!)) this.dropBackpack();
   }
 
   /** Swap a machine's materials for faint transparent copies (and back). */
@@ -158,13 +201,7 @@ export class EggValley {
         const m = o as THREE.Mesh;
         if (!m.isMesh || o === this.backpack) return;
         saved.push({ mesh: m, mat: m.material });
-        const fade = (mm: THREE.Material) => {
-          const c = mm.clone();
-          c.transparent = true;
-          c.opacity = a === this.g.local ? 0.35 : 0.12;
-          c.depthWrite = false;
-          return c;
-        };
+        const fade = (mm: THREE.Material) => fadeCopy(mm, a === this.g.local ? 0.35 : 0.12);
         m.material = Array.isArray(m.material) ? m.material.map(fade) : fade(m.material);
       });
       this.ghosted.set(a.id, saved);
@@ -182,10 +219,22 @@ export class EggValley {
 
   dispose(): void {
     for (const a of this.g.actors) if (this.ghosted.has(a.id)) this.ghost(a, false);
-    this.backpack?.parent?.remove(this.backpack);
+    this.dropBackpack();
     this.g.scene.remove(this.model.root);
     this.model.dispose();
+    this.g.scene.remove(this.prewarm);
+    this.prewarm.clear();
+    for (const m of this.prewarmMats) m.dispose();
   }
+}
+
+/** Faint transparent copy of a machine material (the stealth look). */
+function fadeCopy(mm: THREE.Material, opacity: number): THREE.Material {
+  const c = mm.clone();
+  c.transparent = true;
+  c.opacity = opacity;
+  c.depthWrite = false;
+  return c;
 }
 
 /**

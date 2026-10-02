@@ -1298,6 +1298,17 @@ export class EggGirlModel {
     this.bagMats = this.bag.material as THREE.Material[];
     // Ghost ('hint' / 'gone'): one additive golden material drawing each mesh in a single call.
     this.ghost = ghostMaterial(this.gu);
+    // Shader prewarm: hidden stand-ins wearing the ghost material (skinned body + rigid bag), so
+    // RenderPipeline's whole-scene compile builds both ghost programs at round start instead of
+    // on the frame a player first walks within ghostRange. Never drawn (the group stays hidden).
+    const warm = new THREE.Group();
+    warm.name = 'EggGirl_GhostPrewarm';
+    warm.visible = false;
+    const warmBody = new THREE.SkinnedMesh(geometry, this.ghost);
+    warmBody.bind(this.body.skeleton, this.body.bindMatrix);
+    warmBody.frustumCulled = false;
+    warm.add(warmBody, new THREE.Mesh(this.bag.geometry, this.ghost));
+    this.root.add(warm);
     // Golden egg sparkles orbiting her, and a soft glow disc on the ground.
     const sg = new THREE.BufferGeometry();
     sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N_SPARK * 3), 3));
@@ -1441,11 +1452,14 @@ export class EggGirlModel {
   /**
    * Hide the held backpack and return a standalone copy ≈ 0.45 m across (× scale), lying face-up
    * (egg face → +Y, handle → −Z) with its origin at the underside centre, ready to sit on a car roof.
-   * The copy owns its geometry (dispose it with the car); materials are shared module-wide.
+   * The copy shares the held bag's geometry (freed by this model's dispose(); nothing to free
+   * on the copy) and the module-wide materials: no geometry build on the honk frame.
    */
   makeBackpackCopy(scale = 1): THREE.Object3D {
     this.backpack.visible = false;
-    const mesh = buildBackpack();
+    const mesh = new THREE.Mesh(this.bag.geometry, this.bagMats);
+    mesh.name = 'EggBackpack';
+    mesh.castShadow = true;
     withOutline(mesh);
     mesh.position.set(0, -BAG_CY, 0); // bag centre at the pivot
     const pivot = new THREE.Group();

@@ -1,0 +1,126 @@
+{
+  "date": "2026-10-02T06:26:40.108Z",
+  "base": "http://127.0.0.1:5196/game/",
+  "viewport": {
+    "width": 960,
+    "height": 540
+  },
+  "city": "paris",
+  "tiers": {
+    "low": {
+      "tier": "low",
+      "loadMs": 30995,
+      "lobby": {
+        "mean": 126.4,
+        "std": 42.8,
+        "colours": 241
+      },
+      "dash": {
+        "mean": 98.6,
+        "std": 38.6,
+        "colours": 292
+      },
+      "play": {
+        "mean": 101.3,
+        "std": 40.7,
+        "colours": 306
+      },
+      "start": {
+        "x": 0,
+        "z": 88,
+        "mass": 5,
+        "alive": true,
+        "dashTime": 0,
+        "dashCooldown": 0
+      },
+      "end": {
+        "x": 10.827895187144408,
+        "z": 60.37788244004478,
+        "mass": 5.726,
+        "alive": true,
+        "dashTime": 0,
+        "dashCooldown": 0
+      },
+      "moved": 5.436717317641857,
+      "gpu": {
+        "round1": {
+          "textures": 33,
+          "geometries": 0
+        },
+        "restarts": [
+          {
+            "textures": 128,
+            "geometries": 58
+          },
+          {
+            "textures": 128,
+            "geometries": 58
+          }
+        ]
+      },
+      "errors": []
+    }
+  },
+  "assertions": [
+    {
+      "tier": "low",
+      "name": "lobby canvas is not blank",
+      "pass": true,
+      "detail": "{\"mean\":126.4,\"std\":42.8,\"colours\":241}"
+    },
+    {
+      "tier": "low",
+      "name": "round starts and reaches \"playing\"",
+      "pass": true,
+      "detail": "phase playing"
+    },
+    {
+      "tier": "low",
+      "name": "local machine spawned",
+      "pass": true,
+      "detail": "{\"x\":0,\"z\":88,\"mass\":5,\"alive\":true,\"dashTime\":0,\"dashCooldown\":0}"
+    },
+    {
+      "tier": "low",
+      "name": "W moves the machine",
+      "pass": true,
+      "detail": "5.44 m in 2 s"
+    },
+    {
+      "tier": "low",
+      "name": "SPACE triggers a dash",
+      "pass": true,
+      "detail": "dashTime 0.23 · cooldown 1.05"
+    },
+    {
+      "tier": "low",
+      "name": "MASS grows from eating",
+      "pass": true,
+      "detail": "5.0 → 5.7 kg"
+    },
+    {
+      "tier": "low",
+      "name": "gameplay canvas is not blank",
+      "pass": true,
+      "detail": "{\"mean\":101.3,\"std\":40.7,\"colours\":306}"
+    },
+    {
+      "tier": "low",
+      "name": "dash frame is not blank",
+      "pass": true,
+      "detail": "{\"mean\":98.6,\"std\":38.6,\"colours\":292}"
+    },
+    {
+      "tier": "low",
+      "name": "restart does not leak GPU textures/geometries",
+      "pass": true,
+      "detail": "round textures 33 → 128 → 128, geometries 0 → 58 → 58"
+    },
+    {
+      "tier": "low",
+      "name": "no console or page errors",
+      "pass": true,
+      "detail": "none"
+    }
+  ]
+}

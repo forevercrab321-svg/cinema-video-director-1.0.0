@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const p = await b.newPage({ viewport: { width: 960, height: 540 } });
+p.on('requestfailed', (r) => console.log('REQFAIL', r.url().slice(0, 120), r.failure()?.errorText));
+p.on('console', (m) => m.type() === 'error' && console.log('CONSOLE', m.text().slice(0, 200)));
+p.on('pageerror', (e) => console.log('PAGEERR', e.message));
+await p.goto(process.argv[2] + '?mode=arena&net=solo&test=1&quality=low&lang=en');
+await p.waitForFunction(() => window.__ARENA__?.ready, null, { timeout: 180000 });
+await p.waitForTimeout(3000);
+await b.close();

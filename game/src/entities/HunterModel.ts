@@ -634,6 +634,11 @@ const IDLE: Record<HunterKind, PoseT> = {
   motel: { spine: -0.25, neck: 0.3, tilt: 0.35, shL: [0.95, -0.2], shR: [2.75, 0.25], elL: 0.2, elR: 0.7 },
 };
 
+/** Write a pair in place (the pose arrays are reused every frame). */
+function set2(a: [number, number] | number[], x: number, y: number): void {
+  a[0] = x;
+  a[1] = y;
+}
 const tmpPose: PoseT = { spine: 0, neck: 0, tilt: 0, shL: [0, 0], shR: [0, 0], elL: 0, elR: 0 };
 
 let GLOW_TEX: THREE.Texture | null | undefined;
@@ -651,6 +656,16 @@ function glowTex(): THREE.Texture | null {
 }
 
 // ──────────────────────────────────────────────────────────────── model ──
+/** Exponential ease of one joint angle (monomorphic named access: no per-frame closure). */
+function easeX(g: THREE.Object3D, k: number, target: number): void {
+  const r = g.rotation;
+  r.x += (target - r.x) * k;
+}
+function easeZ(g: THREE.Object3D, k: number, target: number): void {
+  const r = g.rotation;
+  r.z += (target - r.z) * k;
+}
+
 export class HunterModel {
   readonly root = new THREE.Group();
   readonly kind: HunterKind;
@@ -676,6 +691,7 @@ export class HunterModel {
   private sparks: THREE.LineSegments | null = null;
   private glow: THREE.Sprite | null = null;
   private readonly own: THREE.Material[] = [];
+  private ownTex: THREE.Texture | null = null;
   private readonly eyeGlows: THREE.Sprite[] = [];
 
   constructor(kind: HunterKind, height = NOMINAL_H) {
@@ -752,7 +768,7 @@ export class HunterModel {
     this.sparks.position.set(0, tipY, -0.02);
     this.elR.add(this.glow, this.sparks);
     this.own.push(lm, sm);
-    if (tex) this.own.push(sm);
+    this.ownTex = tex; // per-model canvas texture: freed in dispose() (leaked one per round before)
   }
 
   private redrawSparks(): void {
@@ -772,7 +788,12 @@ export class HunterModel {
         const nx = x + dx + (Math.random() - 0.5) * 0.06;
         const ny = y + dy * 0.5 + (Math.random() - 0.5) * 0.05;
         const nz = z + dz + (Math.random() - 0.5) * 0.06;
-        arr.set([x, y, z, nx, ny, nz], o);
+        arr[o] = x;
+        arr[o + 1] = y;
+        arr[o + 2] = z;
+        arr[o + 3] = nx;
+        arr[o + 4] = ny;
+        arr[o + 5] = nz;
         o += 6;
         x = nx;
         y = ny;
@@ -825,8 +846,9 @@ export class HunterModel {
     } else if (pose === 'lunge') {
       p.spine = -0.55;
       p.neck = 0.35;
-      p.shL = [1.55, -0.1];
-      p.shR = this.kind === 'motel' ? [2.9, 0.2] : [1.5, 0.1];
+      set2(p.shL, 1.55, -0.1);
+      if (this.kind === 'motel') set2(p.shR, 2.9, 0.2);
+      else set2(p.shR, 1.5, 0.1);
       p.elL = 0.15;
       p.elR = this.kind === 'motel' ? 0.5 : 0.15;
       legA = Math.max(legA, 0.6);
@@ -834,8 +856,8 @@ export class HunterModel {
       const j = Math.sin(t * 40) * 0.05;
       p.spine = -0.35;
       p.neck = 0.2;
-      p.shL = [1.35 + j, 0.3];
-      p.shR = [1.35 - j, -0.3];
+      set2(p.shL, 1.35 + j, 0.3);
+      set2(p.shR, 1.35 - j, -0.3);
       p.elL = 0.55;
       p.elR = 0.55;
       legA = 0;
@@ -846,8 +868,8 @@ export class HunterModel {
       p.spine = -0.25 + wob;
       p.neck = 0.4;
       p.tilt = wob;
-      p.shL = [2.7 + Math.sin(t * 7) * 0.3, -0.25];
-      p.shR = [2.7 - Math.sin(t * 7) * 0.3, 0.25];
+      set2(p.shL, 2.7 + Math.sin(t * 7) * 0.3, -0.25);
+      set2(p.shR, 2.7 - Math.sin(t * 7) * 0.3, 0.25);
       p.elL = 0.6;
       p.elR = 0.6;
       legA = 0;
@@ -861,26 +883,25 @@ export class HunterModel {
     this.twitch *= Math.exp(-1.2 * dt);
     p.tilt += this.twitch;
     const k = 1 - Math.exp(-14 * dt);
-    const ease = (g: THREE.Group, ax: 'x' | 'z', target: number) => (g.rotation[ax] += (target - g.rotation[ax]) * k);
     this.body.position.y += (bodyY + riseOff - this.body.position.y) * (pose === 'rise' ? 1 : k);
-    ease(this.spine, 'x', p.spine);
-    ease(this.spine, 'z', p.tilt * 0.3);
+    easeX(this.spine, k, p.spine);
+    easeZ(this.spine, k, p.tilt * 0.3);
     this.spine.rotation.y = Math.sin(ph) * 0.15 * run;
-    ease(this.neck, 'x', p.neck);
-    ease(this.neck, 'z', p.tilt);
-    ease(this.shL, 'x', p.shL[0]);
-    ease(this.shL, 'z', p.shL[1]);
-    ease(this.shR, 'x', p.shR[0]);
-    ease(this.shR, 'z', p.shR[1]);
-    ease(this.elL, 'x', p.elL);
-    ease(this.elR, 'x', p.elR);
+    easeX(this.neck, k, p.neck);
+    easeZ(this.neck, k, p.tilt);
+    easeX(this.shL, k, p.shL[0]);
+    easeZ(this.shL, k, p.shL[1]);
+    easeX(this.shR, k, p.shR[0]);
+    easeZ(this.shR, k, p.shR[1]);
+    easeX(this.elL, k, p.elL);
+    easeX(this.elR, k, p.elR);
     // Legs: thighs swing opposite, knees fold on the back swing.
     const sL = Math.sin(ph);
     const sR = -sL;
-    ease(this.hipL, 'x', sL * legA);
-    ease(this.hipR, 'x', sR * legA);
-    ease(this.knL, 'x', -(0.15 + 1.1 * Math.max(0, -Math.cos(ph))) * (legA > 0 ? run || 0.6 : 0) - (pose === 'grab' ? 0.25 : 0));
-    ease(this.knR, 'x', -(0.15 + 1.1 * Math.max(0, Math.cos(ph))) * (legA > 0 ? run || 0.6 : 0) - (pose === 'grab' ? 0.25 : 0));
+    easeX(this.hipL, k, sL * legA);
+    easeX(this.hipR, k, sR * legA);
+    easeX(this.knL, k, -(0.15 + 1.1 * Math.max(0, -Math.cos(ph))) * (legA > 0 ? run || 0.6 : 0) - (pose === 'grab' ? 0.25 : 0));
+    easeX(this.knR, k, -(0.15 + 1.1 * Math.max(0, Math.cos(ph))) * (legA > 0 ? run || 0.6 : 0) - (pose === 'grab' ? 0.25 : 0));
     void s;
     const pulse = 0.2 + Math.sin(t * 5.3) * 0.03 + (Math.random() < 0.02 ? 0.08 : 0);
     for (const g of this.eyeGlows) g.scale.setScalar(pulse);
@@ -906,5 +927,6 @@ export class HunterModel {
       if (o instanceof THREE.Mesh || o instanceof THREE.LineSegments) o.geometry.dispose();
     });
     for (const m of this.own) m.dispose();
+    this.ownTex?.dispose();
   }
 }

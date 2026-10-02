@@ -48,7 +48,7 @@ export const arenaConfig = {
    * vs ~150 / ~1,900 / 2,700–9,400 kg and 104–120 s in the other cities. Scaling class 3 to 0.3 and
    * class 4 to 0.6 brings Scrap to ~300 / ~2,000 / ~4,700 kg and a first car at ~119 s.
    */
-  cityRewardScale: { scrap: [1, 1, 0.9, 0.3, 0.6] } as Readonly<Record<string, readonly number[]>>,
+  cityRewardScale: { scrap: [1, 1, 0.9, 0.3, 0.6], halloween: [1, 1, 0.9, 0.45, 0.55] } as Readonly<Record<string, readonly number[]>>,
   /** The machine that recycles the last landmark part gains this share of its mass. */
   landmarkBonus: 0.25,
   /** Penalty: slamming a locked object while dashing stuns and sheds mass. */
