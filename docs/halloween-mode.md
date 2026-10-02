@@ -4,6 +4,7 @@ The Creative Director asked for this on 2026-10-02.
 
 - **Map:** a Halloween map built entirely from Halloween elements: slime ghosts, graveyard, skeletons, vampire, werewolf, pumpkins, witch.
 - **Centre:** the central plaza stays **empty** for now. Something hidden will go there later.
+- **Only Halloween elements** (2026-10-02 correction): no houses, cars, street furniture, roads or city skyline. Graveyard and pumpkin-patch landscape; every size class is a Halloween object.
 - **Round length:** doubled.
 - **Second half:** every machine shrinks back to small, and three horror characters chase everyone.
 - **Caught:** the player's score goes to **0** and they are **out, spectating**.
