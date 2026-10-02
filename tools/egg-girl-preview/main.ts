@@ -96,18 +96,24 @@ for (let i = 0; i < steps; i++)
   }
 renderer.render(scene, cam);
 
-// Budget (one model, normal state + sparkles).
+// Budget (one model): triangles of all geometry; draw calls of what is visible per state.
 const m = new EggGirlModel();
-m.update(1 / 60, 0, 0, 0, 0, 'give', 0);
-let meshes = 0, tris = 0, draws = 0;
-m.root.traverse((o) => {
-  const g = (o as THREE.Mesh).geometry as THREE.BufferGeometry | undefined;
-  if (!g) return;
-  meshes++;
-  if ((o as THREE.Points).isPoints) { draws++; return; }
-  tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
-  draws += Array.isArray((o as THREE.Mesh).material) ? g.groups.length : 1;
-});
+const count = (st: EggGirlState) => {
+  m.update(1 / 60, 0, 0, 0, 0, st, 0.1);
+  m.root.updateMatrixWorld(true);
+  let meshes = 0, tris = 0, draws = 0;
+  m.root.traverseVisible((o) => {
+    const g = (o as THREE.Mesh).geometry as THREE.BufferGeometry | undefined;
+    if (!g) return;
+    meshes++;
+    if ((o as THREE.Points).isPoints) { draws++; return; }
+    tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+    draws += Array.isArray((o as THREE.Mesh).material) ? g.groups.length : 1;
+  });
+  return { meshes, triangles: tris, drawCalls: draws };
+};
+const normal = count('give');
+const hint = count('hint');
 m.dispose();
-(window as unknown as { __stats: unknown }).__stats = { meshes, triangles: tris, drawCalls: draws, drawCallsWithoutSparkles: draws - 1, renderInfo: renderer.info.render };
+(window as unknown as { __stats: unknown }).__stats = { normal, hint, uniqueGeometryTris: normal.triangles / 2 };
 (window as unknown as { __ready: boolean }).__ready = true;

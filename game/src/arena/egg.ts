@@ -90,8 +90,9 @@ export class EggValley {
     this.setState('reveal');
     this.stealthUntil.set(id, at + EGG.stealthSeconds);
     g.hunt?.addBonus(id, EGG.scoreBonus);
-    g.effects.burst(this.x, 1.2, this.z, new THREE.Color(0xffc23a), 40, 0.08, 5);
-    g.effects.pulse(this.x, this.z, 8, 1.2);
+    // A warm golden pop, not a flash: she must stay visible while she hands the backpack over.
+    g.effects.burst(this.x, 1.2, this.z, new THREE.Color(0xc98a1a), 16, 0.05, 3);
+    g.effects.pulse(this.x, this.z, 4, 0.8);
     const [zh, en] = [EGG.nameZh, EGG.name];
     if (a) {
       g.onFeed?.(L(`🍳 ${a.name} 叫醒了${zh}！隐身 ${EGG.stealthSeconds} 秒，分数 +1/3`, `🍳 ${a.name} woke ${en}! Invisible for ${EGG.stealthSeconds}s, score +1/3`), 'bonus');

@@ -27,6 +27,11 @@ await p.evaluate(() => window.__ARENA__.render()); await p.screenshot({ path: ou
 await p.evaluate(() => window.__ARENA__.game().emote(6));
 for (let i = 0; i < 6; i++) { await park(); await p.evaluate(() => window.__ARENA__.step(0.15)); }
 await p.evaluate(() => window.__ARENA__.render()); await p.screenshot({ path: out + 'game-egg-reveal.jpg' });
+if (process.env.EGG_DEBUG) {
+  const info = await p.evaluate(() => { const g = window.__ARENA__.game(); const m = g.hunt.egg.model; const r = []; m.root.traverse((o) => { if (o.visible && (o.isMesh || o.isPoints || o.isSprite)) r.push(o.type + ':' + o.name + ':' + (Array.isArray(o.material) ? o.material.map((x) => x.name || x.type).join('|') : (o.material.name || o.material.type)) + ':' + (o.material.blending ?? '')); }); m.root.visible = false; return r; });
+  console.log('egg meshes', JSON.stringify(info));
+  await p.evaluate(() => window.__ARENA__.render()); await p.screenshot({ path: out + 'game-egg-reveal-nogirl.jpg' });
+}
 for (let i = 0; i < 12; i++) { await park(); await p.evaluate(() => window.__ARENA__.step(0.2)); }
 await p.evaluate(() => window.__ARENA__.render()); await p.screenshot({ path: out + 'game-egg-stealth.jpg' });
 console.log('egg', JSON.stringify(await p.evaluate(() => window.__ARENA__.summary().hunt.egg)));
