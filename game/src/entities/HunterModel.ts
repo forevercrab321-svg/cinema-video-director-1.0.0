@@ -275,9 +275,9 @@ const TORSO_STD: [number, number][] = [
   [0, -0.16], [0.22, -0.15], [0.29, -0.06], [0.3, 0.12], [0.3, 0.3], [0.32, 0.46], [0.34, 0.58], [0.31, 0.68], [0.2, 0.76], [0.1, 0.79], [0, 0.8],
 ];
 const SPEC: Record<HunterKind, Spec> = {
-  shock: { hipY: 0.95, hipX: 0.15, thigh: 0.45, shin: 0.4, legR: 0.12, torso: TORSO_STD.map(([r, y]) => [r * (y < 0.4 ? 1.08 : 1), y]), flat: 0.8, torsoW: 1.05, shoulderY: 0.66, shoulderX: 0.37, upper: 0.33, fore: 0.29, armR: 0.085, neckY: 0.78, head: [0.4, 0.4, 0.38], headY: 0.38, skin: P('skin', 0xf0c49c) },
-  cannibal: { hipY: 1.0, hipX: 0.15, thigh: 0.48, shin: 0.42, legR: 0.115, torso: TORSO_STD, flat: 0.76, torsoW: 1.0, shoulderY: 0.66, shoulderX: 0.37, upper: 0.34, fore: 0.3, armR: 0.085, neckY: 0.78, head: [0.34, 0.42, 0.36], headY: 0.4, skin: P('skin', 0xe8c1a6) },
-  motel: { hipY: 1.0, hipX: 0.12, thigh: 0.48, shin: 0.43, legR: 0.09, torso: TORSO_STD.map(([r, y]) => [r * 0.84, y]), flat: 0.78, torsoW: 0.9, shoulderY: 0.64, shoulderX: 0.31, upper: 0.35, fore: 0.31, armR: 0.068, neckY: 0.8, head: [0.33, 0.41, 0.34], headY: 0.42, skin: P('skin', 0xf2cdb0) },
+  shock: { hipY: 0.95, hipX: 0.15, thigh: 0.45, shin: 0.4, legR: 0.12, torso: TORSO_STD.map(([r, y]) => [r * (y < 0.4 ? 1.08 : 1), y]), flat: 0.8, torsoW: 1.05, shoulderY: 0.66, shoulderX: 0.37, upper: 0.33, fore: 0.29, armR: 0.085, neckY: 0.78, head: [0.4, 0.4, 0.38], headY: 0.38, skin: P('skin', 0xd6c7a0) },
+  cannibal: { hipY: 1.0, hipX: 0.15, thigh: 0.48, shin: 0.42, legR: 0.115, torso: TORSO_STD, flat: 0.76, torsoW: 1.0, shoulderY: 0.66, shoulderX: 0.37, upper: 0.34, fore: 0.3, armR: 0.085, neckY: 0.78, head: [0.34, 0.42, 0.36], headY: 0.4, skin: P('skin', 0xcfc8c2) },
+  motel: { hipY: 1.0, hipX: 0.12, thigh: 0.48, shin: 0.43, legR: 0.09, torso: TORSO_STD.map(([r, y]) => [r * 0.84, y]), flat: 0.78, torsoW: 0.9, shoulderY: 0.64, shoulderX: 0.31, upper: 0.35, fore: 0.31, armR: 0.068, neckY: 0.8, head: [0.33, 0.41, 0.34], headY: 0.42, skin: P('skin', 0xf1ebe6) },
 };
 
 /** Front (−Z) surface of the lathed torso at (x, y). */
@@ -308,9 +308,15 @@ interface FaceOpts {
   grin: 'smug' | 'wide' | 'none';
   lipstick?: boolean;
   glowIris?: boolean;
+  /** Yellowed / bloodshot whites. */
+  sclera?: Paint;
 }
 
-function buildFace(k: Kit, s: Spec, o: FaceOpts): void {
+/** Eye centres in head space (for the glow sprites). */
+type EyeSpots = [number, number, number][];
+
+function buildFace(k: Kit, s: Spec, o: FaceOpts): EyeSpots {
+  const spots: EyeSpots = [];
   const r = s.head;
   // Ears and nose.
   for (const sx of [-1, 1]) k.add(ell(0.05, 0.085, 0.035, 14, 10), s.skin, sx * r[0] * 0.97, -0.02, 0.02, 0, sx * 0.3, 0);
@@ -321,15 +327,16 @@ function buildFace(k: Kit, s: Spec, o: FaceOpts): void {
     const yaw = sx * o.eyeX;
     const [x, y, z] = onHead(r, yaw, o.eyeY, 0.035);
     const e = o.eyeSize;
-    k.add(ell(e * 0.85, e, e * 0.6, 20, 16), C.sclera, x, y, z, 0, yaw, 0);
+    // Sunken, bruised sockets around every eye.
+    const so = onHead(r, yaw, o.eyeY - 0.01, 0.006);
+    k.add(ell(e * 1.3, e * 1.35, e * 0.45, 18, 12), P('skin', 0x4a2c3a), so[0], so[1], so[2], 0, yaw, 0);
+    k.add(ell(e * 0.85, e, e * 0.6, 20, 16), o.sclera ?? C.sclera, x, y, z, 0, yaw, 0);
     const front = (d: number): [number, number, number] => [x + Math.sin(yaw) * d, y, z - Math.cos(yaw) * d];
     const [ix, iy, iz] = front(e * 0.5);
     k.add(ell(e * 0.5, e * 0.55, e * 0.18, 16, 12), o.glowIris ? P('glow', o.iris.c.getHex()) : o.iris, ix - sx * e * 0.08, iy - e * 0.08, iz, 0, yaw, 0);
     const [px, py, pz] = front(e * 0.6);
-    k.add(ell(e * 0.26, e * 0.3, e * 0.1, 12, 10), C.pupil, px - sx * e * 0.08, py - e * 0.08, pz, 0, yaw, 0);
-    const [hx, hy, hz] = front(e * 0.66);
-    k.add(ell(e * 0.11, e * 0.11, e * 0.05, 8, 6), C.white, hx + e * 0.12, hy + e * 0.12, hz, 0, yaw, 0);
-    k.add(ell(e * 0.05, e * 0.05, e * 0.03, 6, 5), C.white, hx - e * 0.12, hy - e * 0.2, hz, 0, yaw, 0);
+    k.add(ell(e * 0.12, e * 0.2, e * 0.1, 10, 8), C.pupil, px - sx * e * 0.08, py - e * 0.08, pz, 0, yaw, 0); // pin-prick slit
+    spots.push(front(e * 0.7));
     // Upper lid: a skin shell over the top of the eye, rotated down by `lid`.
     const lidG = new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.5).scale(e * 0.93, e * 1.08, e * 0.7);
     k.add(lidG, s.skin, x, y, z, 0.75 - o.lid * 0.95, yaw, sx * o.browAngle * 0.35);
@@ -343,7 +350,7 @@ function buildFace(k: Kit, s: Spec, o: FaceOpts): void {
   // Mouth.
   if (o.grin !== 'none') {
     const wide = o.grin === 'wide';
-    const w = wide ? 0.42 : 0.3;
+    const w = wide ? 0.46 : 0.38;
     const pts: [number, number, number][] = [];
     const ptsLow: [number, number, number][] = [];
     for (let i = 0; i <= 8; i++) {
@@ -355,12 +362,24 @@ function buildFace(k: Kit, s: Spec, o: FaceOpts): void {
     }
     // Mouth opening (dark), teeth band, lip line.
     const mo = onHead(r, 0, -0.42, 0.02);
-    k.add(ell(w * 0.36, wide ? 0.06 : 0.035, 0.03, 18, 10), C.mouth, mo[0], mo[1], mo[2] - 0.005);
-    const tt = onHead(r, 0, -0.39, 0.0);
-    k.add(ell(w * 0.3, wide ? 0.026 : 0.018, 0.022, 16, 8), C.teeth, tt[0], tt[1], tt[2] - 0.012);
+    k.add(ell(w * 0.36, wide ? 0.07 : 0.05, 0.03, 18, 10), C.mouth, mo[0], mo[1], mo[2] - 0.005);
+    // Pointed teeth along both lips.
+    const n = wide ? 7 : 5;
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n - 0.5;
+      const yaw = t * w * 1.4;
+      const up = (wide ? 0.07 : 0.05) * (4 * t * t) - 0.02;
+      const a = onHead(r, yaw, -0.38 + up - 0.025, 0.006);
+      k.add(new THREE.ConeGeometry(0.017, 0.055, 5).rotateX(Math.PI), C.teeth, a[0], a[1], a[2] - 0.008);
+      if (i % 2 === 0) {
+        const b = onHead(r, yaw * 0.9, -0.38 + up - (wide ? 0.11 : 0.06) * (1 - 4 * t * t) + 0.02, 0.006);
+        k.add(new THREE.ConeGeometry(0.014, 0.04, 5), C.teeth, b[0], b[1], b[2] - 0.008);
+      }
+    }
     k.add(tube(pts, o.lipstick ? 0.016 : 0.011, 16, 6), o.lipstick ? P('skin', 0xc8202e) : C.lips);
     k.add(tube(ptsLow, o.lipstick ? 0.016 : 0.009, 16, 6), o.lipstick ? P('skin', 0xc8202e) : C.lips);
   }
+  return spots;
 }
 
 // ──────────────────────────────────────────────────────── per character ──
@@ -376,6 +395,8 @@ interface Parts {
   thighR: Kit;
   shinL: Kit;
   shinR: Kit;
+  eyes?: EyeSpots;
+  eyeGlow?: number;
 }
 
 function common(s: Spec, cloth: { top: Paint; sleeve: Paint; leg: Paint; shoe: Paint; cuff?: Paint }): Parts {
@@ -429,6 +450,9 @@ function buildShock(s: Spec): Parts {
   p.torso.add(new THREE.PlaneGeometry(0.17, 0.085), P('badge', 0xffffff), -0.17, 0.5, torsoZ(s, -0.17, 0.5) - 0.012, 0, Math.PI - 0.6, 0); // badge (wearer's left)
   p.torso.add(box(0.15, 0.12, 0.015), coatShade, 0.17, 0.48, torsoZ(s, 0.17, 0.48) - 0.006, 0, 0.6, 0); // breast pocket
   p.torso.add(cyl(0.012, 0.012, 0.13, 8), P('gloss', 0x1f5fbf), 0.15, 0.56, torsoZ(s, 0.15, 0.56) - 0.015); // pen
+  // Grime: grey-brown stains on the coat.
+  for (const [x, y] of [[-0.12, 0.22], [0.2, 0.05], [0.05, 0.4], [-0.22, 0.6]] as const) p.torso.add(ell(0.06, 0.045, 0.012, 10, 6), P('cloth', 0x8c8070), x, y, torsoZ(s, x, y) - 0.003, 0, Math.atan2(x, 0.3) + Math.PI, 0);
+  for (const a of [0.6, 2.2, 3.6, 4.4]) p.pelvis.add(ell(0.07, 0.05, 0.012, 10, 6), P('cloth', 0x7d7262), Math.sin(a) * 0.4, -0.38, Math.cos(a) * 0.34, 0, a, 0);
   // Stethoscope around the neck, chest piece on the right.
   p.torso.add(tube([[-0.16, 0.5, front + 0.02], [-0.15, 0.7, -0.08], [0, 0.79, 0.12], [0.15, 0.7, -0.08], [0.16, 0.5, front + 0.02]], 0.014, 28, 6), P('gloss', 0x2b2e35));
   p.torso.add(cyl(0.04, 0.04, 0.02, 16), P('metal', 0xc9d0d8), 0.16, 0.47, front + 0.01, Math.PI / 2, 0, 0);
@@ -438,10 +462,11 @@ function buildShock(s: Spec): Parts {
     v.x *= 1 + 0.12 * low; // jowls
     v.z *= 1 + 0.05 * low;
   }), s.skin, 0, 0, 0);
-  for (const sx of [-1, 1]) p.head.add(ell(0.07, 0.05, 0.03, 12, 8), P('skin', 0xf2a99a), sx * 0.2, -0.17, -0.31, 0, sx * 0.5, 0); // ruddy cheeks
-  buildFace(p.head, s, { iris: P('gloss', 0x3b2414), eyeY: 0.05, eyeX: 0.3, eyeSize: 0.075, lid: 0.35, brow: P('gloss', 0x141418), browAngle: -0.2, browY: 0.2, grin: 'smug' });
+  for (const sx of [-1, 1]) p.head.add(ell(0.07, 0.05, 0.03, 12, 8), P('skin', 0xa89a78), sx * 0.2, -0.17, -0.31, 0, sx * 0.5, 0); // sallow, sunken cheeks
+  p.eyes = buildFace(p.head, s, { iris: P('glow', 0x8fe8ff), glowIris: true, sclera: P('gloss', 0xe6dcb4), eyeY: 0.05, eyeX: 0.3, eyeSize: 0.075, lid: 0.25, brow: P('gloss', 0x141418), browAngle: 0.45, browY: 0.17, grin: 'smug' });
+  p.eyeGlow = 0x7fd8ff;
   // Hair: black helmet with a side part and a swept fringe; short sides.
-  const hairM = P('cloth', 0x1a1b20);
+  const hairM = P('cloth', 0x0b0c0f);
   p.head.add(new THREE.SphereGeometry(1, 40, 18, 0, Math.PI * 2, 0, 1.15).scale(r[0] * 1.06, r[1] * 1.07, r[2] * 1.07), hairM, 0, 0.01, 0.01);
   p.head.add(new THREE.SphereGeometry(1, 32, 16, -0.45, Math.PI + 0.9, 1.0, 0.85).scale(r[0] * 1.05, r[1] * 1.05, r[2] * 1.06), hairM, 0, 0, 0.01);
   p.head.add(deform(ell(0.26, 0.07, 0.12, 24, 12), (v) => {
@@ -501,9 +526,10 @@ function buildCannibal(s: Spec): Parts {
     const jaw = smooth(-0.2, -0.4, v.y);
     v.x *= 1 + 0.08 * jaw;
   }), s.skin, 0, 0, 0);
-  buildFace(p.head, s, { iris: P('glow', 0xd01a32), glowIris: true, eyeY: 0.08, eyeX: 0.29, eyeSize: 0.068, lid: 0.7, brow: P('gloss', 0x3a2e28), browAngle: 0.5, browY: 0.16, grin: 'none' });
+  p.eyeGlow = 0xff2238;
+  p.eyes = buildFace(p.head, s, { iris: P('glow', 0xff1f36), glowIris: true, sclera: P('gloss', 0xe8c9b8), eyeY: 0.08, eyeX: 0.29, eyeSize: 0.068, lid: 0.7, brow: P('gloss', 0x3a2e28), browAngle: 0.5, browY: 0.16, grin: 'none' });
   // Slicked-back hair with a widow's peak, greying temples.
-  const hair = P('cloth', 0x3a2c24);
+  const hair = P('cloth', 0x1e1612);
   p.head.add(new THREE.SphereGeometry(1, 40, 16, -0.6, Math.PI + 1.2, 0, 1.75).scale(r[0] * 1.05, r[1] * 1.05, r[2] * 1.06), hair, 0, 0.01, 0.015);
   p.head.add(new THREE.SphereGeometry(1, 40, 12, 0, Math.PI * 2, 0, 0.98).scale(r[0] * 1.06, r[1] * 1.06, r[2] * 1.07), hair, 0, 0.012, 0);
   // Widow's peak: the slicked hair dips to a point mid-forehead.
@@ -563,7 +589,8 @@ function buildMotel(s: Spec): Parts {
     v.x *= 1 - 0.1 * smooth(-0.1, -0.4, v.y); // narrow chin
   }), s.skin, 0, 0, 0);
   for (const sx of [-1, 1]) p.head.add(ell(0.06, 0.04, 0.02, 12, 8), P('skin', 0xee8f9a), sx * 0.19, -0.16, -0.27, 0, sx * 0.55, 0); // rouge
-  buildFace(p.head, s, { iris: P('gloss', 0x3d6aa8), eyeY: 0.07, eyeX: 0.29, eyeSize: 0.085, lid: 0.0, brow: P('gloss', 0x5a4636), browAngle: -0.35, browY: 0.24, grin: 'wide', lipstick: true });
+  p.eyeGlow = 0xffd84a;
+  p.eyes = buildFace(p.head, s, { iris: P('glow', 0xffe066), glowIris: true, sclera: P('gloss', 0xf0e2c0), eyeY: 0.07, eyeX: 0.29, eyeSize: 0.09, lid: 0.0, brow: P('gloss', 0x5a4636), browAngle: -0.35, browY: 0.24, grin: 'wide', lipstick: true });
   // Wig: grey curled helmet, bun on top, curls round the sides and back.
   const wig = P('cloth', 0xbfc0c8);
   const wigDark = P('cloth', 0x9fa1ab);
@@ -585,6 +612,7 @@ function buildMotel(s: Spec): Parts {
   p.foreR.add(box(0.04, 0.16, 0.05), P('gloss', 0x3b2416), 0, fy - 0.08, -0.05);
   p.foreR.add(box(0.06, 0.02, 0.09), P('metal', 0xb8c0c8), 0, fy + 0.005, -0.075); // bolster
   const blade = new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(0.085, 0), new THREE.Vector2(0.08, 0.36), new THREE.Vector2(0.0, 0.52)]);
+  p.foreR.add(ell(0.03, 0.06, 0.008, 8, 6), P('gloss', 0x5a0d12), 0.0, fy + 0.4, -0.115); // dark stain near the tip
   p.foreR.add(new THREE.ExtrudeGeometry(blade, { depth: 0.008, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.004, bevelSegments: 1 }), P('metal', 0xe6ecf2), -0.004, fy + 0.0, -0.11, 0, Math.PI / 2, 0);
   return p;
 }
@@ -600,12 +628,27 @@ interface PoseT {
   elR: number;
 }
 const IDLE: Record<HunterKind, PoseT> = {
-  shock: { spine: -0.05, neck: 0.05, tilt: 0, shL: [0.15, -0.18], shR: [0.75, 0.15], elL: 0.35, elR: 0.75 },
-  cannibal: { spine: 0.05, neck: -0.12, tilt: 0, shL: [0.45, 0.18], shR: [0.45, -0.18], elL: 1.1, elR: 1.1 },
-  motel: { spine: -0.1, neck: 0.05, tilt: 0.22, shL: [0.2, -0.12], shR: [2.7, 0.25], elL: 0.4, elR: 0.7 },
+  // Hunched, head pushed forward and up at you; a free hand already reaching.
+  shock: { spine: -0.3, neck: 0.32, tilt: 0.12, shL: [0.9, -0.25], shR: [0.95, 0.15], elL: 0.25, elR: 0.6 },
+  cannibal: { spine: -0.18, neck: 0.12, tilt: -0.1, shL: [0.85, 0.2], shR: [0.85, -0.2], elL: 0.75, elR: 0.75 },
+  motel: { spine: -0.25, neck: 0.3, tilt: 0.35, shL: [0.95, -0.2], shR: [2.75, 0.25], elL: 0.2, elR: 0.7 },
 };
 
 const tmpPose: PoseT = { spine: 0, neck: 0, tilt: 0, shL: [0, 0], shR: [0, 0], elL: 0, elR: 0 };
+
+let GLOW_TEX: THREE.Texture | null | undefined;
+function glowTex(): THREE.Texture | null {
+  if (GLOW_TEX !== undefined) return GLOW_TEX;
+  GLOW_TEX = canvasTex(64, 64, (g) => {
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(255,255,255,1)');
+    gr.addColorStop(0.25, 'rgba(255,255,255,0.6)');
+    gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 64, 64);
+  });
+  return GLOW_TEX;
+}
 
 // ──────────────────────────────────────────────────────────────── model ──
 export class HunterModel {
@@ -627,9 +670,13 @@ export class HunterModel {
   private phase = 0;
   private time = 0;
   private sparkT = 0;
+  /** Creepy head jerks: next jerk time and the current snapped offset. */
+  private twitchAt = 1;
+  private twitch = 0;
   private sparks: THREE.LineSegments | null = null;
   private glow: THREE.Sprite | null = null;
   private readonly own: THREE.Material[] = [];
+  private readonly eyeGlows: THREE.Sprite[] = [];
 
   constructor(kind: HunterKind, height = NOMINAL_H) {
     this.kind = kind;
@@ -660,6 +707,22 @@ export class HunterModel {
       kn.add(sh.build('shin'));
     }
     if (kind === 'shock') this.addSparks(s);
+    this.addEyeGlow(head, parts.eyes ?? [], parts.eyeGlow ?? 0xff3040);
+  }
+
+  /** Additive glow over each eye: the villains' eyes burn in the dark. */
+  private addEyeGlow(head: THREE.Object3D, spots: EyeSpots, color: number): void {
+    const tex = glowTex();
+    if (!tex) return;
+    const m = new THREE.SpriteMaterial({ map: tex, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+    this.own.push(m);
+    for (const [x, y, z] of spots) {
+      const sp = new THREE.Sprite(m);
+      sp.position.set(x, y, z - 0.03);
+      sp.scale.setScalar(0.22);
+      head.add(sp);
+      this.eyeGlows.push(sp);
+    }
   }
 
   private addSparks(s: Spec): void {
@@ -745,8 +808,8 @@ export class HunterModel {
       p.shL[0] += Math.abs(swing) * 0.15;
       p.shR[0] += Math.abs(swing) * 0.15;
     } else {
-      p.shL[0] += -swing;
-      p.elL += 0.8 * run;
+      p.shL[0] += 0.45 * run - swing * 0.2; // reaching claw, barely swinging
+      p.elL -= 0.15 * run;
       if (this.kind === 'shock') p.shR[0] += swing * 0.25 + 0.25 * run;
       else p.shR[0] += Math.sin(ph * 2) * 0.25 * run - 0.1 * run; // the knife stabs in time
     }
@@ -789,6 +852,14 @@ export class HunterModel {
       p.elR = 0.6;
       legA = 0;
     }
+    // Every second or two the head snaps to a new crooked angle, then slowly settles.
+    if (t >= this.twitchAt && pose !== 'rise') {
+      this.twitchAt = t + 0.8 + Math.random() * 1.8;
+      this.twitch = (Math.random() - 0.5) * 0.7;
+      this.neck.rotation.z = p.tilt + this.twitch;
+    }
+    this.twitch *= Math.exp(-1.2 * dt);
+    p.tilt += this.twitch;
     const k = 1 - Math.exp(-14 * dt);
     const ease = (g: THREE.Group, ax: 'x' | 'z', target: number) => (g.rotation[ax] += (target - g.rotation[ax]) * k);
     this.body.position.y += (bodyY + riseOff - this.body.position.y) * (pose === 'rise' ? 1 : k);
@@ -811,6 +882,8 @@ export class HunterModel {
     ease(this.knL, 'x', -(0.15 + 1.1 * Math.max(0, -Math.cos(ph))) * (legA > 0 ? run || 0.6 : 0) - (pose === 'grab' ? 0.25 : 0));
     ease(this.knR, 'x', -(0.15 + 1.1 * Math.max(0, Math.cos(ph))) * (legA > 0 ? run || 0.6 : 0) - (pose === 'grab' ? 0.25 : 0));
     void s;
+    const pulse = 0.2 + Math.sin(t * 5.3) * 0.03 + (Math.random() < 0.02 ? 0.08 : 0);
+    for (const g of this.eyeGlows) g.scale.setScalar(pulse);
     // Baton: flickering glow and redrawn sparks.
     if (this.glow) {
       (this.glow.material as THREE.SpriteMaterial).opacity = 0.65 + Math.random() * 0.35;

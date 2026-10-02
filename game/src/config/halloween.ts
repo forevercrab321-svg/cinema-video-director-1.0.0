@@ -21,8 +21,8 @@ export const HALLOWEEN = {
   /** Everyone runs at this mass in the second half (diameter ≈ 1 m: small again, quick enough to flee). */
   huntMass: 120,
   /** Villain size (m) and catch reach (m, added to the runner's radius). */
-  hunterHeight: 2.6,
-  hunterReach: 0.65,
+  hunterHeight: 3.0,
+  hunterReach: 0.75,
   /** Villain speed as a share of a standard machine's top speed at huntMass, ramping over the hunt. */
   speedStart: 0.8,
   speedEnd: 1.0,
