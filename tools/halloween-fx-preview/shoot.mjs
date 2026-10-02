@@ -12,12 +12,13 @@ const shots = [
   ['moon', 'normal'], ['moon', 'locked'],
 ];
 const tiers = only ? [only] : ['medium'];
+const pick = process.env.ONLY ? process.env.ONLY.split(',') : null;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log('console:', m.text().slice(0, 400)); });
 page.on('pageerror', (e) => console.log('pageerror:', e.message));
 for (const quality of tiers)
-  for (const [view, state] of process.env.STATS ? [['wide', 'hunt'], ['play', 'hunt'], ['play', 'normal']] : shots) {
+  for (const [view, state] of process.env.STATS ? [['wide', 'hunt'], ['play', 'hunt'], ['play', 'normal']] : shots.filter(([v, st]) => !pick || pick.includes(v + '-' + st))) {
     await page.goto(`${base}?view=${view}&state=${state}&quality=${quality}`);
     await page.waitForFunction(() => window.__ready === true, null, { timeout: 180000 });
     const name = `${view}-${state}${quality === 'medium' ? '' : '-' + quality}`;

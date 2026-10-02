@@ -52,70 +52,82 @@ Object.assign(key.shadow.camera, { left: -110, right: 110, top: 110, bottom: -11
 key.shadow.bias = -0.0005;
 scene.add(key);
 
-// ── Stand-in district (city kit plan: roads at 0/±56, plaza r 30, kerb 0.12) ─────────────────
-const asphalt = new THREE.MeshStandardMaterial({ color: 0x2b2a30, roughness: 0.92 });
-const paving = new THREE.MeshStandardMaterial({ color: 0x4a4650, roughness: 0.9 });
-const wall = new THREE.MeshStandardMaterial({ color: 0x3e3640, roughness: 0.9 });
-const roof = new THREE.MeshStandardMaterial({ color: 0x241f2a, roughness: 0.85 });
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(260, 260).rotateX(-Math.PI / 2), asphalt);
+// ── Stand-in landscape (Halloween Town after the CD correction: no houses, cars or roads) ─────
+// Dark grass, dirt paths on the four axes out of the empty plaza (r 30, kerb 0.12), a graveyard
+// of tombstones, dead trees, giant pumpkins, jack-o'-lanterns, an iron-fence perimeter at ±96 m.
+const grass = new THREE.MeshStandardMaterial({ color: 0x23262a, roughness: 0.95 });
+const dirt = new THREE.MeshStandardMaterial({ color: 0x3a3030, roughness: 0.95 });
+const paving = new THREE.MeshStandardMaterial({ color: 0x46424c, roughness: 0.9 });
+const stone = new THREE.MeshStandardMaterial({ color: 0x5a5866, roughness: 0.85 });
+const bark = new THREE.MeshStandardMaterial({ color: 0x241d1c, roughness: 0.9 });
+const iron = new THREE.MeshStandardMaterial({ color: 0x15141a, roughness: 0.6, metalness: 0.6 });
+const pumpkinSkin = new THREE.MeshStandardMaterial({ color: 0xc8571a, roughness: 0.7 });
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(260, 260).rotateX(-Math.PI / 2), grass);
 ground.receiveShadow = true;
 scene.add(ground);
-const grid = new THREE.GridHelper(192, 48, 0x4c4658, 0x34303e);
-grid.position.y = 0.005;
-scene.add(grid);
+for (const along of [0, 1]) {
+  const path = new THREE.Mesh(new THREE.PlaneGeometry(along ? 6 : 192, along ? 192 : 6).rotateX(-Math.PI / 2), dirt);
+  path.position.y = 0.01;
+  path.receiveShadow = true;
+  scene.add(path);
+}
 const plaza = new THREE.Mesh(new THREE.CylinderGeometry(30, 30, 0.12, 64), paving);
 plaza.position.y = 0.06;
 plaza.receiveShadow = true;
 scene.add(plaza);
-const CELLS: [number, number][] = [[-96, -63], [-49, -10], [10, 49], [63, 96]];
 let s = 7;
 const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-for (const [x0, x1] of CELLS)
-  for (const [z0, z1] of CELLS) {
-    const side = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0 + 8, 0.12, z1 - z0 + 8), paving);
-    side.position.set((x0 + x1) / 2, 0.06, (z0 + z1) / 2);
-    side.receiveShadow = true;
-    scene.add(side);
-    // Two rows of houses facing the streets.
-    for (let i = 0; i < 4; i++) {
-      const w = (x1 - x0) / 2 - 2;
-      const d = (z1 - z0) / 2 - 2;
-      const h = 7 + rnd() * 9;
-      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wall);
-      b.position.set(x0 + 1 + w / 2 + (i % 2) * (w + 2), h / 2, z0 + 1 + d / 2 + Math.floor(i / 2) * (d + 2));
-      b.castShadow = b.receiveShadow = true;
-      scene.add(b);
-      const r = new THREE.Mesh(new THREE.ConeGeometry(Math.min(w, d) * 0.62, 4, 4).rotateY(Math.PI / 4), roof);
-      r.position.set(b.position.x, h + 2, b.position.z);
-      r.castShadow = true;
-      scene.add(r);
-    }
+const add = (m: THREE.Mesh, x: number, y: number, z: number, ry = 0) => {
+  m.position.set(x, y, z);
+  m.rotation.y = ry;
+  m.castShadow = m.receiveShadow = true;
+  scene.add(m);
+  return m;
+};
+// Graveyard (the east cell north of the axis path).
+const yard = { minX: 50, maxX: 92, minZ: -46, maxZ: -12 };
+for (let x = yard.minX + 3; x < yard.maxX - 2; x += 4.2)
+  for (let z = yard.minZ + 3; z < yard.maxZ - 2; z += 4.6) add(new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1 + rnd() * 0.6, 0.25), stone), x + rnd(), 0.6, z + rnd(), (rnd() - 0.5) * 0.2);
+// Dead trees and giant pumpkins (the bat roosts).
+const roosts: { x: number; z: number; h: number }[] = [];
+const trees: [number, number][] = [[-48, -40], [44, 52], [-60, 58], [70, 20], [-30, -76], [20, -64], [-78, -10]];
+for (const [x, z] of trees) {
+  const h = 9 + rnd() * 5;
+  add(new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.6, h, 6), bark), x, h / 2, z);
+  for (let k = 0; k < 4; k++) {
+    const br = add(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.22, 4, 5), bark), x, h * (0.6 + k * 0.1), z, k * 1.6);
+    br.rotation.z = 0.9;
   }
-// Jack-o'-lantern stand-ins on the sidewalks, every 16 m along each road.
+  roosts.push({ x, z, h });
+}
+for (const [x, z] of [[-40, 40], [44, -70], [-70, -60]]) {
+  add(new THREE.Mesh(new THREE.SphereGeometry(3.2, 20, 14).scale(1.2, 0.85, 1.2), pumpkinSkin), x, 2.6, z);
+  roosts.push({ x, z, h: 5.5 });
+}
+// Iron fence perimeter.
+const post = new THREE.CylinderGeometry(0.05, 0.05, 2.2, 5);
+for (let t = -96; t <= 96; t += 2)
+  for (const [x, z] of [[t, -96], [t, 96], [-96, t], [96, t]]) add(new THREE.Mesh(post, iron), x, 1.1, z);
+// Jack-o'-lanterns along the paths every 12 m, both sides.
 const lanternPts: { x: number; y: number; z: number }[] = [];
 const pumpkin = new THREE.MeshStandardMaterial({ color: 0xe0661a, emissive: 0xff7a1a, emissiveIntensity: 2.2, roughness: 0.6 });
 const pumpkinGeo = new THREE.SphereGeometry(0.35, 12, 8).scale(1, 0.8, 1);
-for (const [c, w] of [[-56, 14], [0, 20], [56, 14]] as const)
-  for (let t = -88; t <= 88; t += 16)
-    for (const sgn of [-1, 1]) {
-      const off = c + sgn * (w / 2 + 2);
-      for (const [x, z] of [[t, off], [off, t + 8]]) {
-        if (x * x + z * z < 32 * 32) continue;
-        lanternPts.push({ x, y: 0.12, z });
-        const m = new THREE.Mesh(pumpkinGeo, pumpkin);
-        m.position.set(x, 0.4, z);
-        scene.add(m);
+for (let t = 36; t <= 90; t += 12)
+  for (const sgn of [-1, 1])
+    for (const dir of [-1, 1])
+      for (const [x, z] of [[dir * t, sgn * 4.2], [sgn * 4.2, dir * t + 6]]) {
+        lanternPts.push({ x, y: 0, z });
+        add(new THREE.Mesh(pumpkinGeo, pumpkin), x, 0.3, z);
       }
-    }
 
 // ── Camera ──────────────────────────────────────────────────────────────────────────────────
 const camera = new THREE.PerspectiveCamera(56, W / H, 0.03, 700);
 camera.layers.enable(LAYER_NO_AO); // as the game's camera: FX live on the no-AO layer
 const VIEWS: Record<string, [number[], number[], number?]> = {
-  play: [[6, 8, 58], [6, 0.6, 46]], // gameplay: 8 m up, ~10 m back of a big machine south of the plaza
-  chase: [[8, 2.6, 41.5], [10, 0.65, 35.4], 57.6], // second half: ≈1 m machine (CameraRig at diameter 1)
+  play: [[4, 8, 60], [4, 0.6, 48]], // gameplay: 8 m up, ~10 m back of a big machine on the south path
+  chase: [[2, 2.6, 46], [5, 0.65, 40], 57.6], // second half: ≈1 m machine (CameraRig at diameter 1)
   wide: [[-30, 48, 112], [8, 0, -6]],
-  moon: [[-20, 9, 66], [26, 18, -40]],
+  moon: [[-24, 7, 70], [26, 16, -40]],
 };
 const [cp, lp, fov] = VIEWS[view] ?? VIEWS.play;
 camera.position.set(cp[0], cp[1], cp[2]);
@@ -127,7 +139,8 @@ camera.updateProjectionMatrix();
 const fx = createHalloweenFx({ bounds: { minX: -96, maxX: 96, minZ: -96, maxZ: 96 }, quality, seed: 1031 });
 scene.add(fx.root);
 fx.setLanterns(lanternPts);
-fx.setGraveyard({ minX: 63, maxX: 96, minZ: -49, maxZ: -10 });
+fx.setGraveyard(yard);
+fx.setRoosts(roosts);
 
 const pipeline = new RenderPipeline(renderer, scene, camera, quality);
 

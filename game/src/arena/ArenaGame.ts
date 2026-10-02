@@ -28,6 +28,7 @@ import { Hat } from '../entities/Hat';
 import type { GameEvent } from '../game/Game';
 import { MassLedger } from './massLedger';
 import { Hunt } from './hunt';
+import type { HalloweenFx } from '../world/halloweenFx';
 import { isHalloween } from '../config/halloween';
 
 /**
@@ -183,6 +184,8 @@ export class ArenaGame {
   readonly ledger = new MassLedger();
   /** Halloween map: the second-half hunt (null on every other map). */
   hunt: Hunt | null = null;
+  /** Halloween map: moon, bats, wisps, mist, summoning circle and the hunt's event effects. */
+  atmosphere: HalloweenFx | null = null;
   onEvent: ((e: GameEvent | FeelEvent) => void) | null = null;
   /** Kill feed and notices for the arena HUD. */
   onFeed: ((text: string, tone: 'kill' | 'info' | 'bonus' | 'bad') => void) | null = null;
@@ -499,6 +502,7 @@ export class ArenaGame {
       }
     }
     this.hunt?.present(vdt);
+    this.atmosphere?.update(vdt, this.time, this.camera);
     const focus = this.cameraTarget();
     if (focus) {
       const fx = -Math.sin(focus.heading);
@@ -1272,7 +1276,21 @@ export class ArenaGame {
     return this.rand();
   }
 
+  /** Add the Halloween atmosphere layer, fed with this map's lanterns and giant props. */
+  attachAtmosphere(fx: HalloweenFx): void {
+    this.atmosphere = fx;
+    this.scene.add(fx.root);
+    const lanterns = this.world.objects.filter((o) => /LANTERN/.test(o.typeId)).map((o) => ({ x: o.x, y: o.baseY, z: o.z }));
+    if (lanterns.length) fx.setLanterns(lanterns.slice(0, 64));
+    const roosts = this.world.objects.filter((o) => o.def.objectClass >= 7).map((o) => ({ x: o.x, z: o.z, h: o.def.size[1] }));
+    if (roosts.length) fx.setRoosts(roosts.slice(0, 16));
+  }
+
   dispose(): void {
+    if (this.atmosphere) {
+      this.scene.remove(this.atmosphere.root);
+      this.atmosphere.dispose();
+    }
     this.hunt?.dispose();
     this.hud.dispose();
     this.scene.traverse((o) => {

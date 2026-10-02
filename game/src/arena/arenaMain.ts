@@ -3,6 +3,7 @@ import { L } from '../i18n';
 import { AudioEngine } from '../audio/AudioEngine';
 import { roundSecondsFor } from '../config/arena';
 import { HALLOWEEN, isHalloween } from '../config/halloween';
+import { createHalloweenFx } from '../world/halloweenFx';
 import { bakeSkyEnvironment } from '../art/environment';
 import { RenderPipeline } from '../art/postfx';
 import { installRenderGuards, type AppContext } from '../app';
@@ -79,6 +80,7 @@ export async function runArena(ctx: AppContext): Promise<void> {
     audio?.setTheme(city.id);
     preview.hud.dispose();
     envFor(preview.scene, city);
+    if (isHalloween(city.id)) preview.attachAtmosphere(createHalloweenFx({ bounds: city.bounds, quality, seed: 7 }));
     usePipeline(preview);
   };
 
@@ -180,6 +182,7 @@ export async function runArena(ctx: AppContext): Promise<void> {
         audio?.setTheme(city.id);
         track('match_start', { city: city.id, humans: state.roster.filter((r) => r.kind === 'player').length, bots: state.roster.filter((r) => r.kind === 'bot').length, player: localId !== null });
         envFor(g.scene, city);
+        if (isHalloween(city.id)) g.attachAtmosphere(createHalloweenFx({ bounds: city.bounds, quality, seed: state.seed }));
         usePipeline(g);
         ui.resetRound();
         ui.hideResults();

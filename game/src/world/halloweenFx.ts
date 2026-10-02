@@ -4,11 +4,13 @@ import { createSeededRandom } from '../core/rng';
 
 /**
  * HALLOWEEN TOWN — atmosphere layer (docs/halloween-mode.md). Everything that makes the night
- * district feel alive and is not a prop: the moon, bats, will-o'-wisps, ground mist, the
- * summoning circle in the empty plaza, jack-o'-lantern light pools, and the event beats of the
- * second half (scores lock → blood sky, hunt → lightning + eruption, catch → a soul leaves).
+ * graveyard / pumpkin-patch landscape feel alive and is not a prop: the moon, distant hills with
+ * dead trees, bats, will-o'-wisps, ground mist in the paths and hollows, the summoning circle in
+ * the empty plaza, jack-o'-lantern light pools, and the event beats of the second half (scores
+ * lock → blood sky, hunt → lightning + eruption, catch → a soul leaves). No town assumptions:
+ * no streets, lamps or skyline (CD correction 2026-10-02: Halloween elements only).
  *
- * Budget (technical-art.md, mobile): ≤ 10 draw calls in the worst state, no real lights, no
+ * Budget (technical-art.md, mobile): ≤ 11 draw calls in the worst state, no real lights, no
  * textures, no per-frame allocation. Every repeated element is one instanced draw whose motion
  * is evaluated in its vertex shader from static per-instance attributes and a shared time
  * uniform, so the CPU cost per frame is a handful of scalar envelopes.
@@ -18,7 +20,8 @@ import { createSeededRandom } from '../core/rng';
  *   SKY_Moon             moon disc + halo + passing cloud (billboard)    always
  *   FX_Bats              all flocks, wing flap in the vertex shader      always (opaque silhouettes)
  *   FX_Wisps             green wisps + their trail ghosts + ground glow  always
- *   FX_StreetMist        low mist patches along every street             always
+ *   BG_HillsDeadTrees    two hill ridges + dead-tree silhouettes        always (opaque, 1 static mesh)
+ *   FX_GroundMist        low mist patches in the paths and hollows       always
  *   FX_PlazaMist         slow vortex of mist over the plaza (3 layers)   always
  *   FX_SummoningCircle   ground ring, runes, triangle, rise nodes        always (faint until the hunt)
  *   FX_LanternPools      flickering warm pools under lanterns           once setLanterns() is fed
@@ -50,8 +53,16 @@ export interface HalloweenFx {
   onCaught(x: number, z: number): void;
   /** Jack-o'-lantern pools. `y` = ground height under the lantern (pools sit 2 cm above it). */
   setLanterns(points: { x: number; y: number; z: number }[]): void;
-  /** Optional: the graveyard cell, so a cluster of wisps haunts it (default: none, all on streets). */
+  /** Optional: the graveyard, so a cluster of wisps haunts it. */
   setGraveyard(rect: { minX: number; maxX: number; minZ: number; maxZ: number } | null): void;
+  /**
+   * Optional: where the ground mist lies — path samples and graveyard hollows ({x, z} centre,
+   * r radius m, y ground height, default 0). Replaces the default layout (the four axis paths
+   * out of the plaza plus seeded hollows). Roaming wisps follow the largest zones.
+   */
+  setMistZones(zones: { x: number; z: number; r: number; y?: number }[]): void;
+  /** Optional: what the bat flocks circle — dead trees, giant pumpkins (h = top height, m). */
+  setRoosts(points: { x: number; z: number; h: number }[]): void;
   /** Back to the first-half look (new round on the same map). */
   reset(): void;
   dispose(): void;
@@ -63,19 +74,20 @@ export interface HalloweenFxOptions {
   seed: number;
   /** Accessibility: soften lightning flashes (no full-sky strobe). */
   reducedFlash?: boolean;
+  /** Distant hills + dead-tree silhouettes beyond the fence (default true). */
+  background?: boolean;
 }
 
 // ── Tiers ────────────────────────────────────────────────────────────────────────────────────
 const TIERS = {
-  low: { bats: 14, wisps: 9, trail: 2, mistStep: 26, mistLayers: 1, plazaLayers: 2, oct: 2 },
-  medium: { bats: 26, wisps: 15, trail: 3, mistStep: 20, mistLayers: 2, plazaLayers: 3, oct: 3 },
-  high: { bats: 40, wisps: 22, trail: 4, mistStep: 16, mistLayers: 2, plazaLayers: 3, oct: 4 },
+  low: { bats: 14, wisps: 9, trail: 2, hollows: 10, pathStep: 22, mistLayers: 1, plazaLayers: 2, trees: 22, oct: 2 },
+  medium: { bats: 26, wisps: 15, trail: 3, hollows: 16, pathStep: 16, mistLayers: 2, plazaLayers: 3, trees: 36, oct: 3 },
+  high: { bats: 40, wisps: 22, trail: 4, hollows: 22, pathStep: 13, mistLayers: 2, plazaLayers: 3, trees: 50, oct: 4 },
 } as const;
 
-/** Street plan of the 192 m city kit (cityKit.ts), as fractions of the half extent. */
-const ROAD_AT = [-56 / 96, 0, 56 / 96];
-const ROAD_W = [14 / 96, 20 / 96, 14 / 96];
 const PLAZA_R = 30;
+const MAX_MIST = 96; // zones (each drawn on mistLayers layers)
+const MAX_ROOSTS = 6;
 /** Hunters rise at radius 6 m, angles 90° + i·120° (arena/hunt.ts). */
 const RISE_R = 6;
 const MAX_LANTERNS = 256;
@@ -187,6 +199,9 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
   const uFogColor = { value: new THREE.Color(0x3d3558) };
   const uMoonDir = { value: HALLOWEEN_MOON_DIR.clone() };
   const uCenter = { value: new THREE.Vector2(cx, cz) };
+  // Low tier renders straight to the canvas: every additive layer is tone-mapped on its own, so
+  // stacked glows saturate far sooner than through the HDR composer. Scale the plaza glows down.
+  const uGain: U = { value: opts.quality === 'low' ? 0.5 : 1 };
 
   const geometries: THREE.BufferGeometry[] = [];
   const materials: THREE.Material[] = [];
@@ -220,9 +235,11 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
         float h = d.y;
         // Blood sky: crimson at the horizon to a bruised maroon overhead, darker than the sky it covers.
         float up = smoothstep(-0.05, 0.65, h);
-        vec3 red = mix(vec3(0.62, 0.05, 0.035), vec3(0.16, 0.01, 0.05), up);
-        red *= 0.85 + 0.3 * fbm(d.xz / (abs(h) + 0.25) * 1.4 + uTime * 0.01);
-        float a = uRed * mix(0.62, 0.4, up);
+        // Deep, low-luminance red: bright saturated reds roll off to orange under AgX.
+        vec3 red = mix(vec3(0.3, 0.012, 0.018), vec3(0.055, 0.002, 0.018), up);
+        red *= 0.75 + 0.5 * fbm(d.xz / (abs(h) + 0.25) * 1.4 + uTime * 0.01);
+        red = mix(red, vec3(0.02, 0.0, 0.006), smoothstep(0.0, -0.08, h)); // below the horizon: dark
+        float a = uRed * mix(0.88, 0.76, up);
         vec3 col = red * a;
         // Lightning: whole-sky flash, brighter toward the strike, plus the bolt itself.
         float az = atan(d.x, -d.z);
@@ -236,7 +253,7 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
           float core = exp(-abs(x) * 900.0) + exp(-abs(x) * 160.0) * 0.35;
           // A fork splitting off two thirds of the way down.
           float fh = 0.24;
-          float x2 = dAz - jag(fh, uBoltSeed) - (fh - h) * 0.55 - jag(h, uBoltSeed + 4.0) * 0.6;
+          float x2 = dAz - jag(fh, uBoltSeed) * (1.0 - fh * 0.8) - (fh - h) * 0.55 - (jag(h, uBoltSeed + 4.0) - jag(fh, uBoltSeed + 4.0)) * 0.6;
           float fork = step(h, fh) * smoothstep(0.0, 0.1, h) * (exp(-abs(x2) * 1300.0) + exp(-abs(x2) * 200.0) * 0.25) * 0.75;
           col += vec3(0.85, 0.82, 1.0) * (core * on + fork) * uBolt * 6.0;
         }
@@ -246,8 +263,9 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
       { side: THREE.BackSide },
     ),
   );
+  // Event-only meshes start VISIBLE (each draws nothing until its event) so RenderPipeline's
+  // prewarm compiles their programs; the first update() hides them. No shader hitch at half time.
   const sky = mesh('SKY_Tint', tintGeo, tintMat, -10);
-  sky.visible = false;
   root.add(sky);
 
   // ── Moon ─────────────────────────────────────────────────────────────────────────────────────
@@ -287,13 +305,13 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
         vec3 moon = mix(vec3(1.0, 0.97, 0.88), vec3(0.58, 0.6, 0.66), maria * 0.8);
         moon *= 1.0 - crater * 0.18;
         moon *= mix(0.68, 1.0, pow(z, 0.45));
-        moon = mix(moon, vec3(1.0, 0.36, 0.2) * (0.9 + 0.2 * (1.0 - maria)), uRed * 0.8);
-        moon *= 1.9;
+        moon = mix(moon, vec3(1.0, 0.13, 0.045) * (0.7 + 0.4 * (1.0 - maria)), uRed * 0.9);
+        moon *= mix(1.9, 0.8, uRed); // a blood moon is dim: bright reds wash to peach under AgX
         // Halo: tight glow + wide veil, cool; blood-orange once the scores lock.
         float o = max(r - 1.0, 0.0);
         float halo = exp(-o * 1.7) * 0.34 + exp(-o * 0.42) * 0.075;
         halo *= 1.0 - smoothstep(3.4, ${MOON_QUAD.toFixed(1)}, r);
-        vec3 hc = mix(vec3(0.5, 0.58, 0.9), vec3(0.95, 0.28, 0.16), uRed);
+        vec3 hc = mix(vec3(0.5, 0.58, 0.9), vec3(0.95, 0.16, 0.08), uRed);
         // A thin cloud drifting across: darkens the disc, catches silver light in the halo.
         vec2 cq = vec2(vQ.x * 0.45 + uTime * 0.012, vQ.y * 1.9 + 0.6);
         float cloud = smoothstep(0.5, 0.78, fbm(cq)) * (1.0 - smoothstep(1.6, 3.2, abs(vQ.y + 0.3)));
@@ -307,35 +325,80 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
   const moon = mesh('SKY_Moon', moonGeo, moonMat, -9);
   root.add(moon);
 
+  // ── Distant hills + dead trees (beyond the fence; one static opaque mesh) ─────────────────────
+  if (opts.background !== false) {
+    const bgGeo = buildBackground(rand, cx, cz, half, T.trees, opts.quality === 'low' ? 2 : 3);
+    const bgMat = new THREE.ShaderMaterial({
+      name: 'MAT_BG_HillsDeadTrees',
+      uniforms: { uFogColor, uFlash, uRed },
+      side: THREE.DoubleSide,
+      fog: false,
+      vertexShader: /* glsl */ `
+        attribute float aHaze;
+        varying float vHaze;
+        varying float vY;
+        void main() {
+          vHaze = aHaze;
+          vY = position.y;
+          gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uFogColor;
+        uniform float uFlash, uRed;
+        varying float vHaze;
+        varying float vY;
+        void main() {
+          // Aerial perspective: near ridge a dark violet silhouette, far ridge hazier; mist pools at the foot.
+          vec3 col = vec3(0.02, 0.017, 0.03);
+          float haze = vHaze + (1.0 - smoothstep(0.0, 10.0, vY)) * 0.35;
+          vec3 fogGrey = mix(uFogColor, vec3(dot(uFogColor, vec3(0.3, 0.55, 0.15))), 0.45);
+          col = mix(col, fogGrey * 0.8, clamp(haze, 0.0, 0.85));
+          col *= 1.0 - uFlash * 0.35;
+          gl_FragColor = vec4(col, 1.0);
+          ${FINISH}
+        }`,
+    });
+    track(bgGeo, bgMat);
+    root.add(mesh('BG_HillsDeadTrees', bgGeo, bgMat, 0));
+  }
+
   // ── Bats ─────────────────────────────────────────────────────────────────────────────────────
   const batBase = buildBatGeometry();
   const batGeo = instanced(batBase, T.bats);
-  {
-    const orbit = new Float32Array(T.bats * 4);
-    const motion = new Float32Array(T.bats * 4);
-    // Flocks: one wheeling over the plaza, three over rooftops, the rest as wide stragglers.
-    const cells = [0.31, 0.79].flatMap((u) => [-u, u]);
-    const flocks: [number, number, number, number, number][] = [[cx, cz, 17, 15, 0.5]];
-    for (let i = 0; i < 3; i++) {
-      const fx = cx + cells[Math.floor(rand() * 4)] * half;
-      const fz = cz + cells[Math.floor(rand() * 4)] * half;
-      flocks.push([fx, fz, 9 + rand() * 6, 19 + rand() * 6, 0.25]);
-    }
+  const batOrbit = new Float32Array(T.bats * 4);
+  const batMotion = new Float32Array(T.bats * 4);
+  batGeo.setAttribute('aOrbit', new THREE.InstancedBufferAttribute(batOrbit, 4));
+  batGeo.setAttribute('aMotion', new THREE.InstancedBufferAttribute(batMotion, 4));
+  /**
+   * Flocks: one wheeling over the plaza (the villains' stage), one per roost circling just above
+   * a dead tree / giant pumpkin, and ~15 % wide stragglers crossing the whole landscape.
+   */
+  function writeBats(roosts: { x: number; z: number; h: number }[]): void {
+    const br = createSeededRandom(opts.seed ^ 0xba7);
+    const flocks: [number, number, number, number, number][] = [[cx, cz, 15, 13, 0.5]];
+    for (const r of roosts.slice(0, MAX_ROOSTS)) flocks.push([r.x, r.z, 5 + br() * 4, r.h + 3 + br() * 3, 0.3]);
     for (let i = 0; i < T.bats; i++) {
       const straggler = i >= Math.round(T.bats * 0.85);
-      const f = flocks[i % flocks.length];
-      const dir = (i % flocks.length) % 2 === 0 ? 1 : -1;
+      const fi = i % flocks.length;
+      const f = flocks[fi];
+      const dir = fi % 2 === 0 ? 1 : -1;
       if (straggler) {
-        orbit.set([cx + (rand() - 0.5) * half * 0.6, cz + (rand() - 0.5) * half * 0.6, half * (0.45 + rand() * 0.25), 24 + rand() * 8], i * 4);
-        motion.set([dir * (0.06 + rand() * 0.04), rand() * Math.PI * 2, 6 + rand() * 6, 9 + rand() * 3], i * 4);
+        batOrbit.set([cx + (br() - 0.5) * half * 0.6, cz + (br() - 0.5) * half * 0.6, half * (0.45 + br() * 0.25), 18 + br() * 8], i * 4);
+        batMotion.set([dir * (0.06 + br() * 0.04), br() * Math.PI * 2, 6 + br() * 6, 9 + br() * 3], i * 4);
       } else {
-        orbit.set([f[0] + (rand() - 0.5) * 3, f[1] + (rand() - 0.5) * 3, f[2] * (0.75 + rand() * 0.5), f[3] + (rand() - 0.5) * 5], i * 4);
-        motion.set([dir * (f[4] * (0.85 + rand() * 0.3)) * (12 / f[2]), rand() * Math.PI * 2, 2 + rand() * 3, 10 + rand() * 4], i * 4);
+        batOrbit.set([f[0] + (br() - 0.5) * 2, f[1] + (br() - 0.5) * 2, f[2] * (0.75 + br() * 0.5), f[3] + (br() - 0.5) * 3], i * 4);
+        batMotion.set([dir * (f[4] * (0.85 + br() * 0.3)) * (12 / f[2]), br() * Math.PI * 2, 1 + br() * 2, 10 + br() * 4], i * 4);
       }
     }
-    batGeo.setAttribute('aOrbit', new THREE.InstancedBufferAttribute(orbit, 4));
-    batGeo.setAttribute('aMotion', new THREE.InstancedBufferAttribute(motion, 4));
+    for (const k of ['aOrbit', 'aMotion']) (batGeo.getAttribute(k) as THREE.InstancedBufferAttribute).needsUpdate = true;
   }
+  const defaultRoosts: { x: number; z: number; h: number }[] = [];
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + rand() * 1.2;
+    const d = half * (0.45 + rand() * 0.35);
+    defaultRoosts.push({ x: cx + Math.cos(a) * d, z: cz + Math.sin(a) * d, h: 9 + rand() * 4 });
+  }
+  writeBats(defaultRoosts);
   geometries.push(batBase, batGeo);
   const batMat = new THREE.ShaderMaterial({
     name: 'MAT_FX_Bat',
@@ -408,7 +471,6 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
   const wispPath = new Float32Array(wispCount * 4);
   const wispMove = new Float32Array(wispCount * 4);
   const wispKind = new Float32Array(wispCount * 2);
-  const roamCount = Math.max(2, Math.round(T.wisps * 0.3));
   const setWisp = (i: number, path: number[], move: number[]) => {
     for (let k = 0; k < perWisp; k++) {
       const j = i * perWisp + k;
@@ -417,12 +479,20 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
       wispKind.set(k === T.trail ? [0, 1] : [k * 0.16, 0], j * 2);
     }
   };
+  // Path wisps drift back and forth along the four axis paths out of the plaza; the rest roam
+  // the mist hollows (re-anchored by setMistZones / setGraveyard).
+  const pathWisps = Math.round(T.wisps * 0.45);
+  const legMid = PLAZA_R + (half - PLAZA_R) / 2;
+  const legRange = ((half - PLAZA_R) / 2) * 0.85;
   for (let i = 0; i < T.wisps; i++) {
-    const r = Math.floor(rand() * 3);
-    const along = rand() < 0.5 ? 0 : 1;
-    const lane = (ROAD_AT[r] * half + (rand() - 0.5) * ROAD_W[r] * half * 0.7) + (along === 0 ? cz : cx);
-    const mid = (rand() - 0.5) * half * 1.3 + (along === 0 ? cx : cz);
-    setWisp(i, [along, along === 0 ? mid : lane, along === 0 ? lane : mid, 10 + rand() * 18], [0.05 + rand() * 0.06, rand() * 6.28, 1.0 + rand() * 1.2, 0.75 + rand() * 0.35]);
+    const move = [0.05 + rand() * 0.06, rand() * 6.28, 1.0 + rand() * 1.2, 0.75 + rand() * 0.35];
+    if (i < pathWisps) {
+      const leg = i % 4;
+      const along = leg < 2 ? 0 : 1;
+      const mid = (leg % 2 === 0 ? 1 : -1) * legMid;
+      const lane = (rand() - 0.5) * 4;
+      setWisp(i, along === 0 ? [0, cx + mid, cz + lane, legRange] : [1, cx + lane, cz + mid, legRange], move);
+    } else setWisp(i, [2, cx, cz + legMid, 8], move); // placed by writeMist()
   }
   wispGeo.setAttribute('aPath', new THREE.InstancedBufferAttribute(wispPath, 4));
   wispGeo.setAttribute('aMove', new THREE.InstancedBufferAttribute(wispMove, 4));
@@ -495,32 +565,88 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
   const wisps = mesh('FX_Wisps', wispGeo, wispMat, 3);
   root.add(wisps);
 
-  // ── Street mist ──────────────────────────────────────────────────────────────────────────────
-  const banks: number[][] = [];
-  for (let layer = 0; layer < T.mistLayers; layer++) {
-    const y = layer === 0 ? 0.22 : 0.85;
-    for (let r = 0; r < 3; r++) {
-      const at = ROAD_AT[r] * half;
-      const w = ROAD_W[r] * half + 7;
-      for (let s = -half + T.mistStep / 2 + layer * T.mistStep * 0.5; s < half; s += T.mistStep) {
-        for (const along of [0, 1]) {
-          const x = along === 0 ? s : at + (rand() - 0.5) * 2;
-          const z = along === 0 ? at + (rand() - 0.5) * 2 : s;
-          if (x * x + z * z < (PLAZA_R - 4) * (PLAZA_R - 4)) continue;
-          const len = T.mistStep * (1.5 + rand() * 0.4);
-          // [x, z, sizeX, sizeZ] [y, rot, seed, layer]
-          banks.push([cx + x, cz + z, along === 0 ? len : w, along === 0 ? w : len, y + rand() * 0.15, (rand() - 0.5) * 0.25, rand(), layer]);
-        }
+  // ── Ground mist (paths + hollows) ────────────────────────────────────────────────────────────
+  const disc = new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2);
+  const mistGeo = instanced(disc, 0);
+  const mistA = new Float32Array(MAX_MIST * T.mistLayers * 4); // x, z, radius, y
+  const mistB = new Float32Array(MAX_MIST * T.mistLayers * 4); // seed, layer, stretch, angle
+  const mistAttrA = new THREE.InstancedBufferAttribute(mistA, 4);
+  const mistAttrB = new THREE.InstancedBufferAttribute(mistB, 4);
+  mistGeo.setAttribute('aBank', mistAttrA);
+  mistGeo.setAttribute('aBank2', mistAttrB);
+  geometries.push(disc, mistGeo);
+  let mistZones: { x: number; z: number; r: number; y?: number }[] = [];
+  let graveyard: { minX: number; maxX: number; minZ: number; maxZ: number } | null = null;
+
+  /** Roaming wisps: the graveyard (if known) gets a third of them, the rest the largest mist zones. */
+  function placeRoamers(): void {
+    const wr = createSeededRandom(opts.seed ^ 0x3157);
+    const zones = [...mistZones].sort((p, q) => q.r - p.r);
+    const roamers = T.wisps - pathWisps;
+    const inYard = graveyard ? Math.max(1, Math.round(roamers / 3)) : 0;
+    for (let n = 0; n < roamers; n++) {
+      const i = pathWisps + n;
+      let x = cx, z = cz + legMid, reach = 8, y = 0;
+      if (n < inYard && graveyard) {
+        const g = graveyard;
+        reach = Math.min(g.maxX - g.minX, g.maxZ - g.minZ) * 0.35;
+        x = (g.minX + g.maxX) / 2 + (wr() - 0.5) * reach * 0.5;
+        z = (g.minZ + g.maxZ) / 2 + (wr() - 0.5) * reach * 0.5;
+      } else if (zones.length) {
+        const zn = zones[n % zones.length];
+        x = zn.x + (wr() - 0.5) * zn.r * 0.4;
+        z = zn.z + (wr() - 0.5) * zn.r * 0.4;
+        reach = Math.max(3, zn.r * 0.6);
+        y = zn.y ?? 0;
+      }
+      for (let k = 0; k < perWisp; k++) {
+        const j = (i * perWisp + k) * 4;
+        wispPath.set([2, x, z, reach], j);
+        wispMove[j + 2] = y + 0.9 + ((i * 0.37) % 1) * 1.1;
       }
     }
+    (wispGeo.getAttribute('aPath') as THREE.InstancedBufferAttribute).needsUpdate = true;
+    (wispGeo.getAttribute('aMove') as THREE.InstancedBufferAttribute).needsUpdate = true;
   }
-  const disc = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-  const mistGeo = instanced(disc, banks.length);
-  mistGeo.setAttribute('aBank', new THREE.InstancedBufferAttribute(new Float32Array(banks.flatMap((v) => v.slice(0, 4))), 4));
-  mistGeo.setAttribute('aBank2', new THREE.InstancedBufferAttribute(new Float32Array(banks.flatMap((v) => v.slice(4))), 4));
-  geometries.push(disc, mistGeo);
+
+  function writeMist(zones: { x: number; z: number; r: number; y?: number }[]): void {
+    const mr = createSeededRandom(opts.seed ^ 0x5157);
+    mistZones = zones.slice(0, MAX_MIST);
+    let n = 0;
+    for (let layer = 0; layer < T.mistLayers; layer++)
+      for (const zn of mistZones) {
+        const y = (zn.y ?? 0) + (layer === 0 ? 0.2 + mr() * 0.1 : 0.7 + mr() * 0.2);
+        mistA.set([zn.x + (mr() - 0.5) * 2, zn.z + (mr() - 0.5) * 2, zn.r * (layer === 0 ? 1.15 : 0.85), y], n * 4);
+        mistB.set([mr(), layer, 1 + mr() * 0.5, mr() * Math.PI], n * 4);
+        n++;
+      }
+    mistGeo.instanceCount = n;
+    mistAttrA.needsUpdate = true;
+    mistAttrB.needsUpdate = true;
+    placeRoamers();
+  }
+
+  // Default layout: the four axis paths out of the plaza, plus seeded hollows in between.
+  const defaultZones: { x: number; z: number; r: number }[] = [];
+  for (let d = PLAZA_R + 5; d < half - 4; d += T.pathStep)
+    for (let leg = 0; leg < 4; leg++) {
+      const sx = leg === 0 ? 1 : leg === 1 ? -1 : 0;
+      const sz = leg === 2 ? 1 : leg === 3 ? -1 : 0;
+      defaultZones.push({ x: cx + sx * d + (rand() - 0.5) * 3, z: cz + sz * d + (rand() - 0.5) * 3, r: 7 + rand() * 2.5 });
+    }
+  for (let tries = 0, made = 0; made < T.hollows && tries < 400; tries++) {
+    const a = rand() * Math.PI * 2;
+    const d = PLAZA_R + 10 + rand() * (half - PLAZA_R - 16);
+    const x = cx + Math.cos(a) * d;
+    const z = cz + Math.sin(a) * d;
+    if (Math.abs(x - cx) > half - 6 || Math.abs(z - cz) > half - 6) continue;
+    if (defaultZones.some((q) => (q.x - x) ** 2 + (q.z - z) ** 2 < 15 * 15)) continue;
+    defaultZones.push({ x, z, r: 7 + rand() * 5 });
+    made++;
+  }
+
   const mistMat = fxMaterial(
-    'MAT_FX_StreetMist',
+    'MAT_FX_GroundMist',
     T.oct,
     { uTime, uFlash, uRed, uDensity },
     /* glsl */ `
@@ -531,12 +657,14 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
     varying float vSeed;
     varying float vLayer;
     void main() {
-      vLocal = position.xz * 2.0;
-      float c = cos(aBank2.y), s = sin(aBank2.y);
-      vec2 o = vec2(position.x * aBank.z, position.z * aBank.w);
-      vWorld = vec3(aBank.x + c * o.x - s * o.y, aBank2.x, aBank.y + s * o.x + c * o.y);
-      vSeed = aBank2.z;
-      vLayer = aBank2.w;
+      // Slightly stretched, rotated discs so neighbouring patches do not read as circles.
+      float c = cos(aBank2.w), s = sin(aBank2.w);
+      vec2 l = position.xz * vec2(aBank2.z, 1.0);
+      vLocal = position.xz;
+      vec2 o = vec2(c * l.x - s * l.y, s * l.x + c * l.y) * aBank.z;
+      vWorld = vec3(aBank.x + o.x, aBank.w, aBank.y + o.y);
+      vSeed = aBank2.x;
+      vLayer = aBank2.y;
       gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
     }`,
     /* glsl */ `
@@ -547,40 +675,45 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
     varying float vLayer;
     ${NOISE}
     void main() {
-      float e = length(vLocal);
-      float edge = 1.0 - smoothstep(0.3, 1.0, e);
-      vec2 w = vWorld.xz * 0.075 + vec2(uTime * 0.03, uTime * 0.013) * (1.0 + vLayer * 0.6) + vSeed * 13.0;
+      vec2 w = vWorld.xz * 0.09 + vec2(uTime * 0.035, uTime * 0.014) * (1.0 + vLayer * 0.6) + vSeed * 13.0;
       float n = fbm(w);
-      float n2 = vnoise(w * 2.7 - uTime * 0.05);
-      float d = smoothstep(0.38, 0.85, n * 0.8 + n2 * 0.3);
-      float a = edge * d * (vLayer > 0.5 ? 0.2 : 0.3) * uDensity;
+      float n2 = vnoise(w * 3.1 - uTime * 0.06);
+      // Noise-eroded edge: no visible disc outline.
+      float e = length(vLocal) + (n - 0.5) * 0.55;
+      float edge = 1.0 - smoothstep(0.25, 0.95, e);
+      float d = smoothstep(0.38, 0.85, n * 0.6 + n2 * 0.5);
+      float a = edge * d * (vLayer > 0.5 ? 0.12 : 0.2) * uDensity;
       vec3 v = vWorld - cameraPosition;
       float dist = length(v);
-      a *= smoothstep(0.05, 0.3, abs(v.y) / dist);
+      float steep = abs(v.y) / dist;
+      a *= smoothstep(0.02, 0.16, steep);              // no edge-on sheets
+      a *= mix(1.0, 0.55, smoothstep(0.5, 0.9, steep)); // thin when seen from above, like real ground fog
+      a *= smoothstep(2.5, 11.0, dist);               // no veil over the lens
       a *= 1.0 - smoothstep(90.0, 190.0, dist);
-      a = min(a, 0.62);
-      vec3 col = mix(vec3(0.2, 0.2, 0.3), vec3(0.42, 0.42, 0.56), n);
-      col = mix(col, vec3(0.42, 0.18, 0.24), uRed * 0.55);
-      col += vec3(0.5, 0.5, 0.75) * uFlash;
+      a = min(a, 0.5);
+      vec3 col = mix(vec3(0.13, 0.13, 0.21), vec3(0.3, 0.3, 0.43), n2);
+      col = mix(col, vec3(0.3, 0.1, 0.14), uRed * 0.55);
+      col += vec3(0.3, 0.3, 0.45) * uFlash;
       gl_FragColor = vec4(col * a, a);
       ${FINISH}
     }`,
   );
-  const mist = mesh('FX_StreetMist', mistGeo, mistMat, 2);
+  const mist = mesh('FX_GroundMist', mistGeo, mistMat, 2);
   root.add(mist);
+  writeMist(defaultZones);
 
   // ── Plaza vortex mist ────────────────────────────────────────────────────────────────────────
   const circle = new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2);
   const plazaGeo = instanced(circle, T.plazaLayers);
   const plazaLayers = new Float32Array(T.plazaLayers * 4);
-  const plazaY = [0.24, 0.8, 1.55];
+  const plazaY = [0.22, 0.6, 1.05];
   for (let i = 0; i < T.plazaLayers; i++) plazaLayers.set([plazaY[i], PLAZA_R + 3 - i * 2, i * 3.7, i], i * 4);
   plazaGeo.setAttribute('aLayer', new THREE.InstancedBufferAttribute(plazaLayers, 4));
   geometries.push(circle, plazaGeo);
   const plazaMat = fxMaterial(
     'MAT_FX_PlazaMist',
     T.oct,
-    { uTime, uFlash, uRed, uDensity, uErupt, uSwirl, uRing, uCenter },
+    { uTime, uFlash, uRed, uDensity, uErupt, uSwirl, uRing, uCenter, uGain },
     /* glsl */ `
     attribute vec4 aLayer; // y, radius, seed, index
     uniform float uErupt;
@@ -591,13 +724,13 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
     varying float vIdx;
     void main() {
       vP = position.xz * aLayer.y;
-      vWorld = vec3(uCenter.x + vP.x, aLayer.x * (1.0 + uErupt * 1.4) + uErupt * aLayer.w * 0.5, uCenter.y + vP.y);
+      vWorld = vec3(uCenter.x + vP.x, aLayer.x + uErupt * aLayer.w * 0.3, uCenter.y + vP.y);
       vSeed = aLayer.z;
       vIdx = aLayer.w;
       gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
     }`,
     /* glsl */ `
-    uniform float uTime, uFlash, uRed, uDensity, uErupt, uSwirl, uRing;
+    uniform float uTime, uFlash, uRed, uDensity, uErupt, uSwirl, uRing, uGain;
     varying vec3 vWorld;
     varying vec2 vP;
     varying float vSeed;
@@ -612,16 +745,18 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
       float n = fbm(q + vSeed);
       float arms = 0.5 + 0.5 * sin(th * 3.0 + log(r + 1.0) * 3.2 - uSwirl * 2.0);
       float d = smoothstep(0.3, 0.8, n * mix(0.85, 1.2, arms) + (1.0 - smoothstep(0.0, 14.0, r)) * 0.12);
-      float edge = 1.0 - smoothstep(${(PLAZA_R - 9).toFixed(1)}, ${(PLAZA_R + 3).toFixed(1)}, r);
-      float a = d * edge * (0.3 - vIdx * 0.06) * (uDensity + uErupt * 1.6);
+      float edge = 1.0 - smoothstep(${(PLAZA_R - 12).toFixed(1)}, ${(PLAZA_R + 2).toFixed(1)}, r + (n - 0.5) * 10.0);
+      float a = d * edge * (0.17 - vIdx * 0.04) * (uDensity + uErupt * 1.6);
       vec3 v = vWorld - cameraPosition;
-      a *= smoothstep(0.04, 0.25, abs(v.y) / length(v));
-      a = min(a, 0.7);
-      vec3 col = mix(vec3(0.2, 0.18, 0.3), vec3(0.42, 0.38, 0.56), n);
+      float dist = length(v);
+      a *= smoothstep(0.06, 0.3, abs(v.y) / dist);
+      a *= smoothstep(2.5, 11.0, dist);
+      a = min(a, 0.6);
+      vec3 col = mix(vec3(0.16, 0.15, 0.25), vec3(0.32, 0.29, 0.43), n);
       // Under-glow from the circle, strongest on the lowest layer and near the ring/nodes.
       vec3 glow = mix(vec3(0.85, 0.1, 0.16), vec3(0.5, 0.12, 0.9), 0.5 + 0.5 * sin(th + uTime * 0.3));
       float ring = exp(-abs(r - 27.0) * 0.45) + exp(-r * 0.12) * uErupt * 1.5;
-      col += glow * ring * uRing * (0.35 - vIdx * 0.1);
+      col += glow * ring * uRing * uGain * (0.35 - vIdx * 0.1);
       col = mix(col, vec3(0.45, 0.16, 0.22), uRed * 0.4);
       col += vec3(0.5, 0.5, 0.75) * uFlash;
       gl_FragColor = vec4(col * a, a);
@@ -637,7 +772,7 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
     fxMaterial(
       'MAT_FX_SummoningCircle',
       T.oct,
-      { uTime, uRing, uReveal, uErupt, uCenter, uExt: { value: PLAZA_R } },
+      { uTime, uRing, uReveal, uErupt, uCenter, uGain, uExt: { value: PLAZA_R } },
       /* glsl */ `
       uniform vec2 uCenter;
       uniform float uExt;
@@ -647,7 +782,7 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
         gl_Position = projectionMatrix * viewMatrix * vec4(uCenter.x + vP.x, 0.135, uCenter.y + vP.y, 1.0);
       }`,
       /* glsl */ `
-      uniform float uTime, uRing, uReveal, uErupt;
+      uniform float uTime, uRing, uReveal, uErupt, uGain;
       varying vec2 vP;
       ${NOISE}
       float seg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0)); }
@@ -655,7 +790,8 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
       void main() {
         float r = length(vP);
         float th = atan(vP.y, vP.x);
-        float I = stroke(abs(r - 27.0), 0.22) + stroke(abs(r - 24.6), 0.1) * 0.7;
+        float crack = 0.5 + 0.5 * vnoise(vec2(th * 18.0, 1.0));
+        float I = (stroke(abs(r - 27.0), 0.22) + stroke(abs(r - 24.6), 0.1) * 0.7) * mix(0.45, 1.0, crack);
         // Rune band: 40 cells, about two thirds carry a glyph of bars and ticks.
         float cells = 40.0;
         float u = th / 6.2831853 * cells;
@@ -671,7 +807,7 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
         // Triangle between the three rise points (revealed in the second half).
         vec2 A = vec2(0.0, 24.6), B = vec2(-21.3, -12.3), C = vec2(21.3, -12.3);
         float tri = min(seg(vP, A, B), min(seg(vP, B, C), seg(vP, C, A)));
-        I += stroke(tri, 0.14) * uReveal;
+        I += stroke(tri, 0.1) * uReveal * smoothstep(0.25, 0.6, vnoise(vP * 0.7 + 4.0)) * 0.8;
         // Rise nodes at radius 6 (90°, 210°, 330°).
         float node = 1e3;
         for (int i = 0; i < 3; i++) {
@@ -684,7 +820,7 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
         I *= 0.55 + 0.6 * vnoise(vP * 0.9 + uTime * 0.05);
         vec3 col = mix(vec3(1.0, 0.08, 0.1), vec3(0.55, 0.1, 1.0), 0.5 + 0.5 * sin(th + uTime * 0.25));
         float outer = 1.0 - smoothstep(28.5, 29.8, r);
-        gl_FragColor = vec4(col * I * uRing * outer, 0.0);
+        gl_FragColor = vec4(col * I * uRing * uGain * outer, 0.0);
         ${FINISH}
       }`,
       { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 },
@@ -714,7 +850,7 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
       // Candle flicker: two incommensurate sines plus a rare gutter.
       float t = uTime;
       vI = 0.86 + 0.08 * sin(t * 8.3 + ph * 5.0) + 0.06 * sin(t * 21.7 + ph * 11.0) - 0.18 * smoothstep(0.93, 1.0, sin(t * 1.3 + ph * 3.0));
-      float sz = 5.2;
+      float sz = 3.6;
       vec4 mv = viewMatrix * vec4(aLan.x + position.x * sz, aLan.y + 0.02, aLan.z - position.y * sz, 1.0);
       vI *= 1.0 - smoothstep(70.0, 140.0, -mv.z);
       gl_Position = projectionMatrix * mv;
@@ -725,15 +861,14 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
     varying float vI;
     void main() {
       float r2 = dot(vUv, vUv);
-      float f = exp(-r2 * 3.2) * (1.0 - smoothstep(0.7, 1.0, r2));
-      vec3 col = mix(vec3(1.0, 0.42, 0.09), vec3(1.0, 0.25, 0.06), uRed) * f * 0.62 * vI;
+      float f = (exp(-r2 * 9.0) * 0.7 + exp(-r2 * 3.0) * 0.3) * (1.0 - smoothstep(0.6, 1.0, r2));
+      vec3 col = mix(vec3(1.0, 0.38, 0.07), vec3(1.0, 0.22, 0.05), uRed) * f * 0.5 * vI;
       gl_FragColor = vec4(col, 0.0);
       ${FINISH}
     }`,
     { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 },
   );
   const lanterns = mesh('FX_LanternPools', lanternGeo, lanternMat, 1);
-  lanterns.visible = false;
   root.add(lanterns);
 
   // ── Burst pool (catches, eruption) ───────────────────────────────────────────────────────────
@@ -807,8 +942,8 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
         col = (vCol * exp(-r2 * 5.0) + vec3(0.9) * exp(-r2 * 30.0)) * 1.8 * (1.0 - vK);
       } else if (vKind < 1.5) {
         float r = length(vUv) * 1.1;
-        float band = exp(-abs(r - 1.0) * 26.0) + exp(-abs(r - 1.0) * 6.0) * 0.3;
-        col = vCol * band * 1.6 * pow(1.0 - vK, 1.5) * step(r, 1.08);
+        float band = exp(-abs(r - 1.0) * 40.0) + exp(-abs(r - 1.0) * 9.0) * 0.12;
+        col = vCol * band * 1.8 * pow(1.0 - vK, 2.0) * step(r, 1.08);
       } else {
         // Bedsheet ghost: head + body with a wavy hem, two eye holes and an O mouth.
         vec2 p = vUv;
@@ -827,7 +962,6 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
     }`,
   );
   const bursts = mesh('FX_Bursts', burstGeo, burstMat, 4);
-  bursts.visible = false;
   root.add(bursts);
 
   skipAO(root);
@@ -933,7 +1067,7 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
         const h = time - huntAt;
         const rise = ease(h / 0.35);
         erupt = rise * (0.35 + 0.65 * Math.exp(-Math.max(0, h - 0.35) / 2.2));
-        ringI = 0.9 + rise * 2.6 * Math.exp(-Math.max(0, h - 0.35) / 1.6);
+        ringI = 0.9 + rise * 1.9 * Math.exp(-Math.max(0, h - 0.35) / 1.6);
         reveal = 0.25 + 0.75 * rise;
         if (time >= nextAmbient) {
           strike(time, 0.3 + rand() * 0.25, rand() < 0.4);
@@ -985,6 +1119,7 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
       }
 
       if (bursts.visible && time > burstsUntil) bursts.visible = false;
+      lanterns.visible = lanternGeo.instanceCount > 0;
     },
 
     onScoresLocked(): void {
@@ -1031,22 +1166,16 @@ export function createHalloweenFx(opts: HalloweenFxOptions): HalloweenFx {
     },
 
     setGraveyard(rect): void {
-      // The last `roamCount` wisps roam the graveyard (or return to the streets).
-      for (let i = T.wisps - roamCount; i < T.wisps; i++) {
-        const k = i * perWisp * 4;
-        if (rect) {
-          const gx = (rect.minX + rect.maxX) / 2;
-          const gz = (rect.minZ + rect.maxZ) / 2;
-          const reach = Math.min(rect.maxX - rect.minX, rect.maxZ - rect.minZ) * 0.38;
-          for (let j = 0; j < perWisp; j++) wispPath.set([2, gx + (rand() - 0.5) * reach * 0.4, gz + (rand() - 0.5) * reach * 0.4, reach], k + j * 4);
-        } else {
-          const r = Math.floor(rand() * 3);
-          const lane = ROAD_AT[r] * half + cz;
-          for (let j = 0; j < perWisp; j++) wispPath.set([0, cx, lane, 30], k + j * 4);
-        }
-      }
-      const attr = wispGeo.getAttribute('aPath') as THREE.InstancedBufferAttribute;
-      attr.needsUpdate = true;
+      graveyard = rect;
+      placeRoamers();
+    },
+
+    setMistZones(zones): void {
+      writeMist(zones.length ? zones : defaultZones);
+    },
+
+    setRoosts(points): void {
+      writeBats(points.length ? points : defaultRoosts);
     },
 
     reset(): void {
@@ -1124,5 +1253,83 @@ function buildBatGeometry(): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('aSpan', new THREE.Float32BufferAttribute(span, 1));
+  return g;
+}
+
+/**
+ * Landscape beyond the fence: two hill ridges (near ≈1.75× the half extent, far ≈3×) and dead,
+ * forked trees standing on them as flat cards facing the district centre. Non-indexed, with an
+ * `aHaze` attribute (0 near … 1 far) for aerial perspective. Near ridge 10–24 m, far 24–52 m
+ * high: below the 18° moon from anywhere inside the bounds.
+ */
+function buildBackground(rand: () => number, cx: number, cz: number, half: number, trees: number, depth: number): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const haze: number[] = [];
+  const quad = (a: number[], b: number[], c: number[], d: number[], h: number) => {
+    pos.push(...a, ...b, ...c, ...a, ...c, ...d);
+    for (let i = 0; i < 6; i++) haze.push(h);
+  };
+  const ridges = [
+    { R: half * 2.1, h0: 9, h1: 26, haze: 0.34, seg: 120 },
+    { R: half * 3.2, h0: 26, h1: 56, haze: 0.6, seg: 96 },
+  ];
+  const crest: ((t: number) => number)[] = [];
+  for (const rg of ridges) {
+    const ph = [rand() * 6.28, rand() * 6.28, rand() * 6.28, rand() * 6.28];
+    const height = (t: number) => {
+      const n = 0.5 + 0.22 * Math.sin(t * 3 + ph[0]) + 0.16 * Math.sin(t * 7 + ph[1]) + 0.08 * Math.sin(t * 13 + ph[2]) + 0.05 * Math.sin(t * 29 + ph[3]);
+      return rg.h0 + (rg.h1 - rg.h0) * Math.min(1, Math.max(0, n));
+    };
+    crest.push(height);
+    for (let i = 0; i < rg.seg; i++) {
+      const t0 = (i / rg.seg) * Math.PI * 2;
+      const t1 = ((i + 1) / rg.seg) * Math.PI * 2;
+      const P = (t: number, r: number, y: number) => [cx + Math.cos(t) * r, y, cz + Math.sin(t) * r];
+      const h0 = height(t0);
+      const h1 = height(t1);
+      // Inner slope (foot → crest) and back slope (crest → outer shoulder).
+      // The near ridge's apron runs in to 1.2× the half extent so no sky shows under a finite ground plane.
+      const foot = rg === ridges[0] ? half * 1.2 : rg.R - 50;
+      quad(P(t0, foot, -0.6), P(t1, foot, -0.6), P(t1, rg.R, h1), P(t0, rg.R, h0), rg.haze);
+      quad(P(t0, rg.R, h0), P(t1, rg.R, h1), P(t1, rg.R + 40, h1 * 0.55), P(t0, rg.R + 40, h0 * 0.55), rg.haze);
+    }
+  }
+  // Dead trees: forked branches as tapered cards in the plane facing the centre.
+  const branch = (x: number, y: number, z: number, tx: number, tz: number, ang: number, len: number, w: number, d: number, h: number) => {
+    const dx = Math.sin(ang);
+    const dy = Math.cos(ang);
+    const ex = x + tx * dx * len;
+    const ey = y + dy * len;
+    const ez = z + tz * dx * len;
+    const sx = tx * Math.cos(ang);
+    const sy = -Math.sin(ang);
+    const w2 = w * 0.55;
+    quad([x - (sx * w) / 2, y - (sy * w) / 2, z - (tz * Math.cos(ang) * w) / 2], [x + (sx * w) / 2, y + (sy * w) / 2, z + (tz * Math.cos(ang) * w) / 2],
+      [ex + (sx * w2) / 2, ey + (sy * w2) / 2, ez + (tz * Math.cos(ang) * w2) / 2], [ex - (sx * w2) / 2, ey - (sy * w2) / 2, ez - (tz * Math.cos(ang) * w2) / 2], h);
+    if (d <= 0) return;
+    const kids = rand() < 0.3 ? 3 : 2;
+    for (let k = 0; k < kids; k++) {
+      const spread = (k - (kids - 1) / 2) * (0.55 + rand() * 0.35) + (rand() - 0.5) * 0.3;
+      branch(ex, ey, ez, tx, tz, ang * 0.6 + spread, len * (0.58 + rand() * 0.18), w2, d - 1, h);
+    }
+  };
+  const ringTrees = [trees, Math.round(trees / 2)];
+  for (let r = 0; r < 2; r++) {
+    const rg = ridges[r];
+    for (let i = 0; i < ringTrees[r]; i++) {
+      const t = ((i + rand() * 0.8) / ringTrees[r]) * Math.PI * 2;
+      const rr = rg.R - rand() * 6;
+      const x = cx + Math.cos(t) * rr;
+      const z = cz + Math.sin(t) * rr;
+      const ground = crest[r](t) * (1 - (rg.R - rr) / (r === 0 ? rg.R - half * 1.2 : 50)) - 0.8;
+      const H = (r === 0 ? 9 + rand() * 8 : 13 + rand() * 9) * (rand() < 0.12 ? 1.6 : 1);
+      // Card plane: tangent to the ring (faces the centre).
+      branch(x, ground, z, -Math.sin(t), Math.cos(t), (rand() - 0.5) * 0.25, H * 0.45, H * 0.07, depth, rg.haze);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('aHaze', new THREE.Float32BufferAttribute(haze, 1));
+  g.computeBoundingSphere();
   return g;
 }

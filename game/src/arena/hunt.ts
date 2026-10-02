@@ -122,6 +122,7 @@ export class Hunt {
     if (!this.announced.locked) {
       this.announced.locked = true;
       g.onEvent?.({ kind: 'scoresLocked' });
+      g.atmosphere?.onScoresLocked();
       g.hud.showBanner(L('上半场结束 · 分数已锁定', 'HALF TIME · SCORES LOCKED'), L('马上变小……有东西要来了', 'Shrinking… something is coming'), 2.6);
       g.onFeed?.(L('🎃 分数已锁定。下半场：别被抓住，被抓分数清零！', '🎃 Scores locked. Second half: don’t get caught — caught = score 0!'), 'bonus');
     }
@@ -132,6 +133,7 @@ export class Hunt {
     if (st !== 'locked' && !this.announced.rise) {
       this.announced.rise = true;
       g.onEvent?.({ kind: 'hunterRise' });
+      g.atmosphere?.onHuntStart();
       g.effects.pulse(0, 0, 30, 1.6);
       g.effects.addTrauma(0.35);
     }
@@ -319,6 +321,7 @@ export class Hunt {
     g.effects.shards(a.x, a.diameter * 0.5, a.z, new THREE.Color(a.vehicle.shell), 22, a.diameter * 0.12, 3 + a.diameter * 2);
     g.effects.burst(a.x, a.diameter * 0.6, a.z, new THREE.Color(0x7dff6a), 26, Math.max(0.05, a.diameter * 0.1), 4);
     g.effects.pulse(a.x, a.z, 6, 0.9);
+    g.atmosphere?.onCaught(a.x, a.z);
     const [zh, en] = hunterName(h.def);
     const lost = Math.round(this.scores.get(id) ?? 0).toLocaleString('en-US');
     g.onFeed?.(L(`👻 ${a.name} 被${zh}${h.def.catchLineZh} · 分数清零（-${lost} kg）`, `👻 ${a.name} got ${h.def.catchLine} by ${en} · score reset (−${lost} kg)`), 'kill');
