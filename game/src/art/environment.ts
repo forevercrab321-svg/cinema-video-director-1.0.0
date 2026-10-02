@@ -28,6 +28,8 @@ export interface Palette {
   hemiGround: THREE.Color;
   hemiIntensity: number;
   envIntensity: number;
+  /** Multiplier on the cloud deck's light (night skies: dim, cool clouds). Default white = unchanged. */
+  cloudTint?: THREE.Color;
 }
 
 export const GOLDEN_HOUR: Palette = {
@@ -62,6 +64,7 @@ export function createSkyDome(radius = 900, palette: Palette = GOLDEN_HOUR): THR
     uSunDir: { value: palette.sunDirection },
     uTime: { value: 0 },
     uClouds: { value: palette.clouds },
+    uCloudTint: { value: palette.cloudTint ?? new THREE.Color(1, 1, 1) },
   };
   const mat = new THREE.ShaderMaterial({
     name: 'MAT_SkyDome',
@@ -80,6 +83,7 @@ export function createSkyDome(radius = 900, palette: Palette = GOLDEN_HOUR): THR
       uniform vec3 uTop, uMid, uHorizon, uGround, uSun, uSunDir;
       uniform float uTime;
       uniform float uClouds;
+      uniform vec3 uCloudTint;
       varying vec3 vDir;
       float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float noise(vec2 p) {
@@ -109,8 +113,8 @@ export function createSkyDome(radius = 900, palette: Palette = GOLDEN_HOUR): THR
           float c = fbm(uv * 1.1);
           float cover = smoothstep(0.52, 0.78, c + fbm(uv * 0.35 + 3.0) * 0.35 - 0.12 + uClouds);
           float thick = smoothstep(0.55, 0.95, c);
-          vec3 lit = mix(vec3(1.0, 0.86, 0.7), vec3(1.0, 0.95, 0.9), h) * (1.0 + pow(s, 6.0) * 1.2);
-          vec3 shade = mix(uMid, vec3(0.62, 0.6, 0.64), 0.5);
+          vec3 lit = mix(vec3(1.0, 0.86, 0.7), vec3(1.0, 0.95, 0.9), h) * (1.0 + pow(s, 6.0) * 1.2) * uCloudTint;
+          vec3 shade = mix(uMid, vec3(0.62, 0.6, 0.64) * uCloudTint, 0.5);
           vec3 cloud = mix(lit, shade, thick * 0.65);
           float fade = smoothstep(0.02, 0.2, h);
           col = mix(col, cloud, cover * fade * 0.92);

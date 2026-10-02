@@ -146,7 +146,7 @@ export class MaterialLibrary {
       pumpkin: std({ color: 0xd9621a, roughness: 0.48, metalness: 0, envMapIntensity: 0.8 }),
       straw: std({ color: 0xffdc8e, ...tex(kit.cardboard, 1.2), roughness: 0.95, metalness: 0, envMapIntensity: 0.4 }),
       velvet: phy({ color: 0x6e0c1c, roughness: 0.85, sheen: 0.9, sheenRoughness: 0.45, sheenColor: new THREE.Color(0xff6a7a), envMapIntensity: 0.5 }),
-      shingle: std({ color: 0x9a8ca8, ...tex(kit.darkBrick, 1.2), roughness: 0.9, metalness: 0, envMapIntensity: 0.6 }),
+      shingle: std({ color: 0x8a96c0, ...tex(kit.darkBrick, 1.2), roughness: 0.9, metalness: 0, envMapIntensity: 0.6 }),
       // Folded into 'lamps' by the prop Builder (LAMP_COLOURS); these entries only satisfy the role table.
       ghostGlow: std({ color: 0x1a4010, emissive: 0x6dff4a, emissiveIntensity: 1.6, roughness: 0.3 }),
       pumpkinGlow: std({ color: 0x5a2800, emissive: 0xff7a14, emissiveIntensity: 1.8, roughness: 0.3 }),

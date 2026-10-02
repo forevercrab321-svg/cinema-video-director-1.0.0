@@ -22,6 +22,7 @@ const MOONLIGHT: Palette = {
   hemiGround: new THREE.Color(0x3e3040),
   hemiIntensity: 1.15,
   envIntensity: 0.5,
+  cloudTint: new THREE.Color(0.3, 0.3, 0.42),
 };
 
 /** Monster figures guard the four boulevard approaches to the (empty) plaza. */
@@ -96,7 +97,7 @@ export const HALLOWEEN = makeCity({
   streetLamps: 'gas',
   signals: false,
   deadTrees: true,
-  perimeter: { materials: ['darkBrick', 'darkBrick', 'plaster', 'brick'], h: [14, 22] },
+  perimeter: { materials: ['darkBrick', 'darkBrick', 'darkBrick', 'plaster'], h: [14, 22] },
   skyline: {
     n: 48,
     h: [14, 26],
