@@ -315,14 +315,17 @@ function build(): CityDef {
     lanternAt(x, z, Math.atan2(z, -x) + Math.PI);
   }
 
-  // ── Dead forest beyond the wall (dressing only) ──
+  // ── Dead forest beyond the south and west walls (dressing only). The low moon is in the
+  // north-east, so trees there would throw 40 m shadows across the play area; the FX layer's
+  // hill silhouettes close the view on those sides instead.
   const frand = createSeededRandom(1031 ^ 0x7ee);
-  for (let i = 0; i < 170; i++) {
+  for (let i = 0; i < 260 && trees.length < 44 + 110; i++) {
     const a = frand() * Math.PI * 2;
     const r = HALF + 5 + frand() * 32;
     const x = THREE.MathUtils.clamp(Math.cos(a) * r * 1.3, -HALF - 36, HALF + 36);
     const z = THREE.MathUtils.clamp(Math.sin(a) * r * 1.3, -HALF - 36, HALF + 36);
     if (Math.max(Math.abs(x), Math.abs(z)) < HALF + 4) continue;
+    if (z < -HALF || x > HALF) continue; // north and east sides stay open
     trees.push({ x, z, y: 0 });
   }
 

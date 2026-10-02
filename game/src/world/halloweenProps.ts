@@ -256,8 +256,8 @@ function skullParts(b: Adder, x: number, y: number, z: number, k = 1, rx = 0, ry
     g.scale(k, k, k).translate(px * k, py * k, pz * k).rotateX(rx).rotateY(ry);
     b.add(role, g, x, y, z);
   };
-  // Giant skulls (k > 4) need real curvature: more segments, same shape.
-  const hi = k > 4;
+  // Giant skulls (k > 12) need real curvature: more segments, same shape.
+  const hi = k > 12;
   if (eyes) for (const s of [-1, 1]) put(eyes, ell(0.011, 0.012, 0.006, hi ? 12 : 6, hi ? 8 : 4), s * 0.028, 0.08, -0.088);
   put('bone', ell(0.07, 0.075, 0.088, hi ? 28 : 10, hi ? 18 : 8), 0, 0.09, 0.018);
   put('bone', ell(0.058, 0.05, 0.05, hi ? 22 : 8, hi ? 14 : 6), 0, 0.06, -0.04);
@@ -1033,7 +1033,7 @@ const batShape = (k: number) => poly([...BAT_HALF, ...BAT_HALF.slice(1, -1).reve
 function batPlush(t: ObjectType): PropParts {
   const [W] = t.size; // stuffed bat toy sitting with its wings spread
   const b = new Builder();
-  b.add('fabric', slab(batShape(W / 1.1), 0.02, 0.006, 2), 0, 0.1, 0.03, -0.25, 0, 0);
+  b.add('fabric', slab(batShape(W / 1.1), 0.02, 0, 1), 0, 0.1, 0.03, -0.25, 0, 0);
   b.add('fabric', ell(0.065, 0.07, 0.055, 10, 8), 0, 0.07, 0);
   b.add('fabric', new THREE.SphereGeometry(0.048, 10, 8), 0, 0.13, -0.01);
   for (const s of [-1, 1]) {
