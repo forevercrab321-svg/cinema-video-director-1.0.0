@@ -534,7 +534,7 @@ function slimeGhost(t: ObjectType): PropParts {
   const [W] = t.size; // floating goo ghost, dripping to a puddle that holds it up
   const b = new Builder();
   // Body: head and shoulders swell out of a twisting goo tail that pools on the ground.
-  const body = lathe([[0.001, 2.08], [0.16, 2.05], [0.3, 1.97], [0.39, 1.82], [0.43, 1.6], [0.45, 1.32], [0.47, 1.08], [0.43, 0.84], [0.33, 0.6], [0.23, 0.38], [0.19, 0.2], [0.24, 0.08], [0.34, 0.03], [0.001, 0.02]], 24);
+  const body = lathe([[0.001, 2.08], [0.16, 2.05], [0.3, 1.97], [0.39, 1.82], [0.43, 1.6], [0.45, 1.32], [0.47, 1.08], [0.43, 0.84], [0.33, 0.6], [0.23, 0.38], [0.19, 0.2], [0.24, 0.08], [0.34, 0.03], [0.001, 0.02]], 32);
   const p = body.getAttribute('position');
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i);

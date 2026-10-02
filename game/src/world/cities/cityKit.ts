@@ -534,15 +534,15 @@ function buildDistrict(lib: MaterialLibrary, style: CityStyle, perimeter: Static
   );
   batch.add('sidewalk', new THREE.CylinderGeometry(PLAZA_R, PLAZA_R, CURB, 64), 0, CURB / 2, 0);
   if (graveyard) {
-    // Churchyard ground: worn gravel inside the railings, paved cross paths over it.
+    // Churchyard ground: weathered flagstone inside the railings, paved cross paths over it.
     const g = graveyard;
     const gx = (g.x0 + g.x1) / 2;
     const gz = (g.z0 + g.z1) / 2;
-    batch.add('gravel', box(g.x1 - g.x0, 0.012, g.z1 - g.z0), gx, CURB + 0.006, gz);
+    batch.add('curb', box(g.x1 - g.x0, 0.012, g.z1 - g.z0), gx, CURB + 0.006, gz);
     batch.add('sidewalk', box(3.2, 0.014, g.z1 - g.z0), gx, CURB + 0.007, gz);
     batch.add('sidewalk', box(g.x1 - g.x0, 0.014, 3.2), gx, CURB + 0.007, gz);
   }
-  if (patch) batch.add('gravel', box(patch.x1 - patch.x0, 0.012, patch.z1 - patch.z0), (patch.x0 + patch.x1) / 2, CURB + 0.006, (patch.z0 + patch.z1) / 2);
+  if (patch) batch.add('curb', box(patch.x1 - patch.x0, 0.012, patch.z1 - patch.z0), (patch.x0 + patch.x1) / 2, CURB + 0.006, (patch.z0 + patch.z1) / 2);
   batch.add('curb', new THREE.TorusGeometry(PLAZA_R, 0.1, 4, 64).rotateX(Math.PI / 2), 0, CURB, 0);
   // Plaza paving rings and radial joints.
   for (const r of [8, 14, 20, 26]) batch.add('paintLine', new THREE.RingGeometry(r - 0.12, r + 0.12, 64).rotateX(-Math.PI / 2), 0, CURB + 0.004, 0);

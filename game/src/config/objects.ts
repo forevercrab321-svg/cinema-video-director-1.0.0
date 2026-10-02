@@ -251,7 +251,7 @@ export const OBJECT_TYPES = {
   BROOM_RACK: { label: 'Broom rack', objectClass: 3, size: [1.3, 1.75, 0.55], shape: 'broomRack', colors: [0x2a2233, 0x3b2357], rewardMass: 14, destructionType: 'collect' },
   BAT_SIGN: { label: 'Bat sign', objectClass: 3, size: [1.1, 2.6, 0.16], shape: 'batSign', colors: [0x5a4632, 0x4a3a2a], rewardMass: 12.5, destructionType: 'collect' },
   GRAVE_OBELISK: { label: 'Grave obelisk', objectClass: 4, size: [0.95, 2.8, 0.95], shape: 'tombstone', colors: [0xa9a6a0, 0xb4ada2, 0x9a9e98], rewardMass: 80, destructionType: 'crush' },
-  COFFIN: { label: 'Coffin', objectClass: 4, size: [0.76, 0.58, 2.1], shape: 'coffin', colors: [0x4a2e1e, 0x2a1c16, 0x5a2a22], rewardMass: 70, destructionType: 'crush' },
+  COFFIN: { label: 'Coffin', objectClass: 4, size: [0.76, 0.58, 2.1], shape: 'coffin', colors: [0x6a4430, 0x4a3328, 0x6e3a2e], rewardMass: 70, destructionType: 'crush' },
   SLIME_GHOST: { label: 'Slime ghost', objectClass: 4, size: [1.6, 2.1, 1.1], shape: 'slimeGhost', colors: [0x7dff52, 0x52ffb8, 0xb6ff3a], rewardMass: 90, destructionType: 'crush' },
   SCARECROW: { label: 'Scarecrow', objectClass: 4, size: [1.7, 2.35, 0.55], shape: 'scarecrow', colors: [0x5b4a3a, 0x4a5a3a, 0x6a3a2a, 0x3f4a5f], rewardMass: 70, destructionType: 'crush' },
   CANDY_CART: { label: 'Candy cart', objectClass: 4, size: [1.9, 2.5, 0.95], shape: 'candyCart', colors: [0x6a2f9a, 0xd9601a, 0x2f8a7a], rewardMass: 90, destructionType: 'crush' },

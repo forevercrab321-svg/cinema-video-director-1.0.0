@@ -4,24 +4,24 @@ import type { Placement } from '../scrapCity';
 import { makeCity } from './cityKit';
 
 /**
- * Moonlit night. The moon is the key light (cool, ~25° up in the north so the long shadows fall
+ * Moonlit night. The moon is the key light (cool, ~38° up in the north-east so shadows fall
  * toward the south spawn's camera), a violet hemisphere keeps dark props readable, and the sky
  * runs from deep indigo to a violet band with an orange town-glow on the horizon. Gameplay
  * readability beats drama: the moon is bright enough to model every prop.
  */
 const MOONLIGHT: Palette = {
-  sunDirection: new THREE.Vector3(0.5, 0.46, -0.73).normalize(),
+  sunDirection: new THREE.Vector3(0.45, 0.62, -0.64).normalize(),
   sunColor: new THREE.Color(0xb8c6ff),
-  sunIntensity: 2.3,
+  sunIntensity: 2.6,
   sky: { top: new THREE.Color(0x0d1230), mid: new THREE.Color(0x3a2a68), horizon: new THREE.Color(0xd8743e), ground: new THREE.Color(0x1a1622), sun: new THREE.Color(0xe9eeff) },
-  clouds: -0.12,
+  clouds: -0.25,
   fog: new THREE.Color(0x3d3558),
   fogNear: 70,
   fogFar: 400,
   hemiSky: new THREE.Color(0x9a92d6),
-  hemiGround: new THREE.Color(0x3e3040),
-  hemiIntensity: 1.15,
-  envIntensity: 0.5,
+  hemiGround: new THREE.Color(0x4c3e56),
+  hemiIntensity: 1.75,
+  envIntensity: 0.9,
   cloudTint: new THREE.Color(0.3, 0.3, 0.42),
 };
 
