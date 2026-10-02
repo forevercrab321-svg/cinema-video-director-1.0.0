@@ -59,9 +59,39 @@ export interface CityStyle {
   extras?: Placement[];
   /** A river along one edge instead of perimeter facades (Shanghai: the Huangpu, Pudong beyond). */
   waterfront?: 'east';
-  /** Strings of red lanterns across the side streets (Shanghai). */
-  lanterns?: boolean;
+  /** Strings of red lanterns across the side streets (Shanghai); 'pumpkin' hangs jack-o'-lanterns instead. */
+  lanterns?: boolean | 'pumpkin';
+  // ── Theme options (Halloween Town). All optional: when absent the kit generates exactly the
+  // standard city (same rand() call order, same placements), so existing cities are unchanged.
+  /** Keep the central plaza clear: no plaza ring furniture and no food clusters inside it. */
+  emptyPlaza?: boolean;
+  /** Courtyard objects behind the street fronts: [type, tries]. */
+  courtyard?: [ObjectTypeId, number][];
+  /** Courtyard food clusters: [type, radius as a fraction of the cell span, count]. */
+  courtyardFood?: [ObjectTypeId, number, number][];
+  /** What the park cell becomes. */
+  parkKind?: 'park' | 'graveyard';
+  /** Replacement kit for the construction-site cell: [type, dx, dz, yaw] from the cell centre. */
+  siteKit?: [ObjectTypeId, number, number, number][];
+  /** Food clusters on the site cell: [type, radius m, count]. */
+  siteFood?: [ObjectTypeId, number, number][];
+  /** Loose sidewalk food picked for the kerbside clusters (class 0 types get 10, others 5). */
+  streetFood?: ObjectTypeId[];
+  /** Arena spawn count: 4 (default) or 6 (two more at the NW and SE junctions). */
+  spawnCount?: 4 | 6;
+  /** Street lighting: modern cobra-head poles (default) or Victorian gas lamps. */
+  streetLamps?: 'modern' | 'gas';
+  /** Traffic signals on the junctions (default true). */
+  signals?: boolean;
+  /** Bare, twisted dead street trees (some with a hanging lantern). */
+  deadTrees?: boolean;
+  /** Themed starter food ring around each arena spawn (see CityDef.starterRing). */
+  starterRing?: [ObjectTypeId, number, number][];
 }
+
+const COURTYARD: [ObjectTypeId, number][] = [['DUMPSTER', 1], ['TRASH_CAN', 2], ['PALLET', 2], ['DELIVERY_TRUCK', 1], ['CONTAINER', 1], ['VAN', 1]];
+const COURTYARD_FOOD: [ObjectTypeId, number, number][] = [['SCRAP', 0.3, 22], ['CARDBOARD_BOX', 0.28, 6], ['TRASH_BAG', 0.28, 5], ['BRICK', 0.3, 10]];
+const STREET_FOOD: ObjectTypeId[] = ['CAN', 'BOTTLE', 'SCRAP', 'CARDBOARD_SMALL', 'TRAFFIC_CONE', 'TRASH_BAG'];
 
 /** Distant signature towers, shaped by kind (all far enough to read as silhouettes through haze). */
 export interface Hero {
@@ -70,7 +100,7 @@ export interface Hero {
   w: number;
   h: number;
   taper?: number;
-  kind?: 'box' | 'twist' | 'opener' | 'pagoda' | 'obelisk' | 'arch';
+  kind?: 'box' | 'twist' | 'opener' | 'pagoda' | 'obelisk' | 'arch' | 'spire' | 'castle';
 }
 
 export const HALF = 96;
@@ -128,6 +158,7 @@ export function makeCity(style: CityStyle): CityDef {
   const trees: { x: number; z: number; y: number }[] = [];
   const pick = <T>(list: readonly T[]) => list[Math.floor(rand() * list.length)];
   const taken: Rect[] = [];
+  let graveyard: Rect | null = null;
   const free = (r: Rect, pad: number) => !taken.some((t) => r.x0 < t.x1 + pad && r.x1 > t.x0 - pad && r.z0 < t.z1 + pad && r.z1 > t.z0 - pad);
   const inPlaza = (r: Rect, pad: number) => {
     const cx = THREE.MathUtils.clamp(0, r.x0, r.x1);
@@ -170,7 +201,8 @@ export function makeCity(style: CityStyle): CityDef {
     const { r } = cell;
     const inner = (cell.ix === 1 || cell.ix === 2) && (cell.iz === 1 || cell.iz === 2);
     if (cell === park) {
-      parkCell(r);
+      if (style.parkKind === 'graveyard') graveyardCell(r);
+      else parkCell(r);
       continue;
     }
     if (cell === site) {
@@ -204,7 +236,7 @@ export function makeCity(style: CityStyle): CityDef {
     const cx = (r.x0 + r.x1) / 2;
     const cz = (r.z0 + r.z1) / 2;
     const span = Math.min(r.x1 - r.x0, r.z1 - r.z0);
-    for (const [type, n] of [['DUMPSTER', 1], ['TRASH_CAN', 2], ['PALLET', 2], ['DELIVERY_TRUCK', 1], ['CONTAINER', 1], ['VAN', 1]] as const) {
+    for (const [type, n] of style.courtyard ?? COURTYARD) {
       for (let i = 0; i < n; i++) {
         const x = cx + (rand() - 0.5) * span * 0.4;
         const z = cz + (rand() - 0.5) * span * 0.4;
@@ -212,12 +244,7 @@ export function makeCity(style: CityStyle): CityDef {
         if (fits(type, x, z, yaw, 0.4)) place(type, x, z, yaw);
       }
     }
-    clusters.push(
-      { type: 'SCRAP', x: cx, z: cz, radius: span * 0.3, count: 22 },
-      { type: 'CARDBOARD_BOX', x: cx, z: cz, radius: span * 0.28, count: 6 },
-      { type: 'TRASH_BAG', x: cx, z: cz, radius: span * 0.28, count: 5 },
-      { type: 'BRICK', x: cx, z: cz, radius: span * 0.3, count: 10 },
-    );
+    for (const [type, k, count] of style.courtyardFood ?? COURTYARD_FOOD) clusters.push({ type, x: cx, z: cz, radius: span * k, count });
   }
 
   function parkCell(r: Rect): void {
@@ -250,9 +277,69 @@ export function makeCity(style: CityStyle): CityDef {
     );
   }
 
+  /**
+   * Graveyard (Halloween park cell): an iron-railed churchyard with gates and paths on all four
+   * sides, two crypts facing the paths, headstone rows in the other quadrants, dead trees.
+   */
+  function graveyardCell(r: Rect): void {
+    const cx = (r.x0 + r.x1) / 2;
+    const cz = (r.z0 + r.z1) / 2;
+    const g = { x0: r.x0 + WALK + 1.2, x1: r.x1 - WALK - 1.2, z0: r.z0 + WALK + 1.2, z1: r.z1 - WALK - 1.2 };
+    graveyard = g;
+    // Railings: 2.4 m segments, a 4.8 m gate gap in the middle of each side.
+    const seg = OBJECT_TYPES.IRON_FENCE.size[0];
+    for (const [a0, a1, line, alongX] of [[g.x0, g.x1, g.z0, true], [g.x0, g.x1, g.z1, true], [g.z0, g.z1, g.x0, false], [g.z0, g.z1, g.x1, false]] as const) {
+      const mid = (a0 + a1) / 2;
+      const n = Math.floor((a1 - a0) / seg);
+      const start = mid - (n * seg) / 2;
+      for (let i = 0; i < n; i++) {
+        const a = start + (i + 0.5) * seg;
+        if (Math.abs(a - mid) < seg) continue;
+        place('IRON_FENCE', alongX ? a : line, alongX ? line : a, alongX ? 0 : Q);
+      }
+    }
+    // Two crypts in opposite quadrants, doors toward the north–south path.
+    const qx = (g.x1 - g.x0) / 4 + 0.6;
+    const qz = (g.z1 - g.z0) / 4 + 0.6;
+    for (const [sx, sz] of [[1, -1], [-1, 1]] as const) {
+      const x = cx + sx * qx;
+      const z = cz + sz * qz;
+      const yaw = faceYaw(-sx, 0);
+      if (fits('CRYPT', x, z, yaw, 0.5)) place('CRYPT', x, z, yaw);
+      if (fits('SLIME_GHOST', x - sx * 4.2, z + sz * 3.5, 0, 0.3)) place('SLIME_GHOST', x - sx * 4.2, z + sz * 3.5, faceYaw(sx, 0));
+    }
+    // Headstone rows fill what is left, clear of the cross paths (graves face west, slightly askew).
+    const kinds: ObjectTypeId[] = ['TOMBSTONE', 'TOMBSTONE', 'TOMBSTONE', 'TOMBSTONE', 'TOMBSTONE_CROSS', 'TOMBSTONE_CROSS', 'GRAVE_OBELISK'];
+    for (let z = g.z0 + 1.6; z < g.z1 - 1.2; z += 2.5) {
+      if (Math.abs(z - cz) < 2.2) continue;
+      for (let x = g.x0 + 1.4; x < g.x1 - 1.0; x += 1.7) {
+        if (Math.abs(x - cx) < 2.4) continue;
+        const roll = rand();
+        if (roll < 0.1) continue;
+        const type: ObjectTypeId = roll > 0.985 ? 'SKELETON' : roll > 0.965 ? 'COFFIN' : roll > 0.95 ? 'SLIME_GHOST' : pick(kinds);
+        const yaw = Q + (rand() - 0.5) * 0.14;
+        if (fits(type, x, z, yaw, 0.12)) place(type, x, z, yaw);
+      }
+    }
+    // Dead trees inside the railing corners.
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) trees.push({ x: sx < 0 ? g.x0 + 0.9 : g.x1 - 0.9, z: sz < 0 ? g.z0 + 0.9 : g.z1 - 0.9, y: CURB });
+    clusters.push(
+      { type: 'CANDLE', x: cx, z: cz, radius: 13, count: 18 },
+      { type: 'SKULL', x: cx, z: cz, radius: 13, count: 8 },
+      { type: 'BONE', x: cx, z: cz, radius: 13, count: 12 },
+      { type: 'CANDY_CORN', x: cx, z: cz, radius: 12, count: 16 },
+      { type: 'GOLD_CRATE', x: cx, z: cz, radius: 8, count: 2 },
+    );
+  }
+
   function siteCell(r: Rect): void {
     const cx = (r.x0 + r.x1) / 2;
     const cz = (r.z0 + r.z1) / 2;
+    if (style.siteKit) {
+      for (const [type, dx, dz, yaw] of style.siteKit) if (fits(type, cx + dx, cz + dz, yaw, 0.6)) place(type, cx + dx, cz + dz, yaw);
+      for (const [type, radius, count] of style.siteFood ?? []) clusters.push({ type, x: cx, z: cz, radius, count });
+      return;
+    }
     const kit: [ObjectTypeId, number, number, number][] = [
       ['EXCAVATOR', -6, -4, 0.6],
       ['CONTAINER', 8, -8, 0],
@@ -333,22 +420,24 @@ export function makeCity(style: CityStyle): CityDef {
           const x = axis === 'x' ? a : c + side * (w / 2 + 2);
           const z = axis === 'x' ? c + side * (w / 2 + 2) : a;
           if (Math.hypot(x, z) < PLAZA_R + 2) continue;
-          const t = pick(['CAN', 'BOTTLE', 'SCRAP', 'CARDBOARD_SMALL', 'TRAFFIC_CONE', 'TRASH_BAG'] as const);
-          clusters.push({ type: t, x, z, radius: 3, count: t === 'SCRAP' ? 10 : 5 });
+          const t = pick(style.streetFood ?? STREET_FOOD);
+          clusters.push({ type: t, x, z, radius: 3, count: OBJECT_TYPES[t].objectClass === 0 ? 10 : 5 });
         }
       }
     }
   }
   // Plaza ring: benches, kiosks and a ring of food for mid-size machines circling the landmark.
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2 + 0.13;
-    const x = Math.cos(a) * (PLAZA_R - 5);
-    const z = Math.sin(a) * (PLAZA_R - 5);
-    const type = i % 3 === 0 ? 'KIOSK' : i % 3 === 1 ? 'BENCH' : 'TRASH_CAN';
-    const yaw = faceYaw(-Math.cos(a), -Math.sin(a));
-    if (fits(type, x, z, yaw, 0.5)) place(type, x, z, yaw);
+  if (!style.emptyPlaza) {
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 + 0.13;
+      const x = Math.cos(a) * (PLAZA_R - 5);
+      const z = Math.sin(a) * (PLAZA_R - 5);
+      const type = i % 3 === 0 ? 'KIOSK' : i % 3 === 1 ? 'BENCH' : 'TRASH_CAN';
+      const yaw = faceYaw(-Math.cos(a), -Math.sin(a));
+      if (fits(type, x, z, yaw, 0.5)) place(type, x, z, yaw);
+    }
+    clusters.push({ type: 'SCRAP', x: 0, z: 0, radius: PLAZA_R - 2, count: 40 }, { type: 'CAN', x: 0, z: 0, radius: PLAZA_R - 2, count: 20 });
   }
-  clusters.push({ type: 'SCRAP', x: 0, z: 0, radius: PLAZA_R - 2, count: 40 }, { type: 'CAN', x: 0, z: 0, radius: PLAZA_R - 2, count: 20 });
 
   // ── Static perimeter and spawns ──
   const perimeter: StaticBlock[] = [];
@@ -387,6 +476,8 @@ export function makeCity(style: CityStyle): CityDef {
     { x: -HALF + 8, z: 0, heading: -Q },
     { x: HALF - 8, z: 0, heading: Q },
   ];
+  // Six-player maps add the NW and SE junctions (≈64 m from their neighbours), facing the plaza.
+  if (style.spawnCount === 6) spawns.push({ x: -56, z: -56, heading: (-3 * Math.PI) / 4 }, { x: 56, z: 56, heading: Math.PI / 4 });
 
   return {
     id: style.id,
@@ -403,15 +494,16 @@ export function makeCity(style: CityStyle): CityDef {
     groundHeight: cityGroundHeight,
     spawn: spawns[0],
     spawns,
-    build: (lib) => buildDistrict(lib, style, perimeter, faces),
-    dressing: { trees, crown: style.treeCrown, seed: style.seed },
+    ...(style.starterRing ? { starterRing: style.starterRing } : {}),
+    build: (lib) => buildDistrict(lib, style, perimeter, faces, graveyard),
+    dressing: { trees, crown: style.treeCrown, seed: style.seed, ...(style.deadTrees ? { dead: true } : {}) },
     climaxName: style.climaxName,
     climaxNameZh: style.climaxNameZh,
   };
 }
 
 // ── Static district: ground, roads, markings, kerbs, lights, perimeter facades, skyline ──
-function buildDistrict(lib: MaterialLibrary, style: CityStyle, perimeter: StaticBlock[], faces: { block: StaticBlock; cx: number; cz: number; ry: number; len: number }[]): CityBuild {
+function buildDistrict(lib: MaterialLibrary, style: CityStyle, perimeter: StaticBlock[], faces: { block: StaticBlock; cx: number; cz: number; ry: number; len: number }[], graveyard: Rect | null = null): CityBuild {
   const batch = new Batch();
   const occluders: THREE.Object3D[] = [];
   const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d);
@@ -439,6 +531,15 @@ function buildDistrict(lib: MaterialLibrary, style: CityStyle, perimeter: Static
     }),
   );
   batch.add('sidewalk', new THREE.CylinderGeometry(PLAZA_R, PLAZA_R, CURB, 64), 0, CURB / 2, 0);
+  if (graveyard) {
+    // Churchyard ground: worn gravel inside the railings, paved cross paths over it.
+    const g = graveyard;
+    const gx = (g.x0 + g.x1) / 2;
+    const gz = (g.z0 + g.z1) / 2;
+    batch.add('gravel', box(g.x1 - g.x0, 0.012, g.z1 - g.z0), gx, CURB + 0.006, gz);
+    batch.add('sidewalk', box(3.2, 0.014, g.z1 - g.z0), gx, CURB + 0.007, gz);
+    batch.add('sidewalk', box(g.x1 - g.x0, 0.014, 3.2), gx, CURB + 0.007, gz);
+  }
   batch.add('curb', new THREE.TorusGeometry(PLAZA_R, 0.1, 4, 64).rotateX(Math.PI / 2), 0, CURB, 0);
   // Plaza paving rings and radial joints.
   for (const r of [8, 14, 20, 26]) batch.add('paintLine', new THREE.RingGeometry(r - 0.12, r + 0.12, 64).rotateX(-Math.PI / 2), 0, CURB + 0.004, 0);
@@ -506,6 +607,10 @@ function buildDistrict(lib: MaterialLibrary, style: CityStyle, perimeter: Static
           if (Math.hypot(x, z) < PLAZA_R + 1) continue;
           const dx = axis === 'x' ? 0 : -side;
           const dz = axis === 'x' ? -side : 0;
+          if (style.streetLamps === 'gas') {
+            gasLamp(batch, x, z);
+            continue;
+          }
           batch.add('steelDark', new THREE.CylinderGeometry(0.08, 0.12, 7, 8), x, CURB + 3.5, z);
           batch.add('steelDark', box(0.08, 0.08, 1.8), x + dx * 0.9, CURB + 6.9, z + dz * 0.9, axis === 'x' ? 0 : Q);
           batch.add('steelDark', box(0.36, 0.14, 0.7), x + dx * 1.7, CURB + 6.85, z + dz * 1.7, axis === 'x' ? 0 : Q);
@@ -515,7 +620,7 @@ function buildDistrict(lib: MaterialLibrary, style: CityStyle, perimeter: Static
     }
   }
   // Traffic signals on every junction corner: pole, mast arm over the carriageway, three-aspect head.
-  for (const [cx, cz] of [[-56, -56], [0, -56], [56, -56], [-56, 0], [56, 0], [-56, 56], [0, 56], [56, 56]] as const) {
+  for (const [cx, cz] of style.signals === false ? [] : ([[-56, -56], [0, -56], [56, -56], [-56, 0], [56, 0], [-56, 56], [0, 56], [56, 56]] as const)) {
     const wx = cx === 0 ? BLVD : STREET; // width of the road running along Z through this junction
     const wz = cz === 0 ? BLVD : STREET;
     for (const sx of [-1, 1]) {
@@ -558,6 +663,12 @@ function buildDistrict(lib: MaterialLibrary, style: CityStyle, perimeter: Static
           batch.add('steelDark', new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.015, 4), 0, 0, 0);
           for (let i = 1; i < n; i++) {
             const p = pts[i];
+            if (style.lanterns === 'pumpkin') {
+              // Jack-o'-lantern: squat ribbed glow on a short cord, dark stem cap.
+              batch.add('jackLantern', new THREE.SphereGeometry(0.3, 12, 8).scale(1, 0.78, 1), p.x, p.y - 0.42, p.z);
+              batch.add('steelDark', new THREE.CylinderGeometry(0.04, 0.06, 0.14, 6), p.x, p.y - 0.14, p.z);
+              continue;
+            }
             batch.add('lantern', new THREE.SphereGeometry(0.26, 10, 8).scale(1, 1.25, 1), p.x, p.y - 0.45, p.z);
             batch.add('steelDark', new THREE.CylinderGeometry(0.12, 0.12, 0.06, 8), p.x, p.y - 0.1, p.z);
           }
@@ -570,6 +681,10 @@ function buildDistrict(lib: MaterialLibrary, style: CityStyle, perimeter: Static
     const a = (i / 8) * Math.PI * 2;
     const x = Math.cos(a) * (PLAZA_R - 1.5);
     const z = Math.sin(a) * (PLAZA_R - 1.5);
+    if (style.streetLamps === 'gas') {
+      gasLamp(batch, x, z);
+      continue;
+    }
     batch.add('steelDark', new THREE.CylinderGeometry(0.09, 0.14, 5, 8), x, CURB + 2.5, z);
     batch.add('lampGlow', new THREE.SphereGeometry(0.3, 10, 8), x, CURB + 5.2, z);
   }
@@ -608,11 +723,26 @@ function buildDistrict(lib: MaterialLibrary, style: CityStyle, perimeter: Static
     batch.add(srand() < 0.6 ? 'skylineWindows' : 'concrete', box(w, h, d), Math.cos(a) * r, h / 2, Math.sin(a) * r);
   }
   const heroes: THREE.BufferGeometry[] = [];
-  for (const hero of style.skyline.heroes ?? []) heroes.push(heroGeometry(hero));
+  for (const hero of style.skyline.heroes ?? []) {
+    heroes.push(heroGeometry(hero));
+    // The witch's castle stands on a hill: a broad, fogged mound under it.
+    if (hero.kind === 'castle') batch.add('gravel', new THREE.SphereGeometry(hero.w * 1.5, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.32, 1), hero.x, -1, hero.z);
+  }
   if (heroes.length) batch.add('skylineWindows', mergeGeometries(heroes)!, 0, 0, 0);
 
   const cast = new Set<ArchKey>(['brick', 'darkBrick', 'plaster', 'concrete', 'steelDark', 'awning', 'stone']);
   return { meshes: batch.build(lib, cast), occluders };
+}
+
+/** Victorian gas lamp: fluted post on a base, ladder bar, glazed lantern with a pointed cap. */
+function gasLamp(batch: Batch, x: number, z: number): void {
+  batch.add('steelDark', new THREE.CylinderGeometry(0.16, 0.2, 0.6, 8), x, CURB + 0.3, z);
+  batch.add('steelDark', new THREE.CylinderGeometry(0.055, 0.08, 3.6, 8), x, CURB + 2.4, z);
+  batch.add('steelDark', new THREE.BoxGeometry(0.6, 0.05, 0.05), x, CURB + 3.6, z);
+  batch.add('steelDark', new THREE.CylinderGeometry(0.2, 0.12, 0.12, 6), x, CURB + 4.26, z);
+  batch.add('lampGlow', new THREE.CylinderGeometry(0.17, 0.12, 0.5, 6), x, CURB + 4.57, z);
+  batch.add('steelDark', new THREE.ConeGeometry(0.26, 0.34, 6), x, CURB + 5.0, z);
+  batch.add('steelDark', new THREE.SphereGeometry(0.05, 6, 4), x, CURB + 5.2, z);
 }
 
 /** Signature skyline silhouettes: simple solids that still read as the real towers at distance. */
@@ -621,6 +751,32 @@ function heroGeometry(hero: Hero): THREE.BufferGeometry {
   const t = hero.taper ?? 0.7;
   let g: THREE.BufferGeometry;
   switch (hero.kind ?? 'box') {
+    case 'spire': {
+      // Gothic church: long nave with a steep roof, west tower and needle spire.
+      const parts = [
+        new THREE.BoxGeometry(w, h * 0.24, w * 2.2).translate(0, h * 0.12 - h / 2, w * 0.9),
+        new THREE.CylinderGeometry(0.01, w * 0.72, h * 0.14, 4, 1).rotateY(Math.PI / 4).scale(1, 1, 2.6).translate(0, h * 0.31 - h / 2, w * 0.9),
+        new THREE.BoxGeometry(w * 0.55, h * 0.48, w * 0.55).translate(0, h * 0.24 - h / 2, -w * 0.4),
+        new THREE.CylinderGeometry(0.15, w * 0.4, h * 0.52, 8).translate(0, h * 0.74 - h / 2, -w * 0.4),
+      ];
+      g = mergeGeometries(parts.map((q) => q.toNonIndexed()))!;
+      break;
+    }
+    case 'castle': {
+      // Witch's castle: a keep and four corner towers with candle-snuffer roofs (the hill is added separately).
+      const parts: THREE.BufferGeometry[] = [new THREE.BoxGeometry(w, h * 0.45, w * 0.8).translate(0, h * 0.225 - h / 2 + h * 0.12, 0)];
+      for (const [sx, sz, k] of [[-1, -1, 1], [1, -1, 0.8], [-1, 1, 0.75], [1, 1, 1.15]] as const) {
+        const tx = sx * w * 0.5;
+        const tz = sz * w * 0.4;
+        const th = h * 0.55 * k;
+        parts.push(new THREE.CylinderGeometry(w * 0.12, w * 0.13, th, 10).translate(tx, th / 2 - h / 2 + h * 0.12, tz));
+        parts.push(new THREE.ConeGeometry(w * 0.17, h * 0.28 * k, 10).translate(tx, th + h * 0.14 * k - h / 2 + h * 0.12, tz));
+      }
+      parts.push(new THREE.CylinderGeometry(w * 0.16, w * 0.18, h * 0.62, 10).translate(0, h * 0.31 - h / 2 + h * 0.12, 0));
+      parts.push(new THREE.ConeGeometry(w * 0.22, h * 0.3, 10).translate(0, h * 0.62 + h * 0.15 - h / 2 + h * 0.08, 0));
+      g = mergeGeometries(parts.map((q) => q.toNonIndexed()))!;
+      break;
+    }
     case 'twist': {
       // Shanghai Tower: rounded triangle plan, tapering and twisting ~120° to the top.
       const seg = 24;

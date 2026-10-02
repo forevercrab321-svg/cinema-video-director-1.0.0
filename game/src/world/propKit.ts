@@ -13,10 +13,19 @@ export type PropParts = Partial<Record<Role, THREE.BufferGeometry>>;
 /** Metre-space UV of a flat lug texel in the 0.3 m tread texture (see art/textures.ts tread()). */
 export const BLACK_TEXEL: [number, number] = [0.0175, 0.15];
 
-export const LAMP_COLOURS: Partial<Record<Role, [number, number, number]>> = { headlight: [1, 0.95, 0.85], taillight: [0.85, 0.06, 0.04], signalAmber: [1, 0.55, 0.08] };
+export const LAMP_COLOURS: Partial<Record<Role, [number, number, number]>> = {
+  headlight: [1, 0.95, 0.85],
+  taillight: [0.85, 0.06, 0.04],
+  signalAmber: [1, 0.55, 0.08],
+  // Halloween glows: over-unity colours so carved faces, windows and goo cross the bloom threshold.
+  ghostGlow: [0.55, 2.1, 0.4],
+  pumpkinGlow: [2.5, 1.05, 0.16],
+  windowGlow: [2.1, 1.2, 0.42],
+  witchGlow: [1.25, 0.5, 2.3],
+};
 
 /** Roles whose texture follows metre-scale box projection. */
-export const PROJECTED: ReadonlySet<Role> = new Set<Role>(['paint', 'cardboard', 'propBrick', 'corrugated', 'roofMetal', 'concreteProp', 'timber', 'stone']);
+export const PROJECTED: ReadonlySet<Role> = new Set<Role>(['paint', 'cardboard', 'propBrick', 'corrugated', 'roofMetal', 'concreteProp', 'timber', 'stone', 'straw', 'shingle']);
 
 export class Builder {
   private readonly parts = new Map<Role, THREE.BufferGeometry[]>();

@@ -12,6 +12,8 @@ export interface DressingSpec {
   /** Canopy radius multiplier (plane trees in Paris are broad; Shanghai street trees narrower). */
   crown?: number;
   seed?: number;
+  /** Bare, twisted dead trees (Halloween): no canopy, dark bark, some carry a hanging lantern. */
+  dead?: boolean;
 }
 
 /**
@@ -205,8 +207,67 @@ export function buildDressing(spec: DressingSpec): Dressing {
   const trunkParts: THREE.BufferGeometry[] = [];
   const leafParts: THREE.BufferGeometry[] = [];
   const pitParts: THREE.BufferGeometry[] = [];
+  const lanternParts: THREE.BufferGeometry[] = [];
   const up = new THREE.Vector3(0, 1, 0);
+  /** Tapered branch segment between two points. */
+  const segment = (a: THREE.Vector3, b: THREE.Vector3, ra: number, rb: number) => {
+    const dir = b.clone().sub(a);
+    const g = new THREE.CylinderGeometry(rb, ra, dir.length(), 5);
+    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, dir.normalize()));
+    g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+    trunkParts.push(g);
+  };
+  /** Dead tree: crooked trunk in three kinks, five gnarled limbs that fork once, maybe a lantern. */
+  const deadTree = (tx: number, tz: number, base: number) => {
+    const h = 3.6 + rand() * 1.6;
+    trunkParts.push(new THREE.CylinderGeometry(0.2, 0.34, 0.45, 7).translate(tx, base + 0.22, tz)); // root flare
+    const lean = new THREE.Vector3((rand() - 0.5) * 0.6, 0, (rand() - 0.5) * 0.6);
+    let p = new THREE.Vector3(tx, base, tz);
+    let r = 0.21;
+    const knots: { p: THREE.Vector3; r: number }[] = [];
+    for (let k = 0; k < 3; k++) {
+      const next = p.clone().add(new THREE.Vector3(lean.x * 0.4 + (rand() - 0.5) * 0.35, h / 3, lean.z * 0.4 + (rand() - 0.5) * 0.35));
+      segment(p, next, r, r * 0.72);
+      p = next;
+      r *= 0.72;
+      knots.push({ p: p.clone(), r });
+    }
+    let lantern = rand() < 0.4;
+    for (let bI = 0; bI < 5; bI++) {
+      const from = knots[bI < 2 ? 1 : 2];
+      const a = (bI / 5) * Math.PI * 2 + rand() * 0.9;
+      let q = from.p.clone();
+      let rr = from.r * 0.8;
+      let dir = new THREE.Vector3(Math.cos(a), 0.45 + rand() * 0.5, Math.sin(a)).normalize();
+      for (let s = 0; s < 3; s++) {
+        const len = (1.0 - s * 0.22) * (0.8 + rand() * 0.4);
+        const next = q.clone().addScaledVector(dir, len);
+        segment(q, next, rr, rr * 0.62);
+        if (s === 1) {
+          // One fork that kinks the other way.
+          const fd = dir.clone().applyAxisAngle(up, (rand() < 0.5 ? -1 : 1) * (0.7 + rand() * 0.5)).setY(dir.y + 0.25).normalize();
+          segment(next, next.clone().addScaledVector(fd, 0.7), rr * 0.6, rr * 0.25);
+        }
+        if (s === 0 && lantern && dir.y < 0.75) {
+          // A jack-o'-lantern hanging on a cord from the first limb.
+          const hang = q.clone().lerp(next, 0.75);
+          trunkParts.push(new THREE.CylinderGeometry(0.008, 0.008, 0.6, 3).translate(hang.x, hang.y - 0.3, hang.z));
+          lanternParts.push(new THREE.SphereGeometry(0.2, 10, 7).scale(1, 0.8, 1).translate(hang.x, hang.y - 0.72, hang.z));
+          lantern = false;
+        }
+        q = next;
+        rr *= 0.62;
+        dir = dir.applyAxisAngle(up, (rand() - 0.5) * 1.1).setY(dir.y + (rand() - 0.35) * 0.5).normalize();
+      }
+    }
+  };
   for (const [tx, tz, base] of trees) {
+    if (spec.dead) {
+      pitParts.push(new THREE.BoxGeometry(1.2, 0.03, 1.2).translate(tx, base + 0.015, tz));
+      colliders.push({ cx: tx, cz: tz, hx: 0.24, hz: 0.24, yaw: 0 });
+      deadTree(tx, tz, base);
+      continue;
+    }
     const h = 2.6 + rand() * 0.8;
     const trunk = new THREE.CylinderGeometry(0.1, 0.17, h, 8).translate(tx, base + h / 2, tz);
     trunkParts.push(trunk);
@@ -259,7 +320,7 @@ export function buildDressing(spec: DressingSpec): Dressing {
     return g;
   };
   const woodParts = [
-    ...trunkParts.map((g) => paint(g, 0x4a3c30)),
+    ...trunkParts.map((g) => paint(g, spec.dead ? 0x3a3130 : 0x4a3c30)),
     ...pitParts.map((g) => paint(g, 0x3b2f25)),
     ...(spec.scrapAlley ? [paint(new THREE.CylinderGeometry(0.035, 0.035, 3.1, 8).translate(4.3, CURB_HEIGHT + 1.55, -2.34), 0x6a6f74)] : []), // sign pole
   ];
@@ -299,11 +360,18 @@ export function buildDressing(spec: DressingSpec): Dressing {
     );
   };
   leaves.customProgramCacheKey = () => 'leaves-sway';
-  const leafMesh = new THREE.Mesh(mergeGeometries(leafParts)!, leaves);
+  const leafMesh = new THREE.Mesh(leafParts.length ? mergeGeometries(leafParts)! : new THREE.BufferGeometry(), leaves);
   leafMesh.name = 'DRESS_TreeCanopies';
   leafMesh.castShadow = leafMesh.receiveShadow = true;
   leafMesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: leaves.map, alphaTest: 0.5 });
-  meshes.push(trunkMesh, leafMesh);
+  meshes.push(trunkMesh);
+  if (leafParts.length) meshes.push(leafMesh);
+  if (lanternParts.length) {
+    const glow = new THREE.MeshStandardMaterial({ name: 'MAT_TreeLanterns', color: 0xa8460c, emissive: 0xff7414, emissiveIntensity: 1.9, roughness: 0.55 });
+    const lanterns = new THREE.Mesh(mergeGeometries(lanternParts)!, glow);
+    lanterns.name = 'DRESS_TreeLanterns';
+    meshes.push(lanterns);
+  }
 
   // Weeds: crossed grass cards along the alley wall bases, kerb lines and tree pits.
   // Weeds and decals share one atlas texture (weeds live in cell 15).
