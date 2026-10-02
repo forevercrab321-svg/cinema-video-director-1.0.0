@@ -1,0 +1,821 @@
+{
+ "rows": [
+  {
+   "seed": 864021283,
+   "x": 88,
+   "z": -88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 430269921,
+   "x": 88,
+   "z": -88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 211461043,
+   "x": 88,
+   "z": 88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 383082359,
+   "x": 88,
+   "z": -88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 171605990,
+   "x": 88,
+   "z": -88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 19411137,
+   "x": -88,
+   "z": 88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 78638181,
+   "x": -83,
+   "z": -17,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 2.5,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "graveyard",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 266486535,
+   "x": -88,
+   "z": -88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 710670335,
+   "x": -88,
+   "z": 88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 731964130,
+   "x": -83,
+   "z": -17,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 2.5,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "graveyard",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 559230769,
+   "x": 88,
+   "z": -88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 861908392,
+   "x": -88,
+   "z": -88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 703517171,
+   "x": 88,
+   "z": 88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 299828331,
+   "x": -88,
+   "z": 88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 341475481,
+   "x": -88,
+   "z": -88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 341475481,
+   "x": -88,
+   "z": -88,
+   "stage": "grow",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 294305790,
+   "x": 88,
+   "z": 88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 889863331,
+   "x": -88,
+   "z": -88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 107025670,
+   "x": -83,
+   "z": -83,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 2.65,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "graveyard",
+   "candidateEligibleInPreview": false
+  },
+  {
+   "seed": 621548,
+   "x": -88,
+   "z": 88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 825127611,
+   "x": -88,
+   "z": 88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 221908959,
+   "x": -88,
+   "z": -88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 190061530,
+   "x": -88,
+   "z": -88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  },
+  {
+   "seed": 749699399,
+   "x": -88,
+   "z": -88,
+   "stage": "chase",
+   "bounds": {
+    "minX": -96,
+    "maxX": 96,
+    "minZ": -96,
+    "maxZ": 96
+   },
+   "clearance": 3.05,
+   "inPlaza": false,
+   "tries": [
+    {
+     "side": [
+      1.5,
+      0
+     ],
+     "alive": true,
+     "caught": false,
+     "blockedAtPark": false,
+     "d": 1.5,
+     "by": "me-yhi1l4d6f5oy",
+     "byOther": null,
+     "me": "me-yhi1l4d6f5oy",
+     "reach": 4.5
+    }
+   ],
+   "woke": true,
+   "firstSideWoke": true,
+   "candidate": "corner",
+   "candidateEligibleInPreview": true
+  }
+ ],
+ "errors": []
+}

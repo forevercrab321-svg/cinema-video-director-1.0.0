@@ -1,4 +1,5 @@
-import { arenaConfig as A } from '../config/arena';
+import { arenaConfig as A, MAX_SEATS, maxPlayersFor, roundSecondsFor } from '../config/arena';
+import { HALLOWEEN as HW, isHalloween } from '../config/halloween';
 import { HATS, HORNS, SKINS } from '../config/cosmetics';
 import { VEHICLE_ORDER, type VehicleLook } from '../config/vehicles';
 import type { Net, NetPeer } from '../net/Net';
@@ -53,6 +54,14 @@ export interface MatchState {
   ev?: number[][];
   /** Host, while playing: mass / kill caps [slot, kg, kills] (massLedger.ts). */
   mc?: number[][];
+  /** Halloween map: match time the hunt started (scores locked); absent while growing. */
+  hk?: number;
+  /** Halloween map: locked scores [slot, kg] stamped at `hk`. */
+  hs?: number[][];
+  /** Halloween map: catches [slot, match time, villain index]. */
+  hc?: number[][];
+  /** Halloween map: Egg Valley woken by [slot, match time]. */
+  eg?: number[];
 }
 
 export interface LobbyPlayer {
@@ -171,8 +180,13 @@ export class ArenaSession {
     return this.net
       .peers()
       .filter((p) => p.presence.j === true)
-      .slice(0, A.maxPlayers)
+      .slice(0, this.seats())
       .map((p) => ({ id: p.id, name: cleanName(this.net.nameOf(p), `${L('玩家', 'Player')}${p.id.replace(/\W/g, '').slice(-3).toUpperCase()}`), vehicle: asVehicle(p.presence.v), skin: shortId(p.presence.k), horn: shortId(p.presence.hn), hat: shortId(p.presence.ht), ready: p.presence.r === true, isMe: p.isMe, guest: p.guest }));
+  }
+
+  /** Seats in this room: 6 on the Halloween map, 4 elsewhere (the host's pick in the lobby, else the round's map). */
+  seats(): number {
+    return maxPlayersFor(this.match.ph === 'lobby' ? this.city : this.match.city);
   }
 
   spectators(): NetPeer[] {
@@ -312,8 +326,9 @@ export class ArenaSession {
   /** Seconds until this round (or its results screen) ends, for the room browser; null outside a round. */
   roundLeft(): number | null {
     const m = this.match;
-    if (m.ph === 'countdown') return A.roundSeconds + A.countdownSeconds;
-    if (m.ph === 'playing') return Math.max(0, A.roundSeconds - (m.t || 0));
+    const round = roundSecondsFor(m.city);
+    if (m.ph === 'countdown') return round + A.countdownSeconds;
+    if (m.ph === 'playing') return Math.max(0, (typeof m.hk === 'number' ? m.hk + HW.huntSeconds : round) - (m.t || 0));
     if (m.ph === 'results') return Math.max(0, A.resultsSeconds - this.resultsTimer);
     return null;
   }
@@ -362,7 +377,7 @@ export class ArenaSession {
     const roster: RosterEntry[] = players.map((p, i) => ({ id: p.id, slot: i, kind: 'player', name: p.name, vehicle: p.vehicle, skin: p.skin, horn: p.horn, hat: p.hat }));
     if (this.bots || warmup) {
       const seedNames = [...BOT_NAMES];
-      for (let slot = roster.length; slot < A.maxPlayers; slot++) {
+      for (let slot = roster.length; slot < maxPlayersFor(this.city); slot++) {
         const name = seedNames.splice(Math.floor(Math.random() * seedNames.length), 1)[0];
         // Rivals show off a random shop skin and horn half of the time.
         const skin = Math.random() < 0.5 ? SKINS[1 + Math.floor(Math.random() * (SKINS.length - 1))].id : undefined;
@@ -391,7 +406,7 @@ export class ArenaSession {
   /** Host: back to the lobby (from results, or to abort). */
   toLobby(): void {
     if (!this.isHost()) return;
-    this.match = { ...this.match, ep: this.match.ep + 1, ph: 'lobby', roster: [], t: 0, standings: undefined, city: this.city, bots: this.bots, wu: undefined, wj: undefined, ev: undefined, mc: undefined };
+    this.match = { ...this.match, ep: this.match.ep + 1, ph: 'lobby', roster: [], t: 0, standings: undefined, city: this.city, bots: this.bots, wu: undefined, wj: undefined, ev: undefined, mc: undefined, hk: undefined, hs: undefined, hc: undefined, eg: undefined };
     this.net.emit('match', this.match);
   }
 
@@ -439,7 +454,11 @@ export class ArenaSession {
         const b: number[][] = [];
         for (const a of g.actors) if (a.kind === 'bot') b.push([a.slot, ...g.wireState(a)]);
         presence.b = b;
-      } else presence.b = null;
+        presence.hu = g.hunt && g.hunt.stage() !== 'grow' ? g.hunt.wire((id) => this.slotOf(id)) : null;
+      } else {
+        presence.b = null;
+        presence.hu = null;
+      }
       // ~20 Hz and only when something changed (the room coalesces at ~30 Hz anyway).
       this.presenceTimer += dt * 1000;
       if (this.presenceTimer >= 50) {
@@ -459,6 +478,7 @@ export class ArenaSession {
       for (const p of this.net.peers()) {
         if (p.isMe || p.presence.ep !== this.match.ep) continue;
         if (Array.isArray(p.presence.s)) g.applyWire(p.id, p.presence.s as WireState);
+        if (p.id === this.hostId() && g.hunt && !host) g.hunt.applyWire(p.presence.hu);
         if (p.id === this.hostId() && Array.isArray(p.presence.b)) {
           for (const row of p.presence.b as unknown[]) {
             if (!Array.isArray(row)) continue;
@@ -514,6 +534,9 @@ export class ArenaSession {
     }
     if (m.ph === 'countdown' && g) {
       if (g.countdown <= 0) this.setPhase('playing');
+    } else if (m.ph === 'playing' && g && g.hunt) {
+      m.t = g.matchTime;
+      this.hostHunt(g, g.hunt);
     } else if (m.ph === 'playing' && g) {
       m.t = g.matchTime;
       const humans = g.actors.filter((a) => a.kind !== 'bot');
@@ -552,6 +575,60 @@ export class ArenaSession {
     }
   }
 
+  /**
+   * Host, Halloween map: start the hunt at halftime (or as soon as the first half empties out),
+   * stamp the locked scores, decide catches, end the round when time is up or nobody is left.
+   */
+  private hostHunt(g: ArenaGame, h: NonNullable<ArenaGame['hunt']>): void {
+    const m = this.match;
+    const humans = g.actors.filter((a) => a.kind !== 'bot');
+    if (typeof m.hk !== 'number') {
+      const alive = g.actors.filter((a) => !a.eliminated);
+      const emptied = (g.actors.length > 1 && alive.length <= 1) || (humans.length > 0 && humans.every((a) => a.eliminated));
+      if (g.matchTime >= HW.huntAt || emptied) {
+        const hk = Math.round(g.matchTime * 100) / 100;
+        const scores = new Map<string, number>();
+        for (const a of g.actors) scores.set(a.id, a.left ? 0 : Math.round(a.mass));
+        h.setStart(hk, scores);
+        // In place: the beacon later this frame sends this same object.
+        m.hk = hk;
+        m.hs = [...scores].map(([id, kg]) => [this.slotOf(id), kg]);
+        m.t = g.matchTime;
+        this.net.emit('match', m);
+      }
+      return;
+    }
+    // Egg Valley: AI rivals next to her honk; the first machine to honk beside her wakes her.
+    h.egg.botsHonk();
+    const woke = !m.eg ? h.egg.detect() : null;
+    if (woke) {
+      const at = Math.round(g.matchTime * 100) / 100;
+      if (h.egg.apply(woke.id, at)) {
+        m.eg = [this.slotOf(woke.id), at];
+        m.t = g.matchTime;
+        this.net.emit('match', m);
+      }
+    }
+    const caught = h.detectCatches();
+    if (caught.length) {
+      const hc = [...(m.hc ?? [])];
+      for (const c of caught) {
+        const at = Math.round(g.matchTime * 100) / 100;
+        if (h.applyCaught(c.id, at, c.by)) hc.push([this.slotOf(c.id), at, c.by]);
+      }
+      m.hc = hc;
+      m.t = g.matchTime;
+      this.net.emit('match', m);
+    }
+    const runners = g.actors.filter((a) => !a.left && !h.caught.has(a.id));
+    const humansOut = humans.length > 0 && humans.every((a) => a.left || h.caught.has(a.id));
+    if (g.matchTime >= h.endsAt() || !runners.length || (humansOut && h.stage() === 'chase')) {
+      m.standings = g.standings();
+      this.setPhase('results');
+      this.resultsTimer = 0;
+    }
+  }
+
   private setPhase(ph: MatchPhase): void {
     this.match = { ...this.match, ph, t: this.game?.matchTime ?? 0 };
     this.net.emit('match', this.match);
@@ -575,7 +652,7 @@ export class ArenaSession {
     if (m.ep < this.match.ep && !newTerm) return;
     const newEpoch = m.ep !== this.match.ep;
     const prev = this.match;
-    this.match = { ...m, roster: Array.isArray(m.roster) ? m.roster.slice(0, A.maxPlayers) : [] };
+    this.match = { ...m, roster: Array.isArray(m.roster) ? m.roster.slice(0, MAX_SEATS) : [] };
     if (!cityById(this.match.city)) this.match.city = CITIES[0].id;
     if (!this.isHost()) {
       this.city = this.match.city;
@@ -622,12 +699,33 @@ export class ArenaSession {
       if (m.ph === 'results') g.phase = 'results';
       if (m.ph === 'playing' && !this.isHost() && Math.abs(g.matchTime - m.t) > 0.35) g.matchTime = m.t;
       if (m.ph === 'playing' && from !== me && typeof m.abs === 'string' && m.abs.length < 8000) g.syncAbsorbed(m.abs);
+      if (g.hunt && m.ph !== 'countdown' && from !== me) this.applyHunt(g.hunt, m);
       if (m.ph === 'playing' && from !== me) {
         g.ledger.fromWire(m.mc, (slot) => this.idOf(slot));
         if (Array.isArray(m.ev)) for (const row of m.ev.slice(0, 32)) if (Array.isArray(row)) this.applyEatenRow(row);
       }
     }
     if (prev.ph !== this.match.ph || newEpoch) this.hooks.changed();
+  }
+
+  /** The host's hunt state (start, locked scores, catches) applied on this page. */
+  private applyHunt(h: NonNullable<ArenaGame['hunt']>, m: MatchState): void {
+    if (typeof m.hk !== 'number' || !Number.isFinite(m.hk)) return;
+    const scores = new Map<string, number>();
+    for (const row of Array.isArray(m.hs) ? m.hs.slice(0, MAX_SEATS) : []) {
+      const id = Array.isArray(row) ? this.idOf(row[0]) : null;
+      if (id && typeof row[1] === 'number' && Number.isFinite(row[1])) scores.set(id, Math.max(0, row[1]));
+    }
+    h.setStart(m.hk, scores);
+    if (Array.isArray(m.eg) && typeof m.eg[1] === 'number' && Number.isFinite(m.eg[1])) {
+      const id = this.idOf(m.eg[0]);
+      if (id) h.egg.apply(id, m.eg[1]);
+    }
+    for (const row of Array.isArray(m.hc) ? m.hc.slice(0, MAX_SEATS * 2) : []) {
+      if (!Array.isArray(row) || typeof row[1] !== 'number') continue;
+      const id = this.idOf(row[0]);
+      if (id) h.applyCaught(id, row[1], typeof row[2] === 'number' ? row[2] : 0);
+    }
   }
 
   /**
@@ -637,7 +735,9 @@ export class ArenaSession {
    */
   private admitLateJoiners(g: ArenaGame): void {
     const m = this.match;
-    if (m.ph === 'playing' && g.matchTime > A.roundSeconds - A.dropInCutoffSeconds) return;
+    // Halloween: nobody drops in once the hunt is near (a newcomer would join with no score).
+    const lastCall = isHalloween(m.city) ? HW.huntAt : A.roundSeconds;
+    if (m.ph === 'playing' && (typeof m.hk === 'number' || g.matchTime > lastCall - A.dropInCutoffSeconds)) return;
     let changed = false;
     for (const p of this.lobbyPlayers()) {
       const cur = g.byId.get(p.id);
@@ -650,7 +750,7 @@ export class ArenaSession {
         const present = new Set(this.net.peers().map((x) => x.id));
         const abandoned = m.roster.find((r) => r.kind === 'player' && !present.has(r.id));
         const used = new Set(m.roster.map((r) => r.slot));
-        const free = [0, 1, 2, 3].slice(0, A.maxPlayers).find((s) => !used.has(s));
+        const free = Array.from({ length: maxPlayersFor(m.city) }, (_, i) => i).find((s) => !used.has(s));
         slot = bot?.slot ?? abandoned?.slot ?? free;
       }
       if (slot === undefined) continue; // full: they watch until the next round

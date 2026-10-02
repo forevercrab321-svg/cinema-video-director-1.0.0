@@ -5,7 +5,7 @@
 //   no console/page errors · non-blank canvas (pixel variance) · round reaches "playing" ·
 //   W moves the machine · SPACE triggers a dash · MASS grows · a restart does not leak GPU
 //   textures or geometries.
-// Screenshots: <shots>/smoke-<tier>-<step>.png ; report: <shots>/smoke-report.json
+// Screenshots: <shots>/smoke-<tier>-<step>.jpg (JPEG) ; report: <shots>/smoke-report.json
 //   npm run smoke                                   (dev server, low tier)
 //   node tools/arena-smoke.mjs --tiers low,high     (several tiers)
 //   node tools/arena-smoke.mjs --url http://127.0.0.1:4173/game/   (an already running build)
@@ -83,7 +83,7 @@ try {
         window.__ARENA__.render();
         return document.querySelector('canvas').toDataURL('image/png'); // test mode preserves the drawing buffer
       });
-      writeFileSync(resolve(shots, `smoke-${tier}-${name}.png`), await page.screenshot());
+      await page.screenshot({ path: resolve(shots, `smoke-${tier}-${name}.jpg`), type: 'jpeg', quality: 75 });
       return pixelStats(Buffer.from(dataUrl.split(',')[1], 'base64'));
     };
     const local = () => page.evaluate(() => {

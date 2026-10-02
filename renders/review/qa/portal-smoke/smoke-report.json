@@ -1,0 +1,128 @@
+{
+  "date": "2026-10-02T08:04:18.000Z",
+  "base": "http://127.0.0.1:4181/",
+  "viewport": {
+    "width": 960,
+    "height": 540
+  },
+  "city": "halloween",
+  "tiers": {
+    "low": {
+      "tier": "low",
+      "loadMs": 7483,
+      "lobby": {
+        "mean": 81.7,
+        "std": 29.3,
+        "colours": 356
+      },
+      "dash": {
+        "mean": 85.2,
+        "std": 40.8,
+        "colours": 318
+      },
+      "play": {
+        "mean": 65.6,
+        "std": 15.5,
+        "colours": 174
+      },
+      "start": {
+        "x": 0,
+        "z": 88,
+        "mass": 5,
+        "alive": true,
+        "dashTime": 0,
+        "dashCooldown": 0
+      },
+      "end": {
+        "x": -16.55026902439922,
+        "z": 84.66215276023686,
+        "mass": 8.168229108978451,
+        "alive": true,
+        "dashTime": 0,
+        "dashCooldown": 0
+      },
+      "moved": 6.963040625000502,
+      "gpu": {
+        "round1": {
+          "textures": 34,
+          "geometries": 0
+        },
+        "restarts": [
+          {
+            "textures": 118,
+            "geometries": 54
+          },
+          {
+            "textures": 118,
+            "geometries": 55
+          }
+        ]
+      },
+      "errors": [
+        "console: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED"
+      ]
+    }
+  },
+  "assertions": [
+    {
+      "tier": "low",
+      "name": "lobby canvas is not blank",
+      "pass": true,
+      "detail": "{\"mean\":81.7,\"std\":29.3,\"colours\":356}"
+    },
+    {
+      "tier": "low",
+      "name": "round starts and reaches \"playing\"",
+      "pass": true,
+      "detail": "phase playing"
+    },
+    {
+      "tier": "low",
+      "name": "local machine spawned",
+      "pass": true,
+      "detail": "{\"x\":0,\"z\":88,\"mass\":5,\"alive\":true,\"dashTime\":0,\"dashCooldown\":0}"
+    },
+    {
+      "tier": "low",
+      "name": "W moves the machine",
+      "pass": true,
+      "detail": "6.96 m in 2 s"
+    },
+    {
+      "tier": "low",
+      "name": "SPACE triggers a dash",
+      "pass": true,
+      "detail": "dashTime 0.23 · cooldown 1.05"
+    },
+    {
+      "tier": "low",
+      "name": "MASS grows from eating",
+      "pass": true,
+      "detail": "5.0 → 8.2 kg"
+    },
+    {
+      "tier": "low",
+      "name": "gameplay canvas is not blank",
+      "pass": true,
+      "detail": "{\"mean\":65.6,\"std\":15.5,\"colours\":174}"
+    },
+    {
+      "tier": "low",
+      "name": "dash frame is not blank",
+      "pass": true,
+      "detail": "{\"mean\":85.2,\"std\":40.8,\"colours\":318}"
+    },
+    {
+      "tier": "low",
+      "name": "restart does not leak GPU textures/geometries",
+      "pass": true,
+      "detail": "round textures 34 → 118 → 118, geometries 0 → 54 → 55"
+    },
+    {
+      "tier": "low",
+      "name": "no console or page errors",
+      "pass": false,
+      "detail": "console: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED"
+    }
+  ]
+}

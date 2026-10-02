@@ -58,9 +58,9 @@ function save(p: Progress): void {
 }
 
 /** Record a finished round; returns what was earned for the results card. */
-export function award(rank: number, kills: number, cityLevel: number): { coins: number; unlocked: string | null } {
+export function award(rank: number, kills: number, cityLevel: number, byRank: readonly number[] = A.coinsByRank): { coins: number; unlocked: string | null } {
   const p = progress();
-  const coins = (A.coinsByRank[rank - 1] ?? 10) + kills * A.coinsPerKill;
+  const coins = (byRank[rank - 1] ?? 10) + kills * A.coinsPerKill;
   p.coins += coins;
   p.played++;
   let unlocked: string | null = null;

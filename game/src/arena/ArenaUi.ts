@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { arenaConfig as A } from '../config/arena';
+import { arenaConfig as A, roundSecondsFor } from '../config/arena';
+import { HALLOWEEN as HW, HUNTERS, hunterName, isHalloween } from '../config/halloween';
 import { SLOT_COLORS, VEHICLES, VEHICLE_ORDER, type VehicleLook } from '../config/vehicles';
 import { CITIES } from '../world/cities';
 import type { ArenaGame, Standing } from './ArenaGame';
@@ -149,6 +150,8 @@ const CSS = `
 #arena .combo { position: absolute; left: calc(290px + var(--ge-sl)); bottom: calc(30px + var(--ge-sb)); font-size: 22px; font-weight: 900; color: #ffd35a; text-shadow: 0 2px 8px rgba(0,0,0,.5); }
 #arena .map { position: absolute; right: calc(16px + var(--ge-sr)); bottom: calc(64px + var(--ge-sb)); width: 184px; height: 184px; border-radius: var(--ge-r3); background: rgba(16,18,20,.55); backdrop-filter: blur(6px); }
 #arena .tag.edge { background: rgba(16,18,20,.75); }
+#arena .tag.hunter { background: rgba(120,0,24,.82); color: #fff; border: 1px solid #ff2d55; font-size: var(--ge-fs-sm); letter-spacing: .04em; }
+#arena .timer.hunt { background: rgba(90,0,20,.62); box-shadow: 0 0 18px rgba(255,45,85,.35); }
 #arena .combo small { font-size: 12px; color: #8be07a; letter-spacing: .08em; }
 #arena .combo small.pw { color: #9fd8ff; }
 #arena .tag .say { display: block; font-size: 26px; line-height: 1.1; text-align: center; margin: -34px 0 4px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
@@ -210,8 +213,8 @@ body:has(#arena .lobby:not([hidden])) .ge-full { display: none; }
 /* Phones play in landscape: HUD hugs the corners, thumbs own the bottom corners. */
 @media (pointer: coarse), (max-height: 520px) {
   #arena .timer { top: calc(4px + var(--ge-st)); padding: 2px 10px 3px; } #arena .timer b { font-size: 20px; } #arena .timer span, #arena .timer .lock { font-size: 9.5px; letter-spacing: .06em; }
-  #arena .board { top: calc(6px + var(--ge-st)); right: calc(8px + var(--ge-sr)); width: 156px; padding: 4px 8px; } #arena .row { font-size: 11px; gap: 5px; padding: 1px 0; grid-template-columns: 10px 8px 1fr auto; } #arena .row .lv2, #arena .row .hp { display: none; } #arena .row .ms { min-width: 0; }
-  #arena .map { width: 96px; height: 96px; top: calc(100px + var(--ge-st)); right: calc(8px + var(--ge-sr)); bottom: auto; left: auto; }
+  #arena .board { top: calc(6px + var(--ge-st)); right: calc(8px + var(--ge-sr)); width: 156px; padding: 4px 8px; } #arena .row { font-size: 11px; line-height: 14px; gap: 5px; padding: 1px 0; grid-template-columns: 10px 8px 1fr auto; } #arena .row .lv2, #arena .row .hp { display: none; } #arena .row .ms { min-width: 0; }
+  #arena .map { width: 96px; height: 96px; top: calc(114px + var(--ge-st)); right: calc(8px + var(--ge-sr)); bottom: auto; left: auto; }
   #arena .feed { top: calc(84px + var(--ge-st)); left: calc(8px + var(--ge-sl)); right: auto; width: 230px; align-items: flex-start; } #arena .feed div { font-size: 10.5px; padding: 3px 8px; }
   #arena .combo { left: calc(168px + var(--ge-sl)); bottom: auto; top: calc(8px + var(--ge-st)); font-size: 14px; }
   #arena .center b { font-size: 56px; } #arena .center span { font-size: 12px; }
@@ -342,7 +345,7 @@ export class ArenaUi {
     const hadFocus = this.lobby.contains(document.activeElement);
     this.lobby.innerHTML = `
       <div class="top">
-        <div class="lead">${this.onHub ? `<button class="btn back" data-a="hub" aria-label="${L('返回房间大厅', 'Back to the room browser')}">← <span class="bl">${L('返回房间大厅', 'Room browser')}</span><span class="bs">${L('大厅', 'Rooms')}</span></button>` : ''}<div class="bt"><div class="brand">GROW EVERYTHING</div><div class="title">${L('竞技场', 'Arena')}<small>${L('最多 4 人 · 吞下整座城市', 'Up to 4 players · eat the city')}</small></div></div></div>
+        <div class="lead">${this.onHub ? `<button class="btn back" data-a="hub" aria-label="${L('返回房间大厅', 'Back to the room browser')}">← <span class="bl">${L('返回房间大厅', 'Room browser')}</span><span class="bs">${L('大厅', 'Rooms')}</span></button>` : ''}<div class="bt"><div class="brand">GROW EVERYTHING</div><div class="title">${L('竞技场', 'Arena')}<small>${isHalloween(s.city) ? L(`最多 ${HW.maxPlayers} 人 · 万圣节大逃杀`, `Up to ${HW.maxPlayers} players · Halloween hunt`) : L('最多 4 人 · 吞下整座城市', 'Up to 4 players · eat the city')}</small></div></div></div>
         <div class="tools"><span class="chip hubcount" hidden><i></i><span></span></span><span class="chip coins" title="${L('金币', 'Coins')}">◎ ${prog.coins}</span><button class="btn icon" data-a="shop" aria-label="${L('商店', 'Shop')}">🛒<span class="lbl">${L('商店', 'Shop')}</span></button><button class="btn icon" data-a="lang" aria-label="${L('Switch to English', '切换到中文')}">${otherLangLabel()}</button><button class="btn icon" data-a="settings" aria-label="${L('设置', 'Settings')}">⚙</button><button class="btn icon" data-a="story" aria-label="${L('剧情模式', 'Story')}">📖<span class="lbl">${L('剧情模式', 'Story')}</span></button></div>
       </div>
       <div class="cols">
@@ -353,9 +356,9 @@ export class ArenaUi {
           ${onlineRoom ? '' : `<div class="invite">${invite}</div>`}</div></div>
       </div>
       <div class="foot">
-        <details class="rules"><summary><span class="rk">📖 ${L('规则', 'Rules')}</span><span class="rc">🦷 ${L('大 <b>25%</b> 就能吞掉对手', '<b>25%</b> bigger eats')}</span><span class="rc">♥ ${L('每人 <b>3</b> 条命', '<b>3</b> lives')}</span><span class="rc">⏱ <b>${A.roundSeconds / 60}</b> ${L('分钟一局', 'min')}</span><span class="rc">⚡🧲🛡 ${L('道具', 'Power-ups')}</span><span class="more">${L('详情', 'Details')}</span></summary><div class="full">${L(
-          `规则：比对手大 25% 就能把它整个吞掉（得到它 60% 的质量）。每人 3 条命，被吞后留 45% 质量重生。${A.roundSeconds / 60} 分钟结束，或只剩一人，或地标被拆完。金色箱子、连击、第一滴血、吞掉第一名（悬赏）、拆掉地标最后一块都有奖励；落后的人吃东西有追赶加成；道具箱：⚡加速、🧲强磁、🛡护盾（不会被吃）；冲刺撞上吃不动的东西会被眩晕并掉质量。`,
-          `Rules: be 25% bigger than a rival to swallow it whole (you get 60% of its mass). 3 lives each; when eaten you respawn with 45% of your mass. The round ends after ${A.roundSeconds / 60} minutes, when one machine is left, or when the landmark is torn down. Golden crates, combos, first blood, the leader's bounty and the last landmark piece all pay extra; machines behind the leader get a catch-up bonus. Power-ups: ⚡ speed, 🧲 magnet, 🛡 shield (can't be eaten). Dashing into something you can't eat stuns you and costs mass.`,
+        <details class="rules"><summary><span class="rk">📖 ${L('规则', 'Rules')}</span><span class="rc">🦷 ${L('大 <b>25%</b> 就能吞掉对手', '<b>25%</b> bigger eats')}</span><span class="rc">♥ ${L('每人 <b>3</b> 条命', '<b>3</b> lives')}</span><span class="rc">⏱ <b>${roundSecondsFor(s.city) / 60}</b> ${L('分钟一局', 'min')}</span>${isHalloween(s.city) ? `<span class="rc">👻 ${L('下半场被抓 = <b>0 分</b>', 'Caught in the 2nd half = <b>0</b>')}</span>` : ''}<span class="rc">⚡🧲🛡 ${L('道具', 'Power-ups')}</span><span class="more">${L('详情', 'Details')}</span></summary><div class="full">${L(
+          `${isHalloween(s.city) ? `万圣节小镇：一局 ${roundSecondsFor(s.city) / 60} 分钟，最多 ${HW.maxPlayers} 人。上半场（${HW.huntAt / 60} 分钟）照常吃东西长大，结束时你的质量就是你的分数。下半场所有车变回小车，${HUNTERS.map((h) => hunterName(h)[0]).join('、')} 三个最恐怖的 BOSS 从中央广场爬出来追人：被抓到分数清零并出局。BOSS 吃不掉也打不过。下半场地图某个角落藏着隐身的蛋之谷，每局位置不同：找到她、在她身边按喇叭 📯 叫醒她，拿到煎蛋背包——隐身 10 秒（BOSS 看不见你）并且分数 +1/3。地图上其他所有万圣节东西（南瓜、墓碑、骷髅、吸血鬼、狼人、女巫……）上半场都能被你的车吃掉。最后按分数排名——上半场落后的人，只要活到最后，就可能反超。<br>` : ''}规则：比对手大 25% 就能把它整个吞掉（得到它 60% 的质量）。每人 3 条命，被吞后留 45% 质量重生。${A.roundSeconds / 60} 分钟结束，或只剩一人，或地标被拆完。金色箱子、连击、第一滴血、吞掉第一名（悬赏）、拆掉地标最后一块都有奖励；落后的人吃东西有追赶加成；道具箱：⚡加速、🧲强磁、🛡护盾（不会被吃）；冲刺撞上吃不动的东西会被眩晕并掉质量。`,
+          `${isHalloween(s.city) ? `Halloween Town: a ${roundSecondsFor(s.city) / 60}-minute round for up to ${HW.maxPlayers} players. First half (${HW.huntAt / 60} min): eat and grow as usual — your mass at half time is your score. Second half: every machine shrinks back to small and the three bosses — ${HUNTERS.map((h) => hunterName(h)[1]).join(', ')} — crawl out of the central plaza to hunt you. Caught = score 0 and you're out. Bosses can't be eaten or beaten. Somewhere in the second half an invisible girl, Egg Valley, hides in a different corner every round: find her and HONK 📯 next to her to get her fried-egg backpack — 10 s of invisibility (the bosses can't see you) and +1/3 score. Everything else on the map (pumpkins, tombstones, skeletons, vampires, werewolves, witches…) is food for your machine in the first half. Final ranking is by score, so whoever is behind can still win by surviving.<br>` : ''}Rules: be 25% bigger than a rival to swallow it whole (you get 60% of its mass). 3 lives each; when eaten you respawn with 45% of your mass. The round ends after ${A.roundSeconds / 60} minutes, when one machine is left, or when the landmark is torn down. Golden crates, combos, first blood, the leader's bounty and the last landmark piece all pay extra; machines behind the leader get a catch-up bonus. Power-ups: ⚡ speed, 🧲 magnet, 🛡 shield (can't be eaten). Dashing into something you can't eat stuns you and costs mass.`,
         )}</div></details>
         <div class="actions">
           <button class="btn${me || host ? '' : ' primary cta'}" data-a="join">${me ? L('离开 · 观战', 'Leave · spectate') : L('加入比赛', 'Join')}</button>
@@ -371,9 +374,10 @@ export class ArenaUi {
       b.className = 'city';
       b.setAttribute('aria-pressed', String(s.city === c.id));
       b.disabled = !host || locked;
-      b.innerHTML = `<div class="lv">${c.level || '★'}<small>${c.level ? L('关', 'LEVEL') : L('加分', 'BONUS')}</small></div><div><div class="nm"></div><div class="tg"></div></div>`;
+      const event = isHalloween(c.id);
+      b.innerHTML = `<div class="lv">${event ? '🎃' : c.level || '★'}<small>${event ? L('活动', 'EVENT') : c.level ? L('关', 'LEVEL') : L('加分', 'BONUS')}</small></div><div><div class="nm"></div><div class="tg"></div></div>`;
       (b.querySelector('.nm') as HTMLElement).innerHTML = `${L(c.nameZh, c.name)}<span>${L(c.name.toUpperCase(), '')}</span>${locked ? ' 🔒' : ''}`;
-      (b.querySelector('.tg') as HTMLElement).textContent = locked ? L(`赢下第 ${c.level - 1} 关解锁`, `Win level ${c.level - 1} to unlock`) : L(c.taglineZh ?? c.tagline, c.tagline);
+      (b.querySelector('.tg') as HTMLElement).textContent = locked ? L(`赢下第 ${c.level - 1} 关解锁`, `Win level ${c.level - 1} to unlock`) : `${L(c.taglineZh ?? c.tagline, c.tagline)}${event ? L(` · ${HW.maxPlayers} 人 · ${roundSecondsFor(c.id) / 60} 分钟`, ` · ${HW.maxPlayers} players · ${roundSecondsFor(c.id) / 60} min`) : ''}`;
       b.onclick = () => {
         s.setCity(c.id);
         this.renderLobby();
@@ -382,7 +386,7 @@ export class ArenaUi {
     }
     // Slots.
     const slots = this.lobby.querySelector('.slots') as HTMLElement;
-    for (let i = 0; i < A.maxPlayers; i++) {
+    for (let i = 0; i < s.seats(); i++) {
       const p = players[i];
       const d = document.createElement('div');
       d.className = `slot${p ? '' : ' empty'}`;
@@ -517,10 +521,14 @@ export class ArenaUi {
       this.notice(L(`${s.match.wj} 加入了！正式开局`, `${s.match.wj} joined! New round`));
     }
     (this.overlay.querySelector('.revive') as HTMLElement).hidden = !(this.adsAvailable && g.canRevive());
-    const left = Math.max(0, A.roundSeconds - g.matchTime);
+    const left = g.timeLeft(roundSecondsFor(g.city.id));
     (this.overlay.querySelector('.timer b') as HTMLElement).textContent = `${Math.floor(left / 60)}:${Math.floor(left % 60).toString().padStart(2, '0')}`;
     const climax = g.climaxTotal();
-    (this.overlay.querySelector('.timer span') as HTMLElement).textContent = `${L(g.city.nameZh, g.city.name)} · ${L(g.city.climaxNameZh, g.city.climaxName.replace(/^the /, ''))} ${climax - g.climaxLeft()}/${climax}`;
+    const stage = g.hunt?.stage();
+    (this.overlay.querySelector('.timer') as HTMLElement).classList.toggle('hunt', !!stage && stage !== 'grow');
+    (this.overlay.querySelector('.timer span') as HTMLElement).textContent = g.hunt
+      ? `${L(g.city.nameZh, g.city.name)} · ${stage === 'grow' ? L('🎃 距离下半场', '🎃 Hunt starts in') : stage === 'chase' ? L('👻 活下去！', '👻 Survive!') : L('👻 它们来了……', '👻 They are coming…')}`
+      : `${L(g.city.nameZh, g.city.name)} · ${L(g.city.climaxNameZh, g.city.climaxName.replace(/^the /, ''))} ${climax - g.climaxLeft()}/${climax}`;
     // Landmark lock cue: countdown while it is solid, then a short "open" highlight.
     const lock = this.overlay.querySelector('.timer .lock') as HTMLElement;
     const opensIn = A.landmarkOpenSeconds - g.matchTime;
@@ -539,28 +547,34 @@ export class ArenaUi {
     } else lock.hidden = true;
     // Scoreboard.
     const board = this.overlay.querySelector('.board') as HTMLElement;
+    const hunt = g.hunt && g.hunt.start !== null ? g.hunt : null;
+    if (hunt) {
+      this.renderHuntBoard(g, hunt, board);
+    } else {
     const rows = [...g.actors].sort((a, b) => (a.eliminated !== b.eliminated ? (a.eliminated ? 1 : -1) : b.mass - a.mass));
     board.textContent = '';
     rows.forEach((a, i) => {
       const r = document.createElement('div');
       r.className = `row${a === g.local ? ' me' : ''}${a.eliminated ? ' out' : ''}`;
-      r.innerHTML = `<span class="rk">${i + 1}</span><i style="background:#${SLOT_COLORS[a.slot % 4].toString(16).padStart(6, '0')}"></i><span class="nm"></span><span class="hp"></span><span class="ms hex"></span><span class="lv2"></span>`;
+      r.innerHTML = `<span class="rk">${i + 1}</span><i style="background:#${SLOT_COLORS[a.slot % SLOT_COLORS.length].toString(16).padStart(6, '0')}"></i><span class="nm"></span><span class="hp"></span><span class="ms hex"></span><span class="lv2"></span>`;
       (r.querySelector('.nm') as HTMLElement).textContent = (i === 0 && !a.eliminated ? '👑 ' : '') + a.name + (a === g.local ? L('（你）', ' (you)') : '');
       (r.querySelector('.ms') as HTMLElement).textContent = massText(a.mass);
       (r.querySelector('.hp') as HTMLElement).textContent = a.eliminated ? '' : '♥'.repeat(a.lives);
       (r.querySelector('.lv2') as HTMLElement).textContent = `${L('吞', 'ate')} ${a.kills} · ${L(a.vehicle.nameZh, a.vehicle.name)}${a.eliminated ? L(' · 出局', ' · out') : !a.alive ? L(' · 重生中', ' · respawning') : ''}`;
       board.appendChild(r);
     });
+    }
     // Centre message.
     const center = this.overlay.querySelector('.center') as HTMLElement;
     const me = g.local;
     if (g.phase === 'countdown') center.innerHTML = `<b>${Math.max(1, Math.ceil(g.countdown))}</b><span>${L('准备', 'GET READY')}</span>`;
     else if (g.phase === 'playing' && g.matchTime < 1.2) center.innerHTML = `<b>GO</b><span>${L('开吃！', 'EAT!')}</span>`;
-    else if (me && me.eliminated) center.innerHTML = `<span>${L('已出局 · 观战中（点击切换视角）', 'Eliminated · spectating (tap to switch)')}</span>`;
+    else if (me && g.hunt?.caught.has(me.id)) center.innerHTML = `<span>${L('被抓住了 · 分数清零 · 观战中（点击切换视角）', 'Caught · score 0 · spectating (tap to switch)')}</span>`;
+    else if (me && me.eliminated) center.innerHTML = `<span>${L(g.hunt && g.hunt.start === null ? '已出局 · 下半场会复活参加大逃杀' : '已出局 · 观战中（点击切换视角）', g.hunt && g.hunt.start === null ? 'Out · you come back for the second-half hunt' : 'Eliminated · spectating (tap to switch)')}</span>`;
     else if (me && !me.alive && !isFinite(me.respawnAt)) center.innerHTML = `<span>${L('广告播放中…', 'Ad playing…')}</span>`;
     else if (me && !me.alive) center.innerHTML = `<b>${Math.max(0, me.respawnAt - g.matchTime).toFixed(1)}</b><span>${L('重生中', 'RESPAWNING')}</span>`;
     else if (!me && s.match.wu) center.innerHTML = `<span>${L('房主正在热身 · 马上为你重新开局…', 'The host is warming up · a new round starts for you now…')}</span>`;
-    else if (!me) center.innerHTML = `<span>${g.phase === 'playing' && A.roundSeconds - g.matchTime > A.dropInCutoffSeconds ? L('观战中 · 有空位会自动加入', 'Spectating · you join as soon as a slot frees up') : L('观战中 · 下一局可加入', 'Spectating · join next round')}</span>`;
+    else if (!me) center.innerHTML = `<span>${g.phase === 'playing' && !g.hunt?.locked() && (g.hunt ? HW.huntAt : A.roundSeconds) - g.matchTime > A.dropInCutoffSeconds ? L('观战中 · 有空位会自动加入', 'Spectating · you join as soon as a slot frees up') : L('观战中 · 下一局可加入', 'Spectating · join next round')}</span>`;
     else center.textContent = '';
     const combo = this.overlay.querySelector('.combo') as HTMLElement;
     const cu = me && me.alive ? g.catchUp(me) : 1;
@@ -619,7 +633,7 @@ export class ArenaUi {
       const x = mx(a.x);
       const z = mz(a.z);
       const r = Math.max(4, (a.diameter / 2) * k);
-      ctx.fillStyle = `#${SLOT_COLORS[a.slot % 4].toString(16).padStart(6, '0')}`;
+      ctx.fillStyle = `#${SLOT_COLORS[a.slot % SLOT_COLORS.length].toString(16).padStart(6, '0')}`;
       ctx.beginPath();
       ctx.arc(x, z, r, 0, Math.PI * 2);
       ctx.fill();
@@ -644,19 +658,97 @@ export class ArenaUi {
         ctx.stroke();
       }
     }
+    // Villains (Halloween hunt): red rings with a white core, always on top.
+    const hs = g.hunt?.stage();
+    if (g.hunt && (hs === 'rise' || hs === 'chase')) {
+      for (const h of g.hunt.hunters) {
+        const x = mx(h.x);
+        const z = mz(h.z);
+        ctx.fillStyle = '#ff2d55';
+        ctx.beginPath();
+        ctx.arc(x, z, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(x, z, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  /** Halloween, once the scores are locked: locked score, running / caught. */
+  private renderHuntBoard(g: ArenaGame, h: NonNullable<ArenaGame['hunt']>, board: HTMLElement): void {
+    board.textContent = '';
+    for (const st of g.standings()) {
+      const a = g.byId.get(st.id);
+      if (!a) continue;
+      const caught = h.caught.has(a.id);
+      const r = document.createElement('div');
+      r.className = `row${a === g.local ? ' me' : ''}${caught || a.left ? ' out' : ''}`;
+      r.innerHTML = `<span class="rk">${st.rank}</span><i style="background:#${SLOT_COLORS[a.slot % SLOT_COLORS.length].toString(16).padStart(6, '0')}"></i><span class="nm"></span><span class="hp"></span><span class="ms hex"></span><span class="lv2"></span>`;
+      (r.querySelector('.nm') as HTMLElement).textContent = (st.rank === 1 && !caught ? '👑 ' : '') + a.name + (a === g.local ? L('（你）', ' (you)') : '');
+      (r.querySelector('.ms') as HTMLElement).textContent = massText(st.mass);
+      (r.querySelector('.hp') as HTMLElement).textContent = caught ? '👻' : a.left ? '' : h.egg.stealthed(a) ? '🍳' : '🏃';
+      (r.querySelector('.lv2') as HTMLElement).textContent = caught ? L('被抓 · 0 分', 'caught · 0') : a.left ? L('离开了', 'left') : L('锁定分数 · 还在逃', 'score locked · running');
+      board.appendChild(r);
+    }
+  }
+
+  /** Halloween: each villain's name over its head; off screen, an edge arrow when it is close. */
+  private renderHunterTags(g: ArenaGame, host: HTMLElement, v: THREE.Vector3): void {
+    const st = g.hunt?.stage();
+    const on = !!g.hunt && (st === 'rise' || st === 'chase');
+    g.hunt?.hunters.forEach((h, i) => {
+      const key = `hunter-${i}`;
+      let tag = this.tags.get(key);
+      if (!tag) {
+        tag = document.createElement('div');
+        tag.className = 'tag hunter';
+        host.appendChild(tag);
+        this.tags.set(key, tag);
+      }
+      const me = g.local?.alive ? g.local : null;
+      const dist = me ? Math.hypot(h.x - me.x, h.z - me.z) : Infinity;
+      v.set(h.x, HW.hunterHeight + 0.5, h.z).project(g.camera);
+      const onScreen = v.z < 1 && Math.abs(v.x) < 1 && Math.abs(v.y) < 1;
+      const [zh, en] = hunterName(h.def);
+      tag.hidden = !on || (!onScreen && dist > 45);
+      if (tag.hidden) return;
+      if (onScreen) {
+        tag.classList.remove('edge');
+        tag.style.transform = '';
+        tag.textContent = `☠ BOSS · ${L(zh, en)}`;
+        tag.style.left = `${((v.x + 1) / 2) * innerWidth}px`;
+        tag.style.top = `${((1 - v.y) / 2) * innerHeight}px`;
+      } else {
+        let ex = v.z > 1 ? -v.x : v.x;
+        let ey = v.z > 1 ? -v.y : v.y;
+        const m = Math.max(Math.abs(ex), Math.abs(ey)) || 1;
+        ex = (ex / m) * 0.9;
+        ey = (ey / m) * 0.84;
+        if (ex > 0.6) ey = Math.max(ey, -0.2);
+        const arrow = Math.abs(ex) > Math.abs(ey) ? (ex > 0 ? '▶' : '◀') : ey > 0 ? '▲' : '▼';
+        tag.classList.add('edge');
+        tag.textContent = `${arrow} ☠ BOSS · ${L(zh, en)} · ${Math.round(dist)} m`;
+        tag.style.left = `${((ex + 1) / 2) * innerWidth}px`;
+        tag.style.top = `${((1 - ey) / 2) * innerHeight + 12}px`;
+        tag.style.transform = ex < -0.6 ? 'translate(0, -50%)' : ex > 0.6 ? 'translate(-100%, -50%)' : 'translate(-50%, -50%)';
+      }
+    });
   }
 
   private renderTags(g: ArenaGame): void {
     const host = this.overlay.querySelector('.tags') as HTMLElement;
     const v = new THREE.Vector3();
+    this.renderHunterTags(g, host, v);
     // Machines that left the roster (drop-in replaced them) lose their tag.
-    for (const [id, tag] of this.tags) if (!g.byId.has(id)) (tag.remove(), this.tags.delete(id));
+    for (const [id, tag] of this.tags) if (!g.byId.has(id) && !id.startsWith('hunter-')) (tag.remove(), this.tags.delete(id));
     for (const a of g.actors) {
       let tag = this.tags.get(a.id);
       if (!tag) {
         tag = document.createElement('div');
         tag.className = 'tag';
-        tag.style.borderBottom = `2px solid #${SLOT_COLORS[a.slot % 4].toString(16).padStart(6, '0')}`;
+        tag.style.borderBottom = `2px solid #${SLOT_COLORS[a.slot % SLOT_COLORS.length].toString(16).padStart(6, '0')}`;
         host.appendChild(tag);
         this.tags.set(a.id, tag);
       }

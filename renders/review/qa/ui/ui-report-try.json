@@ -1,0 +1,497 @@
+{
+ "base": "http://127.0.0.1:5203/game/",
+ "tag": "try",
+ "runs": [
+  {
+   "view": "desktop",
+   "lang": "en",
+   "states": {
+    "lobby": {
+     "file": "renders/review/qa/ui/try-desktop-en-lobby.jpg",
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "lobby": {
+       "x": 0,
+       "y": 0,
+       "w": 1920,
+       "h": 1080,
+       "text": "GROW EVERYTHING Arena Up to 6 players · Halloween hunt ◎ 0 🛒 Shop 中文 ⚙ 📖 Story 1 Pick a level 1 LEVEL Shanghai Shikumen lanes around the Pearl 2 LEVEL New Yor"
+      },
+      "start": {
+       "x": 1752,
+       "y": 1008,
+       "w": 110,
+       "h": 56,
+       "text": "Start"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": false,
+     "dashHit": false,
+     "tags": []
+    },
+    "grow": {
+     "file": "renders/review/qa/ui/try-desktop-en-grow.jpg",
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 809,
+       "y": 14,
+       "w": 301,
+       "h": 59,
+       "text": "4:59 Halloween Town · 🎃 Hunt starts in"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) ♥♥♥ 5.0 kg ate 0 · Collector 2 Gearjaw ♥♥♥ 5.0 kg 3 Chomp ♥♥♥ 5.0 kg 4 Hoover-9 ♥♥♥ 5.0 kg 5 Rustbucket ♥♥♥ 5.0 kg 6 Magna ♥♥♥ 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "panel": {
+       "x": 24,
+       "y": 923,
+       "w": 282,
+       "h": 135,
+       "text": "MASS TIER 1 5.0KG SCRAP COLLECTOR NEXT · BOXES & BAGS · 25.2 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester (you)",
+       "sw": 109,
+       "cw": 100
+      }
+     ],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "Gearjaw · 5.0 kg",
+      "◀ Chomp · 124 m",
+      "▶ Hoover-9 · 125 m",
+      "Rustbucket · 5.0 kg",
+      "▶ Magna · 68 m"
+     ]
+    },
+    "halftime": {
+     "file": "renders/review/qa/ui/try-desktop-en-halftime.jpg",
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 793,
+       "y": 14,
+       "w": 333,
+       "h": 59,
+       "text": "4:59 Halloween Town · 👻 They are coming…"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) 🏃 5.0 kg score locked · running 2 Gearjaw 🏃 5.0 kg 3 Chomp 🏃 5.0 kg 4 Hoover-9 🏃 5.0 kg 5 Rustbucket 🏃 5.0 kg 6 Magna 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "panel": {
+       "x": 24,
+       "y": 923,
+       "w": 282,
+       "h": 135,
+       "text": "MASS TIER 1 5.0KG SCRAP COLLECTOR NEXT · BOXES & BAGS · 25.2 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "Gearjaw · 5.0 kg",
+      "◀ Chomp · 124 m",
+      "▶ Hoover-9 · 126 m",
+      "Rustbucket · 5.0 kg",
+      "▶ Magna · 69 m"
+     ]
+    },
+    "rise": {
+     "file": "renders/review/qa/ui/try-desktop-en-rise.jpg",
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 793,
+       "y": 14,
+       "w": 333,
+       "h": 59,
+       "text": "4:56 Halloween Town · 👻 They are coming…"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) 🏃 5.0 kg score locked · running 2 Gearjaw 🏃 5.0 kg 3 Chomp 🏃 5.0 kg 4 Hoover-9 🏃 5.0 kg 5 Rustbucket 🏃 5.0 kg 6 Magna 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "panel": {
+       "x": 24,
+       "y": 909,
+       "w": 282,
+       "h": 149,
+       "text": "MASS TIER 2 120KG INTAKE CHASSIS NEXT · DUMPSTERS & MACHINES · 394 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "☠ BOSS · Yang Yongxin",
+      "☠ BOSS · Hannibal",
+      "☠ BOSS · Norman Bates",
+      "Gearjaw · 120 kg",
+      "◀ Chomp · 134 m",
+      "▶ Hoover-9 · 124 m",
+      "Rustbucket · 120 kg",
+      "▶ Magna · 77 m"
+     ]
+    },
+    "chase": {
+     "file": "renders/review/qa/ui/try-desktop-en-chase.jpg",
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 832,
+       "y": 14,
+       "w": 257,
+       "h": 59,
+       "text": "4:52 Halloween Town · 👻 Survive!"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) 🏃 5.0 kg score locked · running 2 Gearjaw 🏃 5.0 kg 3 Chomp 🏃 5.0 kg 4 Hoover-9 🏃 5.0 kg 5 Rustbucket 🏃 5.0 kg 6 Magna 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "panel": {
+       "x": 24,
+       "y": 909,
+       "w": 282,
+       "h": 149,
+       "text": "MASS TIER 2 120KG INTAKE CHASSIS NEXT · DUMPSTERS & MACHINES · 394 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "☠ BOSS · Yang Yongxin",
+      "☠ BOSS · Hannibal",
+      "☠ BOSS · Norman Bates",
+      "Gearjaw · 120 kg",
+      "Chomp · 120 kg",
+      "▶ Hoover-9 · 110 m",
+      "Rustbucket · 120 kg",
+      "▶ Magna · 82 m"
+     ]
+    },
+    "egg-toast": {
+     "file": "renders/review/qa/ui/try-desktop-en-egg-toast.jpg",
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 832,
+       "y": 14,
+       "w": 257,
+       "h": 59,
+       "text": "4:51 Halloween Town · 👻 Survive!"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) 🏃 5.0 kg score locked · running 2 Gearjaw 🏃 5.0 kg 3 Chomp 🏃 5.0 kg 4 Hoover-9 🏃 5.0 kg 5 Rustbucket 🏃 5.0 kg 6 Magna 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "panel": {
+       "x": 24,
+       "y": 909,
+       "w": 282,
+       "h": 149,
+       "text": "MASS TIER 2 120KG INTAKE CHASSIS NEXT · DUMPSTERS & MACHINES · 394 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "▶ Gearjaw · 124 m",
+      "Chomp · 120 kg",
+      "▶ Hoover-9 · 171 m",
+      "Rustbucket · 120 kg",
+      "▶ Magna · 185 m"
+     ]
+    },
+    "egg-banner": {
+     "file": "renders/review/qa/ui/try-desktop-en-egg-banner.jpg",
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 832,
+       "y": 14,
+       "w": 257,
+       "h": 59,
+       "text": "4:51 Halloween Town · 👻 Survive!"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) 🍳 7.0 kg score locked · running 2 Gearjaw 🏃 5.0 kg 3 Chomp 🏃 5.0 kg 4 Hoover-9 🏃 5.0 kg 5 Rustbucket 🏃 5.0 kg 6 Magna 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "panel": {
+       "x": 24,
+       "y": 909,
+       "w": 282,
+       "h": 149,
+       "text": "MASS TIER 2 120KG INTAKE CHASSIS NEXT · DUMPSTERS & MACHINES · 394 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "📯",
+      "▶ Gearjaw · 121 m",
+      "Chomp · 120 kg",
+      "▶ Hoover-9 · 168 m",
+      "Rustbucket · 120 kg",
+      "▶ Magna · 182 m"
+     ]
+    },
+    "results": {
+     "file": "renders/review/qa/ui/try-desktop-en-results.jpg",
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 832,
+       "y": 14,
+       "w": 257,
+       "h": 59,
+       "text": "0:00 Halloween Town · 👻 Survive!"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) 🏃 7.0 kg score locked · running 2 Gearjaw 🏃 5.0 kg 3 Chomp 🏃 5.0 kg 4 Hoover-9 🏃 5.0 kg 5 Rustbucket 🏃 5.0 kg 6 Magna 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "panel": {
+       "x": 24,
+       "y": 909,
+       "w": 282,
+       "h": 149,
+       "text": "MASS TIER 2 120KG INTAKE CHASSIS NEXT · DUMPSTERS & MACHINES · 394 kg"
+      },
+      "results": {
+       "x": 680,
+       "y": 306,
+       "w": 560,
+       "h": 469,
+       "text": "👑 Champion Tester · 7.0 kg # Player Mass Eats Eaten Items 1 Tester 7.0 kg 0 0 0 2 Gearjaw 5.0 kg 0 0 0 3 Chomp 5.0 kg 0 0 0 4 Hoover-9 5.0 kg 0 0 0 5 Rustbucke"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": false,
+     "dashHit": false,
+     "tags": [
+      "📯",
+      "▶ Gearjaw · 115 m",
+      "Chomp · 120 kg",
+      "▶ Hoover-9 · 159 m",
+      "Rustbucket · 120 kg",
+      "▶ Magna · 172 m"
+     ]
+    }
+   },
+   "lobbyText": {
+    "halloween": true,
+    "event": true,
+    "seats": null,
+    "rules": true
+   },
+   "eggWokenByHornButton": true,
+   "resultsRows": 6,
+   "errors": []
+  }
+ ]
+}

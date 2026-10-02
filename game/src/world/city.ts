@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import type { Palette } from '../art/environment';
 import type { MaterialLibrary } from '../art/materials';
+import type { ObjectTypeId } from '../config/objects';
 import type { DressingSpec } from './dressing';
 import type { Cluster, Placement, StaticBlock } from './scrapCity';
 
@@ -44,8 +45,23 @@ export interface CityDef {
   groundHeight(x: number, z: number): number;
   /** Story-mode spawn. */
   spawn: SpawnPoint;
-  /** Arena spawns, one per player slot (4), far enough apart to start safely. */
+  /** Arena spawns, one per player slot (4; 6 on the Halloween map), far enough apart to start safely. */
   spawns: SpawnPoint[];
+  /**
+   * Themed food ring around each arena spawn: [type, radius m, count]. Absent → the arena's generic
+   * starter scrap ring. Keep its total rewardMass close to the generic ring so starts stay fair.
+   */
+  starterRing?: [ObjectTypeId, number, number][];
+  /**
+   * Atmosphere hints for the Halloween FX layer (world/halloweenFx.ts): where the lanterns hang
+   * (light pools), the graveyard extent (wisps), mist zones (paths and hollows) and bat roosts.
+   */
+  fxHints?: {
+    lanterns: { x: number; y: number; z: number }[];
+    graveyard: Bounds | null;
+    mistZones: { x: number; z: number; r: number }[];
+    roosts: { x: number; z: number; h: number }[];
+  };
   build(lib: MaterialLibrary): CityBuild;
   dressing: DressingSpec;
   /** What tearing down the climax structure means here ("the Eiffel Tower"). */

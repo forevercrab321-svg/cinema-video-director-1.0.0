@@ -34,6 +34,8 @@ export class ArenaBot {
 
   intents(game: ArenaGame, me: Actor): { dx: number; dz: number; dash: boolean } {
     const t = game.time;
+    const st = game.hunt?.stage();
+    if (st && st !== 'grow') return this.flee(game, me, st === 'chase');
     if (t >= this.thinkAt) this.think(game, me);
     let dx = 0;
     let dz = -1;
@@ -130,6 +132,52 @@ export class ArenaBot {
       this.lastDist = Infinity;
       this.checkAt = game.time + 0.8;
     }
+  }
+
+  /**
+   * The hunt: run from the villains. Away from the nearest (weighted by closeness), pulled toward
+   * the open middle of the district so a rival does not pin itself into a corner, dashing when
+   * one gets close. Rookie AI reacts a little later (skill).
+   */
+  private flee(game: ArenaGame, me: Actor, chasing: boolean): { dx: number; dz: number; dash: boolean } {
+    const t = game.time;
+    const hunters = game.hunt?.hunters ?? [];
+    let dx = 0;
+    let dz = 0;
+    let nearest = Infinity;
+    for (const h of hunters) {
+      const ox = me.x - h.x;
+      const oz = me.z - h.z;
+      const d = Math.hypot(ox, oz) || 0.01;
+      nearest = Math.min(nearest, d);
+      const w = 1 / (d * d);
+      dx += (ox / d) * w * 400;
+      dz += (oz / d) * w * 400;
+    }
+    const b = game.city.bounds;
+    const cx = (b.minX + b.maxX) / 2;
+    const cz = (b.minZ + b.maxZ) / 2;
+    const half = (b.maxX - b.minX) / 2;
+    // Walls: the closer to the edge, the stronger the pull back in.
+    const edge = Math.max(Math.abs(me.x - cx), Math.abs(me.z - cz)) / half;
+    if (edge > 0.6) {
+      dx += (cx - me.x) * (edge - 0.6) * 0.5;
+      dz += (cz - me.z) * (edge - 0.6) * 0.5;
+    }
+    if (!chasing || Math.hypot(dx, dz) < 1e-3) {
+      // Before the chase: scatter away from the plaza the villains rise from.
+      dx += me.x - cx;
+      dz += me.z - cz;
+    }
+    const skill = Math.min(1, Math.max(0, game.botSkill));
+    let dash = false;
+    if (chasing && nearest < 6 + (1 - skill) * -2 && t > this.nextDash) {
+      dash = true;
+      this.nextDash = t + 1.2 + (1 - skill) * 1.2;
+    }
+    const len = Math.hypot(dx, dz) || 1;
+    [dx, dz] = this.avoid(game, me, dx / len, dz / len);
+    return { dx, dz, dash };
   }
 
   private avoid(game: ArenaGame, me: Actor, dx: number, dz: number): [number, number] {

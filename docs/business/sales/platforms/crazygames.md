@@ -1,6 +1,12 @@
 # CrazyGames — 平台档案
 
-> 调研日期：2026-09-24 · 负责人：平台发行 BD · 状态：**未提交**（需要用户注册开发者账号）
+> 调研日期：2026-09-24 · 负责人：平台发行 BD · 状态：**REJECTED（2026-10-01 提交）**
+>
+> 2026-10-02 审核反馈原文："The game would benefit from additional stability and technical improvements before publishing"（未指明具体问题）。
+> 门户状态：被拒；另有一份 33 个文件的上传未跑 QA（"Latest changes require QA"）；"Submit new version" 按钮不在，只剩 "Remove game"（**不要点**）。
+> 已做：WebGL 上下文丢失不再整页重载（`tools/qa-context-loss.mjs`）；模拟 CrazyGames 环境的稳定性探针 `tools/qa-portal-stability.mjs`（SDK 桩、后端拒连/挂起）——无崩溃、无脚本错误、后端不通时可直接和 AI 玩。
+> 数据库：0005/0006/0007 已全部在生产库（2026-10-02 核对，7 项全为 true），6 人房和万圣节结算后端已就绪。
+> 未能验证：真实帧率（沙盒是软件渲染）、真实 Supabase 联机（沙盒网络屏蔽）。上传框只收文件夹，不收 zip。
 >
 > 取证方式：本环境的网络出口屏蔽了 `docs.crazygames.com` / `developer.crazygames.com`，无法打开全文；以下内容来自**官方域名页面的搜索引擎摘要**，每条都注明 URL。提交前请用户在浏览器里打开对应页面再核对一次。
 

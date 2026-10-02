@@ -18,9 +18,12 @@ export interface MusicTheme {
   /** Root frequency (Hz) the patterns are relative to. */
   root: number;
   lead: { pattern: (number | null)[]; wave: OscillatorType; level: number; decay: number; pluck?: boolean; tremolo?: boolean; detune?: number };
-  /** `boing`: each bass note bends down a little (springy, cartoon bass). */
-  bass: { pattern: (number | null)[]; wave: OscillatorType; level: number; boing?: boolean };
+  /** `boing`: each bass note bends down a little (springy, cartoon bass). `pluck` + a short
+   *  `decay` (default 0.3 s) give a pizzicato / ostinato bass. */
+  bass: { pattern: (number | null)[]; wave: OscillatorType; level: number; boing?: boolean; pluck?: boolean; decay?: number };
   kick: number[];
+  /** Kick drum level (default 0.8). */
+  kickLevel?: number;
   /** Clap / snare hits (from tier 2). */
   snare: number[];
   hat: number[];
@@ -28,6 +31,12 @@ export interface MusicTheme {
   bell?: { pattern: (number | null)[]; level: number };
   /** Optional colour hit (gong, brass stab, accordion chord) on these steps from tier 4. */
   accent?: { steps: number[]; chord: number[]; wave: OscillatorType; level: number; decay: number };
+  /**
+   * Layers play as if the machine were at least this tier (default 1). For a theme whose job is
+   * the mood of a phase rather than growth, e.g. the Halloween hunt, where every machine has
+   * been shrunk back to small but the chase must still drive.
+   */
+  minTier?: number;
 }
 
 const n = null;
@@ -100,5 +109,67 @@ export const THEMES: Record<string, MusicTheme> = {
     hat: [2, 6, 10, 14, 18, 22, 26, 30],
     bell: { pattern: [n, n, n, n, n, n, n, n, n, n, 19, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, 24, n, 19, n, n, n], level: 0.06 },
     accent: { steps: [14, 30], chord: [12, 16, 19], wave: 'square', level: 0.035, decay: 0.1 },
+  },
+  // Halloween Town, first half — "Candy Crypt Shuffle": A harmonic minor, spooky-but-cute.
+  // A toy harpsichord / organ hook creeps up and back (call), then slides down chromatically
+  // through the tritone (answer); pizzicato bass, xylophone "bones" rattles from tier 4.
+  halloween: {
+    id: 'halloween',
+    bpm: 124,
+    steps: 32,
+    root: 220.0, // A3
+    lead: {
+      // Call: A A C B A G# A E · Answer: F F A G# F E D# E
+      pattern: [12, n, 12, 15, n, 14, 12, n, 11, n, 12, n, 7, n, n, n, 8, n, 8, 12, n, 11, 8, n, 7, n, 6, n, 7, n, n, n],
+      wave: 'sawtooth', level: 0.065, decay: 0.22, pluck: true, detune: 6,
+    },
+    // Pizzicato: A–E bounce under the call, F–C then E–B–G# turnaround under the answer.
+    bass: { pattern: [-12, n, n, n, -5, n, n, n, -12, n, n, n, -5, n, -12, n, -16, n, n, n, -9, n, n, n, -17, n, n, n, -10, n, -13, n], wave: 'triangle', level: 0.34, pluck: true, decay: 0.18 },
+    kick: [0, 8, 16, 24],
+    snare: [4, 12, 20, 28],
+    hat: [2, 6, 10, 14, 18, 22, 26, 30],
+    // Music-box ghost line: answers the hook from an octave up, ending on the eerie leading tone.
+    bell: { pattern: [n, n, n, n, n, n, 24, n, n, n, n, n, n, n, 27, n, n, n, n, n, n, n, 20, n, n, n, n, n, n, n, 23, n], level: 0.06 },
+    // Xylophone "bones": two dry clacks at the end of each bar.
+    accent: { steps: [13, 15, 29, 31], chord: [31], wave: 'triangle', level: 0.07, decay: 0.07 },
+  },
+  // Halloween Town, second half — "They're Coming": E minor horror chase. A driving low sixteenth
+  // ostinato with a semitone/tritone twist, heartbeat kick ("lub-dub"), a slow tremolo string
+  // line that rises by semitones, an eerie high bell and dissonant E–F–Bb stabs. Mixed at the
+  // same level as the city themes: it drives, it does not blare.
+  'halloween-hunt': {
+    id: 'halloween-hunt',
+    bpm: 150,
+    steps: 64,
+    root: 164.81, // E3
+    minTier: 4,
+    lead: {
+      pattern: [
+        12, n, n, n, n, n, n, n, 13, n, n, n, n, n, n, n, 12, n, n, n, n, n, n, n, 10, n, n, n, n, n, n, n,
+        12, n, n, n, n, n, n, n, 13, n, n, n, n, n, n, n, 15, n, n, n, n, n, n, n, 18, n, n, n, 13, n, n, n,
+      ],
+      wave: 'sawtooth', level: 0.06, decay: 1.0, tremolo: true, detune: 9,
+    },
+    bass: {
+      pattern: [
+        -12, -12, -11, -12, -12, -12, -6, -12, -12, -12, -11, -12, -9, -12, -6, -11,
+        -12, -12, -11, -12, -12, -12, -6, -12, -12, -12, -11, -12, -7, -6, -7, -11,
+        -12, -12, -11, -12, -12, -12, -6, -12, -12, -12, -11, -12, -9, -12, -6, -11,
+        -14, -14, -13, -14, -14, -14, -8, -14, -11, -11, -10, -11, -7, -6, -7, -6,
+      ],
+      wave: 'sawtooth', level: 0.26, pluck: true, decay: 0.11,
+    },
+    kick: [0, 2, 16, 18, 32, 34, 48, 50],
+    kickLevel: 0.7,
+    snare: [24, 56],
+    hat: [4, 12, 20, 28, 36, 44, 52, 60],
+    bell: {
+      pattern: [
+        n, n, n, n, n, n, n, n, n, n, n, n, 36, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, 37, n, n, n,
+        n, n, n, n, n, n, n, n, n, n, n, n, 36, n, n, n, n, n, n, n, n, n, n, n, 42, n, n, n, n, n, n, n,
+      ],
+      level: 0.05,
+    },
+    accent: { steps: [30, 62], chord: [0, 1, 6], wave: 'sawtooth', level: 0.045, decay: 0.2 },
   },
 };

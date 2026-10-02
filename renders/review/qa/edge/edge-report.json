@@ -1,0 +1,26 @@
+{
+ "honkcatch": {
+  "caught": false,
+  "woke": true
+ },
+ "stealth10": {
+  "egAt": 308.5,
+  "caughtAt": 318.69999999998254
+ },
+ "guesthonk": {
+  "woke": "tab-i4lksg1dtfii",
+  "remote": {
+   "x": -24.6,
+   "z": 84.4,
+   "emote": 0,
+   "emoteSeq": 0,
+   "say": ""
+  },
+  "egg": {
+   "x": -88,
+   "z": 88,
+   "by": null,
+   "stealth": []
+  }
+ }
+}

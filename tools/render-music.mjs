@@ -50,7 +50,7 @@ const render = (job) => p.evaluate(async ({ city, secs, victoryAt, tierEvery }) 
 }, job);
 
 const jobs = [
-  ...['shanghai', 'newyork', 'paris', 'scrap'].map((city) => ({ name: `bgm-${city}`, city, secs: 32, victoryAt: null, tierEvery: 8 })),
+  ...['shanghai', 'newyork', 'paris', 'scrap', 'halloween', 'halloween-hunt'].map((city) => ({ name: `bgm-${city}`, city, secs: 32, victoryAt: null, tierEvery: 8 })),
   { name: 'victory', city: 'shanghai', secs: 6, victoryAt: 0.5, tierEvery: 0 },
 ];
 for (const j of jobs) {

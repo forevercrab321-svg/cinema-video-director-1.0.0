@@ -1,0 +1,112 @@
+/**
+ * HALLOWEEN TOWN — "The Hunt" (docs/halloween-mode.md). Balance for the Halloween map only;
+ * every other city keeps arenaConfig as it is.
+ *
+ * First half: the normal arena (eat, grow, 3 lives). At `huntAt` the host locks each machine's
+ * mass as its score, every machine shrinks back to `huntMass` and three horror villains rise
+ * from the empty central plaza and chase everyone for `huntSeconds`. A machine they catch loses
+ * its score (0) and is out of the round. Final ranking: score, then the later catch.
+ */
+export const HALLOWEEN_CITY = 'halloween';
+
+export const HALLOWEEN = {
+  maxPlayers: 6,
+  /** Grow phase length; the hunt starts here (or earlier if the first half empties out). */
+  huntAt: 300,
+  huntSeconds: 300,
+  /** After the scores lock: the shrink, the villains rising, the chase starting (s after the hunt starts). */
+  shrinkDelay: 1,
+  riseDelay: 3,
+  chaseDelay: 6,
+  /** Everyone runs at this mass in the second half (diameter ≈ 1 m: small again, quick enough to flee). */
+  huntMass: 120,
+  /** Villain size (m) and catch reach (m, added to the runner's radius). */
+  hunterHeight: 3.0,
+  hunterReach: 0.6,
+  /**
+   * Villain speed as a share of a standard machine's top speed at huntMass, ramping over the hunt.
+   * Audit 2026-10-02 (tools/halloween-balance.mjs, 6 AI runners): 0.92→1.12 with a 1.7× lunge and
+   * 0.75 m reach caught 86 % of machines and the first-half leader in 12/12 rounds; 0.82→0.96,
+   * 1.35× and 0.6 m catch 59 % and the leader in 5/16 (humans dash and juke better than the AI).
+   */
+  speedStart: 0.82,
+  speedEnd: 0.96,
+  /** Close to its target a villain lunges: speed × lungeMul for lungeSeconds, then cools down. */
+  lungeRange: 6,
+  lungeMul: 1.35,
+  lungeSeconds: 0.6,
+  lungeCooldown: 3,
+  /** Villains walk through props (they are horror villains) but slower inside one. */
+  phaseSlow: 0.7,
+  /** Villains share the runners out: a target another villain already chases counts this many metres farther. */
+  spreadPenalty: 18,
+  /** Seconds of lead when aiming at a runner (cut corners instead of tail-chasing). */
+  leadSeconds: 0.45,
+  /** Coins by final rank 1..6 (the 4-player table extended). */
+  coinsByRank: [120, 80, 55, 35, 25, 15],
+  /** Spots this close to the centre are the villains' plaza: nothing hides there. */
+  huntSafeRadius: 36,
+  /** Heartbeat: villain closer than this (m) raises the proximity cue from 0 to 1. */
+  dreadRange: 22,
+} as const;
+
+/**
+ * 蛋之谷 / Egg Valley: an invisible girl hidden somewhere new each round (second half only).
+ * Honk next to her to wake her: her fried-egg backpack makes the machine invisible to the bosses
+ * for stealthSeconds and adds scoreBonus × its locked score. Once per round.
+ */
+export const EGG = {
+  name: 'Egg Valley',
+  nameZh: '蛋之谷',
+  height: 2.0,
+  /** Golden egg sparkles give her away within hintRange m; a translucent ghost within ghostRange. */
+  hintRange: 15,
+  ghostRange: 6,
+  /** Honk within this distance (m, plus the machine's radius) to wake her. */
+  wakeRange: 4,
+  stealthSeconds: 10,
+  scoreBonus: 1 / 3,
+  /** An AI rival next to her honks with this chance per second. */
+  botHonkChance: 0.35,
+} as const;
+
+export type HunterKind = 'shock' | 'cannibal' | 'motel';
+
+/**
+ * The three villains. The own-site build shows the names the Creative Director chose; portal
+ * builds (CrazyGames, GameDistribution …) show neutral nicknames, because platform review rejects
+ * real people and third-party characters. Flip `PORTAL_REAL_NAMES` to show the names there too.
+ */
+export const PORTAL_REAL_NAMES = false;
+
+/**
+ * Vite replaces `import.meta.env.VITE_PORTAL_BUILD` at build time, so in a portal build `REAL` is
+ * the constant `false` and the real names are dropped from the bundle (platform review greps it).
+ * Node tools that import this file have no `import.meta.env`: they get the real names.
+ */
+// `?.` keeps Node (no import.meta.env) working; Vite still folds the whole expression.
+const PORTAL: boolean = import.meta.env?.VITE_PORTAL_BUILD === '1';
+const REAL = !PORTAL || PORTAL_REAL_NAMES;
+
+export interface HunterDef {
+  kind: HunterKind;
+  /** The name this build shows (the real name, or the neutral nickname in portal builds). */
+  name: string;
+  nameZh: string;
+  /** Feed line when this villain catches someone. */
+  catchLine: string;
+  catchLineZh: string;
+}
+
+export const HUNTERS: readonly HunterDef[] = [
+  { kind: 'shock', name: REAL ? 'Yang Yongxin' : 'The Shock Doctor', nameZh: REAL ? '杨永信' : '电击院长', catchLine: 'zapped', catchLineZh: '电晕了' },
+  { kind: 'cannibal', name: REAL ? 'Hannibal' : 'The Cannibal', nameZh: REAL ? '汉尼拔' : '食人魔', catchLine: 'had for dinner', catchLineZh: '当成了晚餐' },
+  { kind: 'motel', name: REAL ? 'Norman Bates' : 'The Motel Keeper', nameZh: REAL ? '诺曼·贝茨' : '汽车旅馆老板', catchLine: 'checked in', catchLineZh: '请进了旅馆' },
+];
+
+/** Display name of a villain for this build ([zh, en]). */
+export function hunterName(h: HunterDef): [string, string] {
+  return [h.nameZh, h.name];
+}
+
+export const isHalloween = (city: string | undefined): boolean => city === HALLOWEEN_CITY;

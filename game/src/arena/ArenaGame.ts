@@ -27,6 +27,9 @@ import { hatById, hornById, skinById, type HornSound } from '../config/cosmetics
 import { Hat } from '../entities/Hat';
 import type { GameEvent } from '../game/Game';
 import { MassLedger } from './massLedger';
+import { Hunt } from './hunt';
+import type { HalloweenFx } from '../world/halloweenFx';
+import { isHalloween } from '../config/halloween';
 
 /**
  * ARENA — up to four machines in one city. The world is identical on every client (same
@@ -179,6 +182,10 @@ export class ArenaGame {
   readonly grants = new Map<number, string>();
   /** Most mass / kills each machine can have earned from the host's decisions (massLedger.ts). */
   readonly ledger = new MassLedger();
+  /** Halloween map: the second-half hunt (null on every other map). */
+  hunt: Hunt | null = null;
+  /** Halloween map: moon, bats, wisps, mist, summoning circle and the hunt's event effects. */
+  atmosphere: HalloweenFx | null = null;
   onEvent: ((e: GameEvent | FeelEvent) => void) | null = null;
   /** Kill feed and notices for the arena HUD. */
   onFeed: ((text: string, tone: 'kill' | 'info' | 'bonus' | 'bad') => void) | null = null;
@@ -242,7 +249,7 @@ export class ArenaGame {
     const b = city.bounds;
     const extra: Cluster[] = [{ type: 'GOLD_CRATE', x: (b.minX + b.maxX) / 2, z: (b.minZ + b.maxZ) / 2, radius: Math.min(b.maxX - b.minX, b.maxZ - b.minZ) * 0.45, count: A.goldCrateCount }];
     // Fair starts: every spawn gets the same ring of starter scrap, whatever zone it sits in.
-    for (const sp of city.spawns) for (const [type, radius, count] of STARTER_RING) extra.push({ type, x: sp.x, z: sp.z, radius, count });
+    for (const sp of city.spawns) for (const [type, radius, count] of (city as CityDef & { starterRing?: [ObjectTypeId, number, number][] }).starterRing ?? STARTER_RING) extra.push({ type, x: sp.x, z: sp.z, radius, count });
     for (const type of ['POWER_SPEED', 'POWER_MAGNET', 'POWER_SHIELD'] as const) extra.push({ type, x: (b.minX + b.maxX) / 2, z: (b.minZ + b.maxZ) / 2, radius: Math.min(b.maxX - b.minX, b.maxZ - b.minZ) * 0.47, count: A.powerCount });
     this.world.spawnObjects(seed, extra);
     this.climaxParts = this.world.objects.filter((o) => o.def.climax);
@@ -252,6 +259,10 @@ export class ArenaGame {
       if (!o.def.climax && o.def.objectClass <= A.refillMaxClass && !o.supports.length && !supporting.has(o)) this.refillable.add(o.id);
     }
     for (const r of roster) this.addActor(r, localId);
+    if (isHalloween(city.id)) {
+      this.hunt = new Hunt(this);
+      this.hunt.initEgg();
+    }
     this.world.applyEligibility(this.local?.power ?? diameterForMass(growthConfig.startMass));
     const me = this.local ?? this.actors[0];
     if (me) this.rig.snap(me.x, me.z, me.heading, me.diameter);
@@ -266,7 +277,7 @@ export class ArenaGame {
     const d = diameterForMass(growthConfig.startMass);
     const model = new PlayerModel(this.lib, vehicle.id, skinById(r.skin));
     skipAO(model.root);
-    const ringMat = new THREE.MeshBasicMaterial({ color: SLOT_COLORS[r.slot % 4], transparent: true, opacity: 0.85, depthWrite: false });
+    const ringMat = new THREE.MeshBasicMaterial({ color: SLOT_COLORS[r.slot % SLOT_COLORS.length], transparent: true, opacity: 0.85, depthWrite: false });
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.72, 48).rotateX(-Math.PI / 2), ringMat);
     const bubble = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 16), new THREE.MeshBasicMaterial({ color: 0x6fe8ff, transparent: true, opacity: 0.22, depthWrite: false }));
     bubble.name = `FX_Shield_${r.slot}`;
@@ -415,7 +426,8 @@ export class ArenaGame {
     }
     const playing = this.phase === 'playing';
     if (playing) this.matchTime += dt;
-    if (playing && !this.landmarkAnnounced && this.landmarkOpen()) {
+    if (playing) this.hunt?.update(dt, this.isHost());
+    if (playing && !this.landmarkAnnounced && this.climaxParts.length && this.landmarkOpen()) {
       this.landmarkAnnounced = true;
       this.onFeed?.(L(`${this.city.climaxNameZh}开放了 · 第一个拆倒它的人赢得地标奖励！`, `${this.city.climaxName} is open · topple it for the landmark bonus!`), 'bonus');
       if (this.local) this.hud.showBanner(L('地标开放！', 'LANDMARK OPEN!'), L(`拆倒${this.city.climaxNameZh}`, `TOPPLE ${this.city.climaxName.replace(/^the /, '').toUpperCase()}`), 2.4);
@@ -442,8 +454,10 @@ export class ArenaGame {
         this.moveActor(a, dt, i.dx, i.dz, i.dash);
       }
       this.collideObjects(a);
-      this.proposeCollection(a);
-      this.proposeEats(a);
+      if (!this.hunt?.locked()) {
+        this.proposeCollection(a);
+        this.proposeEats(a);
+      }
       if (this.time > a.comboUntil) a.combo = 0;
     }
     this.bumpActors();
@@ -483,13 +497,15 @@ export class ArenaGame {
       const magnet = this.matchTime < a.magnetUntil;
       const speedy = this.matchTime < a.speedUntil;
       a.ring.scale.setScalar(a.diameter * 0.95 * (magnet ? 1.6 + 0.08 * Math.sin(this.time * 8) : 1));
-      a.ringMat.color.setHex(magnet ? 0xb05cff : speedy ? 0x3fa9ff : SLOT_COLORS[a.slot % 4]);
+      a.ringMat.color.setHex(magnet ? 0xb05cff : speedy ? 0x3fa9ff : SLOT_COLORS[a.slot % SLOT_COLORS.length]);
       a.bubble.visible = a.alive && this.matchTime < a.shieldUntil;
       if (a.bubble.visible) {
         a.bubble.position.set(a.x, this.city.groundHeight(a.x, a.z) + a.diameter * 0.45, a.z);
         a.bubble.scale.setScalar(a.diameter * 1.35 * (1 + 0.03 * Math.sin(this.time * 6)));
       }
     }
+    this.hunt?.present(vdt);
+    this.atmosphere?.update(vdt, this.time, this.camera);
     const focus = this.cameraTarget();
     if (focus) {
       const fx = -Math.sin(focus.heading);
@@ -760,6 +776,7 @@ export class ArenaGame {
       this.effects.pop(a.x + fx * a.diameter * 0.42, a.diameter * 0.3, a.z + fz * a.diameter * 0.42, Math.max(0.12, a.diameter * 0.22));
     }
     if (!a.owned) return; // the owner's client adds the mass; presence brings it here
+    if (this.hunt?.locked()) return; // still flying in when the scores locked: no mass
     a.objects++;
     // Combo: chained absorbs within the window raise a multiplier.
     a.combo = this.time <= a.comboUntil ? a.combo + 1 : 1;
@@ -974,6 +991,7 @@ export class ArenaGame {
 
   // ── Players eating players ─────────────────────────────────────────────────
   canEat(a: Actor, b: Actor): boolean {
+    if (this.hunt?.locked()) return false; // the hunt: nobody eats anybody
     if (a === b || !a.alive || !b.alive || this.matchTime < b.invulnerableUntil || this.matchTime < a.invulnerableUntil || this.matchTime < b.shieldUntil) return false;
     return a.diameter >= b.diameter * A.eatRatio * a.vehicle.eatRatio;
   }
@@ -1128,6 +1146,7 @@ export class ArenaGame {
       a.emoteSeq = s[13];
       const id = Math.floor(s[12]);
       if (id > 0 && id < EMOTES.length) {
+        a.emote = id; // the host reads it (a guest's horn wakes Egg Valley)
         this.sayFor(a, EMOTES[id], 2.2);
         const focus = this.cameraTarget();
         if (id === HORN && focus && Math.hypot(focus.x - a.x, focus.z - a.z) < 60 + focus.diameter * 6) this.onEvent?.({ kind: 'horn', horn: a.horn });
@@ -1181,10 +1200,27 @@ export class ArenaGame {
 
   // ── Results ────────────────────────────────────────────────────────────────
   standings(): Standing[] {
+    if (this.hunt) return this.huntStandings(this.hunt);
     const list = this.actors.map((a) => ({ id: a.id, name: a.name, slot: a.slot, mass: a.mass, kills: a.kills, deaths: a.deaths, objects: a.objects, alive: !a.eliminated, eliminatedAt: a.eliminatedAt, rank: 0 }));
     list.sort((p, q) => (p.alive !== q.alive ? (p.alive ? -1 : 1) : p.alive ? q.mass - p.mass : q.eliminatedAt - p.eliminatedAt));
     list.forEach((s, i) => (s.rank = i + 1));
     return list.map(({ eliminatedAt: _e, ...s }) => s);
+  }
+
+  /**
+   * Halloween: rank by locked score (live mass before the lock). Caught machines score 0 and rank
+   * below everyone still running, the later catch higher; players who left rank last.
+   */
+  private huntStandings(h: Hunt): Standing[] {
+    const list = this.actors.map((a) => ({ id: a.id, name: a.name, slot: a.slot, mass: h.scoreOf(a), kills: a.kills, deaths: a.deaths, objects: a.objects, alive: !h.caught.has(a.id) && !a.left, caughtAt: h.caught.get(a.id) ?? (a.left ? -1 : Infinity), rank: 0 }));
+    list.sort((p, q) => (p.alive !== q.alive ? (p.alive ? -1 : 1) : p.alive ? q.mass - p.mass : q.caughtAt - p.caughtAt));
+    list.forEach((s, i) => (s.rank = i + 1));
+    return list.map(({ caughtAt: _c, ...s }) => s);
+  }
+
+  /** Seconds the HUD counts down: the round, or on the Halloween map the hunt start, then the end. */
+  timeLeft(roundSeconds: number): number {
+    return this.hunt ? this.hunt.timeLeft() : Math.max(0, roundSeconds - this.matchTime);
   }
 
   climaxLeft(): number {
@@ -1244,7 +1280,26 @@ export class ArenaGame {
     return this.rand();
   }
 
+  /** Add the Halloween atmosphere layer, fed with this map's lanterns and giant props. */
+  attachAtmosphere(fx: HalloweenFx): void {
+    this.atmosphere = fx;
+    this.scene.add(fx.root);
+    // The map's own hints first (graveyard, mist hollows, roosts, lanterns), else derive from its objects.
+    const h = this.city.fxHints;
+    const lanterns = h?.lanterns.length ? h.lanterns : this.world.objects.filter((o) => /LANTERN/.test(o.typeId)).map((o) => ({ x: o.x, y: o.baseY, z: o.z }));
+    if (lanterns.length) fx.setLanterns(lanterns.slice(0, 64));
+    const roosts = h?.roosts.length ? h.roosts : this.world.objects.filter((o) => o.def.objectClass >= 7).map((o) => ({ x: o.x, z: o.z, h: o.def.size[1] }));
+    if (roosts.length) fx.setRoosts(roosts.slice(0, 16));
+    if (h?.graveyard) fx.setGraveyard(h.graveyard);
+    if (h?.mistZones.length) fx.setMistZones(h.mistZones);
+  }
+
   dispose(): void {
+    if (this.atmosphere) {
+      this.scene.remove(this.atmosphere.root);
+      this.atmosphere.dispose();
+    }
+    this.hunt?.dispose();
     this.hud.dispose();
     this.scene.traverse((o) => {
       const m = o as THREE.Mesh;

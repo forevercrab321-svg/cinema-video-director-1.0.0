@@ -76,7 +76,56 @@ export type Shape =
   | 'arcPier'
   | 'arcAttic'
   | 'morris'
-  | 'metro';
+  | 'metro'
+  // Halloween Town
+  | 'candy'
+  | 'candyCorn'
+  | 'lollipop'
+  | 'candle'
+  | 'bone'
+  | 'skull'
+  | 'miniPumpkin'
+  | 'candyBucket'
+  | 'witchHat'
+  | 'tombstone'
+  | 'ironFence'
+  | 'jackOLantern'
+  | 'cauldron'
+  | 'skeleton'
+  | 'broomRack'
+  | 'batSign'
+  | 'coffin'
+  | 'slimeGhost'
+  | 'scarecrow'
+  | 'vampireCoffin'
+  | 'vampire'
+  | 'werewolf'
+  | 'giantCauldron'
+  | 'crypt'
+  | 'eyeball'
+  | 'spider'
+  | 'batPlush'
+  | 'crowPost'
+  | 'lanternPost'
+  | 'spiderWeb'
+  | 'witch'
+  | 'bonePile'
+  | 'cryptGate'
+  | 'giantSpider'
+  | 'wishingWell'
+  | 'giantJack'
+  | 'mausoleum'
+  | 'skullRock'
+  | 'giantObelisk'
+  | 'giantScarecrow'
+  | 'colossalPumpkin'
+  | 'hauntedTree'
+  | 'giantSkeleton'
+  | 'witchHatTower'
+  | 'skullMountain'
+  | 'giantPumpkin'
+  | 'pumpkinCarriage'
+
 
 export type DestructionType = 'collect' | 'crush' | 'push' | 'break' | 'rip' | 'collapse';
 
@@ -197,6 +246,63 @@ export const OBJECT_TYPES = {
   ARC_ATTIC: { topple: true, requiredPower: 8, label: 'Arc de Triomphe attic', objectClass: 7, size: [18, 6.5, 9], shape: 'arcAttic', colors: [0xd9d0bd], rewardMass: 12000, destructionType: 'collapse' },
   MORRIS_COLUMN: { label: 'Morris column', objectClass: 4, size: [1.3, 3.6, 1.3], shape: 'morris', colors: [0x2e4a32], rewardMass: 70, destructionType: 'crush' },
   METRO_ENTRANCE: { label: 'Métro entrance', objectClass: 5, size: [3.2, 3.4, 5], shape: 'metro', colors: [0x2e4a32], rewardMass: 260, destructionType: 'rip' },
+  // ── Halloween Town (event map). Class budgets copy the city sets above: same reward per class,
+  // similar sizes per class, so the map paces like every other city.
+  // Class 0–2 food: real-world sizes (a wrapped sweet is 7.5 cm).
+  CANDY: { label: 'Wrapped candy', objectClass: 0, size: [0.075, 0.028, 0.032], shape: 'candy', colors: [0xc92a2a, 0x7a3fbf, 0x2f9e5a, 0xf2a01c, 0xe8e1d0], rewardMass: 0.14, destructionType: 'collect' },
+  EYEBALL: { label: 'Eyeball', objectClass: 0, size: [0.035, 0.035, 0.035], shape: 'eyeball', colors: [0x52ff6a, 0xff4a3a, 0x4ab8ff], rewardMass: 0.14, destructionType: 'collect' },
+  CANDY_CORN: { label: 'Candy corn', objectClass: 0, size: [0.024, 0.05, 0.036], shape: 'candyCorn', colors: [0xf2b705], rewardMass: 0.14, destructionType: 'collect' },
+  CANDLE: { label: 'Candle', objectClass: 1, size: [0.06, 0.17, 0.06], shape: 'candle', colors: [0xe9e1cf, 0x2a2430, 0x5b2a6e], rewardMass: 0.28, destructionType: 'collect' },
+  LOLLIPOP: { label: 'Lollipop', objectClass: 1, size: [0.09, 0.025, 0.26], shape: 'lollipop', colors: [0xd9342b, 0x8a3fd0, 0x2fae6a, 0xf28a1c], rewardMass: 0.36, destructionType: 'collect' },
+  BONE: { label: 'Bone', objectClass: 1, size: [0.065, 0.045, 0.28], shape: 'bone', colors: [0xe4d9bf], rewardMass: 0.48, destructionType: 'collect' },
+  SKULL: { label: 'Skull', objectClass: 1, size: [0.15, 0.17, 0.2], shape: 'skull', colors: [0xe4d9bf], rewardMass: 0.65, destructionType: 'collect' },
+  SPIDER: { label: 'Spider', objectClass: 1, size: [0.12, 0.05, 0.12], shape: 'spider', colors: [0x1a1a1e], rewardMass: 0.36, destructionType: 'collect' },
+  BAT_PLUSH: { label: 'Bat plush', objectClass: 2, size: [0.4, 0.18, 0.2], shape: 'batPlush', colors: [0x2e2238, 0x4a2a5e, 0x22222a], rewardMass: 2.4, destructionType: 'collect' },
+  MINI_PUMPKIN: { label: 'Mini pumpkin', objectClass: 2, size: [0.32, 0.27, 0.32], shape: 'miniPumpkin', colors: [0xe0661c, 0xd9561a, 0xeee6d2, 0xc77a2a, 0x6f8a4a], rewardMass: 2.4, destructionType: 'collect' },
+  CANDY_BUCKET: { label: 'Trick-or-treat pail', objectClass: 2, size: [0.3, 0.38, 0.3], shape: 'candyBucket', colors: [0xe8661a, 0x7a3fbf], rewardMass: 2.8, destructionType: 'collect' },
+  WITCH_HAT: { label: 'Witch hat', objectClass: 2, size: [0.5, 0.6, 0.5], shape: 'witchHat', colors: [0x231c2c, 0x3b2357, 0x1f2a24], rewardMass: 2.2, destructionType: 'collect' },
+  // Class 3–4: graveyard, patch and hollow props.
+  TOMBSTONE: { label: 'Tombstone', objectClass: 3, size: [0.75, 1.0, 0.22], shape: 'tombstone', colors: [0xa9a6a0, 0x9a9e98, 0xb4ada2, 0x8e948c], rewardMass: 15, destructionType: 'collect' },
+  TOMBSTONE_CROSS: { label: 'Celtic cross', objectClass: 3, size: [0.66, 1.4, 0.2], shape: 'tombstone', colors: [0xa9a6a0, 0x9ea39c, 0xb4ada2], rewardMass: 14, destructionType: 'collect' },
+  IRON_FENCE: { label: 'Iron fence', objectClass: 3, size: [2.4, 1.7, 0.16], shape: 'ironFence', colors: [0x6f6a64], rewardMass: 14, destructionType: 'collect' },
+  JACK_O_LANTERN: { label: "Jack-o'-lantern", objectClass: 3, size: [0.62, 0.62, 0.62], shape: 'jackOLantern', colors: [0xe0661c, 0xd9561a, 0xc9721e], rewardMass: 19.5, destructionType: 'collect' },
+  CAULDRON: { label: 'Cauldron', objectClass: 3, size: [0.9, 0.95, 0.9], shape: 'cauldron', colors: [0x6dff4a, 0xb35cff, 0x3ff0c0], rewardMass: 19.5, destructionType: 'collect' },
+  SKELETON: { label: 'Skeleton', objectClass: 3, size: [0.7, 1.8, 0.5], shape: 'skeleton', colors: [0xe4d9bf], rewardMass: 21, destructionType: 'collect' },
+  BROOM_RACK: { label: 'Broom rack', objectClass: 3, size: [1.3, 1.75, 0.55], shape: 'broomRack', colors: [0x2a2233, 0x3b2357], rewardMass: 14, destructionType: 'collect' },
+  BAT_SIGN: { label: 'Bat sign', objectClass: 3, size: [1.1, 2.6, 0.16], shape: 'batSign', colors: [0x5a4632, 0x4a3a2a], rewardMass: 12.5, destructionType: 'collect' },
+  CROW_POST: { label: 'Crow post', objectClass: 3, size: [0.7, 1.95, 0.4], shape: 'crowPost', colors: [0x5a4632], rewardMass: 12.5, destructionType: 'collect' },
+  LANTERN_POST: { label: 'Lantern post', objectClass: 4, size: [1.0, 2.9, 0.5], shape: 'lanternPost', colors: [0xe0661c, 0xd9561a], rewardMass: 60, destructionType: 'crush' },
+  SPIDER_WEB: { label: 'Spider web', objectClass: 4, size: [2.3, 2.5, 0.4], shape: 'spiderWeb', colors: [0x1a1a1e], rewardMass: 35, destructionType: 'break' },
+  GRAVE_OBELISK: { label: 'Grave obelisk', objectClass: 4, size: [0.95, 2.8, 0.95], shape: 'tombstone', colors: [0xa9a6a0, 0xb4ada2, 0x9a9e98], rewardMass: 80, destructionType: 'crush' },
+  COFFIN: { label: 'Coffin', objectClass: 4, size: [0.76, 0.58, 2.1], shape: 'coffin', colors: [0x6a4430, 0x4a3328, 0x6e3a2e], rewardMass: 70, destructionType: 'crush' },
+  SLIME_GHOST: { label: 'Slime ghost', objectClass: 4, size: [1.6, 2.1, 1.1], shape: 'slimeGhost', colors: [0x7dff52, 0x52ffb8, 0xb6ff3a], rewardMass: 90, destructionType: 'crush' },
+  SCARECROW: { label: 'Scarecrow', objectClass: 4, size: [1.7, 2.35, 0.55], shape: 'scarecrow', colors: [0x5b4a3a, 0x4a5a3a, 0x6a3a2a, 0x3f4a5f], rewardMass: 70, destructionType: 'crush' },
+  // Class 5: monster figures, biers, bone piles, crypt gates.
+  VAMPIRE_COFFIN: { label: "Vampire's coffin", objectClass: 5, size: [1.45, 1.9, 2.7], shape: 'vampireCoffin', colors: [0x8a0f22, 0x4a1a6a, 0x1f5a3a], rewardMass: 300, destructionType: 'crush' },
+  VAMPIRE: { label: 'Vampire', objectClass: 5, size: [1.9, 2.75, 1.4], shape: 'vampire', colors: [0x1c1622, 0x16161c], rewardMass: 350, destructionType: 'break' },
+  WEREWOLF: { label: 'Werewolf', objectClass: 5, size: [1.7, 3.4, 1.7], shape: 'werewolf', colors: [0x4a3a2c, 0x3e3a3c, 0x55402e], rewardMass: 350, destructionType: 'break' },
+  WITCH: { label: 'Witch', objectClass: 5, size: [2.0, 2.45, 2.0], shape: 'witch', colors: [0x2e2238, 0x1f2a24, 0x3b2357], rewardMass: 320, destructionType: 'break' },
+  BONE_PILE: { label: 'Bone pile', objectClass: 5, size: [3.0, 1.4, 3.0], shape: 'bonePile', colors: [0x8a8478], rewardMass: 300, destructionType: 'break' },
+  CRYPT_GATE: { label: 'Cemetery gate', objectClass: 5, size: [3.6, 3.5, 0.8], shape: 'cryptGate', colors: [0xb0aca4, 0xa0a69e], rewardMass: 260, destructionType: 'rip' },
+  // Class 6: crypts, giant pumpkins, the pumpkin coach, giant spiders, wells.
+  CRYPT: { label: 'Crypt', objectClass: 6, size: [4.4, 4.9, 6.0], shape: 'crypt', colors: [0xb0aca4, 0xa0a69e, 0xbab2a6], rewardMass: 1300, destructionType: 'collapse' },
+  GIANT_PUMPKIN: { label: 'Giant pumpkin', objectClass: 6, size: [3.0, 2.6, 3.0], shape: 'giantPumpkin', colors: [0xe0661c, 0xd9561a, 0xc9721e], rewardMass: 1100, destructionType: 'break' },
+  PUMPKIN_CARRIAGE: { label: 'Pumpkin carriage', objectClass: 6, size: [2.5, 3.5, 5.6], shape: 'pumpkinCarriage', colors: [0xe0661c, 0xd9561a], rewardMass: 1400, destructionType: 'break' },
+  GIANT_SPIDER: { label: 'Giant spider', objectClass: 6, size: [5.0, 2.6, 5.0], shape: 'giantSpider', colors: [0x26222a, 0x2e2420, 0x1e2426], rewardMass: 1300, destructionType: 'break' },
+  WISHING_WELL: { label: 'Haunted well', objectClass: 6, size: [3.0, 4.0, 3.0], shape: 'wishingWell', colors: [0x6dff4a, 0xb35cff], rewardMass: 1100, destructionType: 'collapse' },
+  // Class 7 (6.5 m machine) and class 8 (9.5 m machine): the giant Halloween set pieces that
+  // stand in for other cities' houses and blocks — same thresholds, similar reward per class.
+  GIANT_JACK: { requiredPower: 6.5, label: "Giant jack-o'-lantern", objectClass: 7, size: [8, 7.2, 8], shape: 'giantJack', colors: [0xe0661c, 0xd9561a, 0xc9721e], rewardMass: 4800, destructionType: 'collapse' },
+  MAUSOLEUM: { requiredPower: 6.5, label: 'Mausoleum', objectClass: 7, size: [8.8, 9.8, 12], shape: 'mausoleum', colors: [0xb0aca4, 0xa0a69e, 0xbab2a6], rewardMass: 5200, destructionType: 'collapse' },
+  GIANT_CAULDRON: { requiredPower: 6.5, label: "Witch's great cauldron", objectClass: 7, size: [6.5, 7.0, 6.5], shape: 'giantCauldron', colors: [0x6dff4a, 0xb35cff], rewardMass: 4500, destructionType: 'collapse' },
+  SKULL_ROCK: { requiredPower: 6.5, label: 'Skull rock', objectClass: 7, size: [9, 8.5, 9], shape: 'skullRock', colors: [0x6dff4a, 0x52ffb8], rewardMass: 5000, destructionType: 'collapse' },
+  GIANT_OBELISK: { requiredPower: 6.5, label: 'Great obelisk', objectClass: 7, size: [4.5, 13.3, 4.5], shape: 'giantObelisk', colors: [0xa9a6a0, 0xb4ada2], rewardMass: 4500, destructionType: 'collapse' },
+  GIANT_SCARECROW: { requiredPower: 6.5, label: 'Giant scarecrow', objectClass: 7, size: [8.5, 11.75, 2.75], shape: 'giantScarecrow', colors: [0x5b4a3a, 0x4a5a3a, 0x6a3a2a], rewardMass: 4500, destructionType: 'collapse' },
+  COLOSSAL_PUMPKIN: { requiredPower: 9.5, label: 'Colossal pumpkin', objectClass: 8, size: [16, 13.9, 16], shape: 'colossalPumpkin', colors: [0xe0661c, 0xd9561a], rewardMass: 14000, destructionType: 'collapse' },
+  HAUNTED_TREE: { requiredPower: 9.5, label: 'Haunted tree', objectClass: 8, size: [15, 24, 15], shape: 'hauntedTree', colors: [0x4a3e36, 0x3e3a38], rewardMass: 14000, destructionType: 'collapse' },
+  GIANT_SKELETON: { requiredPower: 9.5, label: 'Giant skeleton', objectClass: 8, size: [10, 14, 12], shape: 'giantSkeleton', colors: [0xe4d9bf], rewardMass: 15000, destructionType: 'collapse' },
+  WITCH_HAT_TOWER: { requiredPower: 9.5, label: "Giant witch's hat", objectClass: 8, size: [19, 22.8, 19], shape: 'witchHatTower', colors: [0x2e2238, 0x231c2c], rewardMass: 14000, destructionType: 'collapse' },
+  SKULL_MOUNTAIN: { requiredPower: 9.5, label: 'Skull mountain', objectClass: 8, size: [18, 17, 18], shape: 'skullMountain', colors: [0x6dff4a, 0xb35cff], rewardMass: 16000, destructionType: 'collapse' },
 } satisfies Record<string, ObjectType>;
 
 export type ObjectTypeId = keyof typeof OBJECT_TYPES;

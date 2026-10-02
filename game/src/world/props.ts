@@ -5,6 +5,7 @@ import { Builder, box, cyl, lathe, poly, profile, rbox, strut, v3, wheel, type P
 import { HEAVY_BUILDERS } from './heavyProps';
 import { CITY_BUILDERS } from './cityProps';
 import { LANDMARK_BUILDERS } from './landmarkProps';
+import { HALLOWEEN_BUILDERS } from './halloweenProps';
 import { createSeededRandom } from '../core/rng';
 
 export type { PropParts } from './propKit';
@@ -392,6 +393,7 @@ const BUILDERS: Record<Shape, PropFactory> = {
   ...HEAVY_BUILDERS,
   ...CITY_BUILDERS,
   ...LANDMARK_BUILDERS,
+  ...HALLOWEEN_BUILDERS,
   taxi,
   scrap,
   box: (t) => (t.size[0] < 0.25 ? brick(t) : cardboardBox(t)),

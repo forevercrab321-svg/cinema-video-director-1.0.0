@@ -44,9 +44,20 @@ export type Role =
   | 'screen' // vending machine lit panel
   | 'corrugated' // warehouse cladding, tinted
   | 'roofMetal'
-  | 'concreteProp';
+  | 'concreteProp'
+  // Halloween Town kit
+  | 'slime' // glossy self-lit goo (ghosts, cauldrons), tinted: emissive follows the tint
+  | 'bone' // ivory: bones, skulls, Victorian trim, candle wax
+  | 'pumpkin' // waxy orange rind (carved heads, candy corn, porch pumpkins)
+  | 'straw' // dry straw / bristles (scarecrows, brooms)
+  | 'velvet' // crimson velvet (cape and coffin linings, curtains)
+  | 'shingle' // dark slate roof shingles (haunted houses)
+  | 'ghostGlow' // folded into 'lamps': green spectral light
+  | 'pumpkinGlow' // folded into 'lamps': candle-flame orange
+  | 'windowGlow' // folded into 'lamps': warm lit window
+  | 'witchGlow'; // folded into 'lamps': violet witch light
 
-export const TINTED: ReadonlySet<Role> = new Set<Role>(['paint', 'carPaint', 'plastic', 'glossyPlastic', 'cardboard', 'propBrick', 'glassTint', 'aluminium', 'fabric', 'corrugated', 'concreteProp', 'timber']);
+export const TINTED: ReadonlySet<Role> = new Set<Role>(['paint', 'carPaint', 'plastic', 'glossyPlastic', 'cardboard', 'propBrick', 'glassTint', 'aluminium', 'fabric', 'corrugated', 'concreteProp', 'timber', 'slime']);
 
 function tex(set: { map: THREE.Texture; normalMap: THREE.Texture; roughnessMap: THREE.Texture }, normalScale = 1) {
   return { map: set.map, normalMap: set.normalMap, roughnessMap: set.roughnessMap, normalScale: new THREE.Vector2(normalScale, normalScale) };
@@ -56,6 +67,15 @@ function tex(set: { map: THREE.Texture; normalMap: THREE.Texture; roughnessMap: 
 function citySignMaterial(): THREE.MeshStandardMaterial {
   const atlas = createSignAtlas();
   return new THREE.MeshStandardMaterial({ map: atlas, emissiveMap: atlas, emissive: 0xffffff, emissiveIntensity: 0.85, roughness: 0.45, metalness: 0 });
+}
+
+/** Slime: glossy goo that glows in its own (per-instance) colour, so a green ghost lights green. */
+function slimeMaterial(m: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
+  m.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance *= diffuseColor.rgb;');
+  };
+  m.customProgramCacheKey = () => 'slime-tinted-emissive';
+  return m;
 }
 
 /** Vehicle lamps in one draw call: vertex colour drives both base and emissive colour. */
@@ -71,7 +91,7 @@ function lampsMaterial(): THREE.MeshStandardMaterial {
 export class MaterialLibrary {
   readonly roles: Record<Role, THREE.Material>;
   /** Architecture + ground. */
-  readonly arch: Record<'brick' | 'darkBrick' | 'plaster' | 'concrete' | 'asphalt' | 'sidewalk' | 'curb' | 'windowGlass' | 'windowFrame' | 'steelDark' | 'roofing' | 'awning' | 'shopGlass' | 'puddle' | 'paintLine' | 'lampGlow' | 'skylineWindows' | 'hazard' | 'craneYellow' | 'gravel' | 'metalLight' | 'metals' | 'water' | 'stone' | 'signalRed' | 'signalGreen' | 'lantern', THREE.Material>;
+  readonly arch: Record<'brick' | 'darkBrick' | 'plaster' | 'concrete' | 'asphalt' | 'sidewalk' | 'curb' | 'windowGlass' | 'windowFrame' | 'steelDark' | 'roofing' | 'awning' | 'shopGlass' | 'puddle' | 'paintLine' | 'lampGlow' | 'skylineWindows' | 'hazard' | 'craneYellow' | 'gravel' | 'metalLight' | 'metals' | 'water' | 'stone' | 'signalRed' | 'signalGreen' | 'lantern' | 'jackLantern' | 'deadGrass' | 'dirt', THREE.Material>;
 
   /**
    * `quality: 'low'` folds every physical material (clearcoat / sheen lobes) into a standard
@@ -121,6 +141,17 @@ export class MaterialLibrary {
       corrugated: std({ color: 0xffffff, ...tex(kit.corrugated, 1), metalness: 0.55, envMapIntensity: 0.9 }),
       roofMetal: std({ color: 0x7c8084, ...tex(kit.corrugated, 0.8), metalness: 0.6, envMapIntensity: 0.8 }),
       concreteProp: std({ color: 0xffffff, ...tex(kit.concrete, 1), metalness: 0 }),
+      slime: slimeMaterial(phy({ color: 0xffffff, roughness: 0.2, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.12, emissive: 0xffffff, emissiveIntensity: 0.55, envMapIntensity: 1.2 })),
+      bone: std({ color: 0xe4d9bf, roughness: 0.62, metalness: 0, envMapIntensity: 0.7 }),
+      pumpkin: std({ color: 0xd9621a, roughness: 0.48, metalness: 0, envMapIntensity: 0.8 }),
+      straw: std({ color: 0xffdc8e, ...tex(kit.cardboard, 1.2), roughness: 0.95, metalness: 0, envMapIntensity: 0.4 }),
+      velvet: phy({ color: 0x6e0c1c, roughness: 0.85, sheen: 0.9, sheenRoughness: 0.45, sheenColor: new THREE.Color(0xff6a7a), envMapIntensity: 0.5 }),
+      shingle: std({ color: 0x8a96c0, ...tex(kit.darkBrick, 1.2), roughness: 0.9, metalness: 0, envMapIntensity: 0.6 }),
+      // Folded into 'lamps' by the prop Builder (LAMP_COLOURS); these entries only satisfy the role table.
+      ghostGlow: std({ color: 0x1a4010, emissive: 0x6dff4a, emissiveIntensity: 1.6, roughness: 0.3 }),
+      pumpkinGlow: std({ color: 0x5a2800, emissive: 0xff7a14, emissiveIntensity: 1.8, roughness: 0.3 }),
+      windowGlow: std({ color: 0x5a3810, emissive: 0xffa040, emissiveIntensity: 1.5, roughness: 0.3 }),
+      witchGlow: std({ color: 0x2a1040, emissive: 0xa050ff, emissiveIntensity: 1.6, roughness: 0.3 }),
     };
     for (const [name, m] of Object.entries(this.roles)) m.name = `MAT_${name}`;
 
@@ -152,6 +183,10 @@ export class MaterialLibrary {
       signalRed: std({ color: 0x3a0404, emissive: 0xff2a1a, emissiveIntensity: 2.4, roughness: 0.3 }),
       signalGreen: std({ color: 0x033a14, emissive: 0x19ff7a, emissiveIntensity: 2.0, roughness: 0.3 }),
       lantern: std({ color: 0x8a0f0a, emissive: 0xff3a14, emissiveIntensity: 1.6, roughness: 0.6 }),
+      jackLantern: std({ color: 0xa8460c, emissive: 0xff7414, emissiveIntensity: 1.9, roughness: 0.55 }),
+      // Halloween landscape ground: withered grass and trodden earth (no asphalt on that map).
+      deadGrass: std({ color: 0xb4ae86, ...tex(kit.concrete, 0.8), roughness: 1, metalness: 0 }),
+      dirt: std({ color: 0xc2a688, ...tex(kit.concrete, 1.2), roughness: 1, metalness: 0 }),
     };
     for (const [name, m] of Object.entries(this.arch)) m.name = `MAT_ARCH_${name}`;
 
@@ -159,8 +194,9 @@ export class MaterialLibrary {
     for (const k of ['brick', 'darkBrick', 'plaster', 'concrete', 'curb'] as const) weathering(this.arch[k], 'wall');
     weathering(this.arch.metals, 'wall', 0.6);
     weathering(this.arch.skylineWindows, 'wall', 0.5);
-    for (const k of ['asphalt', 'sidewalk', 'gravel', 'roofing'] as const) weathering(this.arch[k], 'ground');
+    for (const k of ['asphalt', 'sidewalk', 'gravel', 'roofing', 'deadGrass', 'dirt'] as const) weathering(this.arch[k], 'ground');
     for (const r of ['paint', 'concreteProp', 'roofMetal', 'stone'] as const) weathering(this.roles[r], 'prop', 0.8);
+    weathering(this.roles.shingle, 'prop', 0.5);
     weathering(this.roles.corrugated, 'prop', 0.35); // containers: grime blotches read as camouflage on dark paint
     interiorMapping(this.arch.windowGlass as THREE.MeshStandardMaterial, { width: 3.2, depth: 4.2, height: 3.0, floorBelowCentre: 1.75, litChance: 0.3, shop: false });
     interiorMapping(this.arch.shopGlass as THREE.MeshStandardMaterial, { width: 3.6, depth: 6, height: 3.8, floorBelowCentre: 1.9, litChance: 1, shop: true });
