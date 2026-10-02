@@ -91,7 +91,7 @@ function lampsMaterial(): THREE.MeshStandardMaterial {
 export class MaterialLibrary {
   readonly roles: Record<Role, THREE.Material>;
   /** Architecture + ground. */
-  readonly arch: Record<'brick' | 'darkBrick' | 'plaster' | 'concrete' | 'asphalt' | 'sidewalk' | 'curb' | 'windowGlass' | 'windowFrame' | 'steelDark' | 'roofing' | 'awning' | 'shopGlass' | 'puddle' | 'paintLine' | 'lampGlow' | 'skylineWindows' | 'hazard' | 'craneYellow' | 'gravel' | 'metalLight' | 'metals' | 'water' | 'stone' | 'signalRed' | 'signalGreen' | 'lantern' | 'jackLantern', THREE.Material>;
+  readonly arch: Record<'brick' | 'darkBrick' | 'plaster' | 'concrete' | 'asphalt' | 'sidewalk' | 'curb' | 'windowGlass' | 'windowFrame' | 'steelDark' | 'roofing' | 'awning' | 'shopGlass' | 'puddle' | 'paintLine' | 'lampGlow' | 'skylineWindows' | 'hazard' | 'craneYellow' | 'gravel' | 'metalLight' | 'metals' | 'water' | 'stone' | 'signalRed' | 'signalGreen' | 'lantern' | 'jackLantern' | 'deadGrass' | 'dirt', THREE.Material>;
 
   /**
    * `quality: 'low'` folds every physical material (clearcoat / sheen lobes) into a standard
@@ -184,6 +184,9 @@ export class MaterialLibrary {
       signalGreen: std({ color: 0x033a14, emissive: 0x19ff7a, emissiveIntensity: 2.0, roughness: 0.3 }),
       lantern: std({ color: 0x8a0f0a, emissive: 0xff3a14, emissiveIntensity: 1.6, roughness: 0.6 }),
       jackLantern: std({ color: 0xa8460c, emissive: 0xff7414, emissiveIntensity: 1.9, roughness: 0.55 }),
+      // Halloween landscape ground: withered grass and trodden earth (no asphalt on that map).
+      deadGrass: std({ color: 0xb4ae86, ...tex(kit.concrete, 0.8), roughness: 1, metalness: 0 }),
+      dirt: std({ color: 0xc2a688, ...tex(kit.concrete, 1.2), roughness: 1, metalness: 0 }),
     };
     for (const [name, m] of Object.entries(this.arch)) m.name = `MAT_ARCH_${name}`;
 
@@ -191,7 +194,7 @@ export class MaterialLibrary {
     for (const k of ['brick', 'darkBrick', 'plaster', 'concrete', 'curb'] as const) weathering(this.arch[k], 'wall');
     weathering(this.arch.metals, 'wall', 0.6);
     weathering(this.arch.skylineWindows, 'wall', 0.5);
-    for (const k of ['asphalt', 'sidewalk', 'gravel', 'roofing'] as const) weathering(this.arch[k], 'ground');
+    for (const k of ['asphalt', 'sidewalk', 'gravel', 'roofing', 'deadGrass', 'dirt'] as const) weathering(this.arch[k], 'ground');
     for (const r of ['paint', 'concreteProp', 'roofMetal', 'stone'] as const) weathering(this.roles[r], 'prop', 0.8);
     weathering(this.roles.shingle, 'prop', 0.5);
     weathering(this.roles.corrugated, 'prop', 0.35); // containers: grime blotches read as camouflage on dark paint

@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Role } from '../art/materials';
 import type { ObjectType, Shape } from '../config/objects';
-import { Builder, box, cyl, lathe, poly, profile, rbox, strut, v3, wheel, type PropParts } from './propKit';
+import { boxProjectUV } from '../art/uv';
+import { Builder, PROJECTED, box, cyl, lathe, poly, profile, rbox, strut, v3, type PropParts } from './propKit';
 
 /**
- * HALLOWEEN TOWN prop kit: graveyard, witch camp, monster figures, carriages and the two
- * haunted building types. Same contract as props.ts / cityProps.ts: real-world metres, pivot
+ * HALLOWEEN TOWN prop kit: candy and bones, the graveyard, the pumpkin patch, the witch's
+ * hollow, monster figures and the giant class 7–8 set pieces (no houses, cars or street props). Same contract as props.ts / cityProps.ts: real-world metres, pivot
  * on the ground at the footprint centre, forward = −Z, one geometry per material role.
  *
  * Colour discipline: every model carries ONE tinted role (its per-instance variant colour);
@@ -15,6 +16,12 @@ import { Builder, box, cyl, lathe, poly, profile, rbox, strut, v3, wheel, type P
  */
 type Factory = (t: ObjectType, seed: number) => PropParts;
 type Vec = THREE.Vector3;
+/** Anything parts can be added to: a Builder, or a Builder shifted to a sub-assembly's origin. */
+type Adder = Pick<Builder, 'add'>;
+/** A sub-assembly origin inside a bigger model (a cauldron at a witch's feet). */
+const shifted = (b: Builder, ox: number, oy: number, oz: number): Adder => ({
+  add: (role, g, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => b.add(role, g, x + ox, y + oy, z + oz, rx, ry, rz),
+});
 const Q = Math.PI / 2;
 
 // ── Geometry helpers ─────────────────────────────────────────────────────────
@@ -155,7 +162,7 @@ const FACE: [number, number][][] = [
 ];
 
 /** Carved face glow + dark cut rim, mapped onto a pumpkin of radius R, height H, base at y0. */
-function carveFace(b: Builder, R: number, H: number, y0: number, glow: Role = 'pumpkinGlow', scale = 0.92): void {
+function carveFace(b: Adder, R: number, H: number, y0: number, glow: Role = 'pumpkinGlow', scale = 0.92): void {
   const yc = y0 + H * 0.5;
   const ry = H * 0.5;
   const d = Math.max(0.01, R * 0.05);
@@ -244,16 +251,19 @@ function boneProp(t: ObjectType): PropParts {
 }
 
 /** Skull at real size; `b` may be a bigger model (skeleton, scarecrow pile). */
-function skullParts(b: Builder, x: number, y: number, z: number, k = 1, rx = 0): void {
+function skullParts(b: Adder, x: number, y: number, z: number, k = 1, rx = 0, ry = 0, eyes?: Role): void {
   const put = (role: Role, g: THREE.BufferGeometry, px: number, py: number, pz: number) => {
-    g.scale(k, k, k).translate(px * k, py * k, pz * k).rotateX(rx);
+    g.scale(k, k, k).translate(px * k, py * k, pz * k).rotateX(rx).rotateY(ry);
     b.add(role, g, x, y, z);
   };
-  put('bone', ell(0.07, 0.075, 0.088, 10, 8), 0, 0.09, 0.018);
-  put('bone', ell(0.058, 0.05, 0.05, 8, 6), 0, 0.06, -0.04);
+  // Giant skulls (k > 4) need real curvature: more segments, same shape.
+  const hi = k > 4;
+  if (eyes) for (const s of [-1, 1]) put(eyes, ell(0.011, 0.012, 0.006, hi ? 12 : 6, hi ? 8 : 4), s * 0.028, 0.08, -0.088);
+  put('bone', ell(0.07, 0.075, 0.088, hi ? 28 : 10, hi ? 18 : 8), 0, 0.09, 0.018);
+  put('bone', ell(0.058, 0.05, 0.05, hi ? 22 : 8, hi ? 14 : 6), 0, 0.06, -0.04);
   put('bone', box(0.075, 0.03, 0.06), 0, 0.017, -0.045);
   put('bone', box(0.05, 0.012, 0.008), 0, 0.036, -0.08);
-  for (const s of [-1, 1]) put('darkTrim', ell(0.02, 0.022, 0.012, 6, 4), s * 0.028, 0.08, -0.079);
+  for (const s of [-1, 1]) put('darkTrim', ell(0.02, 0.022, 0.012, hi ? 14 : 6, hi ? 10 : 4), s * 0.028, 0.08, -0.079);
   put('darkTrim', new THREE.ConeGeometry(0.01, 0.022, 3).rotateX(Math.PI), 0, 0.056, -0.087);
 }
 
@@ -287,7 +297,7 @@ function candyBucket(t: ObjectType): PropParts {
   return b.build();
 }
 
-function witchHatParts(b: Builder, fabric: Role, x: number, y: number, z: number, k = 1, tilt = 0): void {
+function witchHatParts(b: Adder, fabric: Role, x: number, y: number, z: number, k = 1, tilt = 0): void {
   const put = (role: Role, g: THREE.BufferGeometry) => b.add(role, g.scale(k, k, k), x, y, z, 0, 0, tilt);
   put(fabric, lathe([[0.001, 0.025], [0.16, 0.018], [0.24, 0.028], [0.25, 0.038], [0.235, 0.036], [0.16, 0.03], [0.001, 0.035]], 24));
   put(fabric, bend(lathe([[0.14, 0.02], [0.135, 0.12], [0.1, 0.27], [0.06, 0.42], [0.001, 0.6]], 14), 0.28, 0.6, 0.13, 0.06));
@@ -385,7 +395,7 @@ function jackOLantern(t: ObjectType): PropParts {
   return b.build();
 }
 
-function cauldronParts(b: Builder, k: number, fire: boolean): void {
+function cauldronParts(b: Adder, k: number, fire: boolean): void {
   const s = (pts: [number, number][]) => pts.map(([r, y]) => [r * k, y * k] as [number, number]);
   b.add('darkTrim', lathe(s([[0.001, 0.14], [0.2, 0.13], [0.35, 0.21], [0.43, 0.4], [0.42, 0.58], [0.37, 0.71], [0.34, 0.76], [0.35, 0.8], [0.31, 0.79], [0.3, 0.72]]), 28));
   b.add('darkTrim', new THREE.TorusGeometry(0.35 * k, 0.03 * k, 6, 28).rotateX(Q), 0, 0.8 * k, 0);
@@ -611,100 +621,7 @@ function scarecrow(t: ObjectType): PropParts {
   return b.build();
 }
 
-function candyCart(t: ObjectType): PropParts {
-  const [W, H, D] = t.size; // painted candy cart: glass jars, striped parasol, pumpkin, string lights
-  const b = new Builder();
-  b.add('paint', rbox(W - 0.3, 0.8, D - 0.1, 0.05), 0, 0.82, 0);
-  b.add('wood', box(W - 0.15, 0.05, D), 0, 1.25, 0);
-  b.add('darkTrim', box(W - 0.3, 0.06, D - 0.08), 0, 0.44, 0);
-  for (const s of [-1, 1]) wheel(b, 0.32, 0.1, s * (W / 2 - 0.2), 0.32, 0.1, s, 8, 'wood');
-  b.add('darkTrim', cyl(0.035, 0.035, 0.4, 6), 0, 0.2, -D / 2 + 0.15);
-  b.add('wood', strut(v3(W / 2 - 0.1, 1.0, -0.15), v3(W / 2 + 0.25, 1.1, -0.15), 0.025, 6));
-  // Jars of sweets.
-  const fill: Role[] = ['pumpkin', 'bone', 'velvet', 'pumpkin'];
-  for (let i = 0; i < 4; i++) {
-    const x = -0.6 + i * 0.36;
-    b.add('clearGlass', cyl(0.1, 0.1, 0.28, 14), x, 1.42, -0.1);
-    b.add(fill[i], cyl(0.085, 0.085, 0.17, 12), x, 1.36, -0.1);
-    b.add('steel', cyl(0.105, 0.105, 0.04, 14), x, 1.58, -0.1);
-  }
-  b.add('pumpkin', pumpkinGeo(0.17, 0.26, 8, 0.12, 16, 8), 0.55, 1.27, 0.22);
-  carveFace(b, 0.17, 0.26, 1.27, 'pumpkinGlow', 0.9);
-  // Striped parasol on a mast.
-  b.add('steel', cyl(0.025, 0.025, H - 1.27, 6), -0.05, 1.27 + (H - 1.27) / 2, 0.3);
-  const gores = 10;
-  const canopy: [number, number][] = [[1.0, 0], [0.72, 0.18], [0.32, 0.31], [0.001, 0.36]];
-  for (let i = 0; i < gores; i++) {
-    const g = new THREE.LatheGeometry(canopy.map(([r, y]) => new THREE.Vector2(r, y)), 3, (i / gores) * Math.PI * 2, (Math.PI * 2) / gores);
-    b.add(i % 2 ? 'bone' : 'fabric', g, -0.05, H - 0.38, 0.3);
-  }
-  for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * Math.PI * 2;
-    b.add('pumpkinGlow', new THREE.SphereGeometry(0.035, 6, 4), -0.05 + Math.cos(a) * 0.98, H - 0.42, 0.3 + Math.sin(a) * 0.98);
-  }
-  return b.build();
-}
-
-// ── Class 5: vehicles and monster figures ────────────────────────────────────
-function hearse(t: ObjectType): PropParts {
-  const [W, , L] = t.size; // long-wheelbase funeral car: landau bars, draped rear windows
-  const b = new Builder();
-  const hl = L / 2;
-  const wr = 0.36;
-  const fA = -1.85;
-  const rA = 1.75;
-  const sill = 0.32;
-  const arch = 0.43;
-  const body = new THREE.Shape();
-  body.moveTo(-hl + 0.04, sill + 0.04);
-  body.lineTo(-hl, 0.55);
-  body.splineThru(([[-hl + 0.04, 0.72], [-hl + 0.4, 0.84], [-hl + 1.2, 0.93], [-0.8, 0.98], [hl - 0.6, 1.0], [hl - 0.12, 0.97], [hl, 0.78]] as [number, number][]).map(([z, y]) => new THREE.Vector2(z, y)));
-  body.lineTo(hl - 0.02, 0.45);
-  body.lineTo(hl - 0.1, sill);
-  body.lineTo(rA + arch, sill);
-  body.absarc(rA, sill, arch, 0, Math.PI, false);
-  body.lineTo(fA + arch, sill);
-  body.absarc(fA, sill, arch, 0, Math.PI, false);
-  body.closePath();
-  b.add('carPaint', profile(body, W, 0.08, 10, true));
-  // Glasshouse: raked windscreen, long flat roof, near-vertical rear.
-  const cab = poly([[-hl + 1.28, 0.95], [-hl + 1.98, 1.64], [hl - 0.22, 1.68], [hl - 0.05, 1.44], [hl - 0.04, 0.97]]);
-  b.add('carPaint', profile(cab, W - 0.16, 0.05, 2));
-  const wsLen = Math.hypot(0.7, 0.69);
-  b.add('glass', box(W - 0.34, wsLen - 0.08, 0.03), 0, (0.95 + 1.64) / 2, -hl + (1.28 + 1.98) / 2 - 0.02, 0.79, 0, 0);
-  b.deform = (v) => {
-    const tumble = 1 - 0.08 * THREE.MathUtils.smoothstep(v.y, 0.95, 1.7);
-    const taperZ = 1 - 0.07 * THREE.MathUtils.smoothstep(Math.abs(v.z), hl - 0.45, hl + 0.1);
-    v.x *= tumble * taperZ;
-  };
-  for (const s of [-1, 1]) {
-    const sx = s * (W / 2 - 0.085);
-    b.add('glass', box(0.03, 0.52, 0.82), sx, 1.28, -hl + 2.42); // front door window
-    b.add('glass', box(0.03, 0.46, 2.0), sx, 1.27, 0.55); // long rear window
-    b.add('velvet', box(0.035, 0.12, 2.0), sx * 1.002, 1.46, 0.55); // valance
-    for (const z of [-0.38, 1.48]) b.add('velvet', box(0.04, 0.44, 0.2), sx * 1.003, 1.25, z); // tied-back drapes
-    b.add('darkTrim', box(0.04, 0.62, 1.05), sx * 1.004, 1.33, hl - 0.68); // padded landau panel
-    const landau = new THREE.TorusGeometry(0.2, 0.018, 4, 12, Math.PI * 1.1).rotateY(Q);
-    b.add('steel', landau, sx * 1.01, 1.28, hl - 0.66, Math.PI * 0.5, 0, 0);
-    b.add('steel', box(0.02, 0.025, 4.6), s * (W / 2 - 0.005), 0.95, 0.05); // beltline chrome
-    b.add('steel', box(0.02, 0.03, 0.15), s * (W / 2 + 0.01), 0.86, -hl + 2.4); // handle
-    b.add('headlight', cyl(0.11, 0.11, 0.05, 14).rotateX(Q), s * 0.62, 0.7, -hl - 0.02);
-    b.add('steel', new THREE.TorusGeometry(0.115, 0.018, 4, 14), s * 0.62, 0.7, -hl - 0.03);
-    b.add('taillight', box(0.12, 0.3, 0.05), s * (W / 2 - 0.16), 0.72, hl + 0.02);
-    b.add('signalAmber', box(0.1, 0.05, 0.04), s * 0.82, 0.5, -hl - 0.03);
-    b.add('steel', box(0.02, 0.025, 2.0), s * (W / 2 - 0.12), 1.7, 0.5); // roof rail
-  }
-  b.add('steel', rbox(W - 0.04, 0.16, 0.16, 0.05), 0, 0.42, -hl + 0.02); // chrome bumpers
-  b.add('steel', rbox(W - 0.04, 0.16, 0.16, 0.05), 0, 0.42, hl - 0.02);
-  b.add('darkTrim', box(0.9, 0.34, 0.04), 0, 0.68, -hl - 0.02); // tall grille
-  for (let i = 0; i < 9; i++) b.add('steel', box(0.02, 0.32, 0.02), -0.4 + i * 0.1, 0.68, -hl - 0.05);
-  b.add('steel', strut(v3(0, 0.95, -hl + 0.2), v3(0, 1.0, -hl + 0.32), 0.02, 5)); // mascot
-  b.add('glass', box(W - 0.5, 0.48, 0.03), 0, 1.24, hl - 0.04); // rear door glass
-  b.add('reflective', box(0.52, 0.12, 0.01), 0, 0.55, hl + 0.06);
-  for (const sx of [-1, 1]) for (const z of [fA, rA]) wheel(b, wr, 0.24, sx * (W / 2 - 0.15), wr, z, sx, 6);
-  return b.build();
-}
-
+// ── Class 5: monster figures and biers ────────────────────────────────────────
 function vampireCoffin(t: ObjectType): PropParts {
   const [W, , D] = t.size; // black-lacquer coffin on a stone bier, lid swung open, candelabras
   const b = new Builder();
@@ -923,7 +840,7 @@ function giantCauldron(t: ObjectType): PropParts {
   return b.build();
 }
 
-// ── Class 6: crypts, giant pumpkins, carriages ───────────────────────────────
+// ── Class 6: crypts, giant pumpkins, the pumpkin coach ───────────────────────
 function crypt(t: ObjectType): PropParts {
   const [W, H, D] = t.size; // Greek-revival mausoleum: steps, portico, pediment, iron doors leaking green light
   const b = new Builder();
@@ -974,6 +891,11 @@ function crypt(t: ObjectType): PropParts {
   b.add('witchGlow', cyl(0.4, 0.4, 0.06, 16).rotateX(Q), 0, 2.4, cz + cellaD / 2 + 0.01);
   b.add(s, new THREE.TorusGeometry(0.44, 0.07, 6, 16), 0, 2.4, cz + cellaD / 2 + 0.03);
   return b.build();
+}
+
+/** Gable triangle of base `span` and height `rise`, as a slab facing ±Z. */
+function gable(span: number, rise: number, depth: number): THREE.BufferGeometry {
+  return slab(poly([[-span / 2, 0], [span / 2, 0], [0, rise]]), depth);
 }
 
 /** Pointed (lancet) arch outline, base on y = 0. */
@@ -1076,409 +998,455 @@ function pumpkinCarriage(t: ObjectType): PropParts {
   return b.build();
 }
 
-function hauntedCarriage(t: ObjectType): PropParts {
-  const [W, H, L] = t.size; // glass-sided funeral coach: coffin inside, plumes, green lanterns, skeleton driver
+// ── New small finds ──────────────────────────────────────────────────────────
+function eyeball(t: ObjectType): PropParts {
+  const r = t.size[0] / 2; // a loose glass-bright eyeball; the iris glows in the instance colour
   const b = new Builder();
-  carriageChassis(b, W, L, 0.55, 0.75);
-  const bz = 0.55;
-  const bl = 2.9;
-  const y0 = 1.1;
-  const bh = 1.65;
-  b.add('carPaint', rbox(1.7, 0.3, bl, 0.05), 0, y0 + 0.15, bz);
-  b.add('carPaint', rbox(1.85, 0.16, bl + 0.25, 0.04), 0, y0 + bh + 0.08, bz);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.add('carPaint', lathe([[0.07, 0], [0.06, 0.1], [0.05, bh - 0.4], [0.07, bh - 0.3]], 8), sx * 0.8, y0 + 0.3, bz + sz * (bl / 2 - 0.07));
-  for (const sx of [-1, 1]) {
-    b.add('clearGlass', box(0.02, bh - 0.4, bl - 0.25), sx * 0.8, y0 + 0.3 + (bh - 0.4) / 2, bz);
-    b.add('carPaint', box(0.06, 0.08, bl - 0.2), sx * 0.8, y0 + 0.85, bz);
-    for (const z of [-0.5, 0.5]) b.add('carPaint', box(0.05, bh - 0.4, 0.06), sx * 0.8, y0 + 0.3 + (bh - 0.4) / 2, bz + z);
-    b.add('velvet', box(0.03, 0.18, bl - 0.25), sx * 0.76, y0 + bh - 0.2, bz); // drapes
-  }
-  b.add('clearGlass', box(1.55, bh - 0.4, 0.02), 0, y0 + 0.3 + (bh - 0.4) / 2, bz + bl / 2 - 0.02);
-  b.add('carPaint', box(1.6, bh - 0.4, 0.04), 0, y0 + 0.3 + (bh - 0.4) / 2, bz - bl / 2 + 0.03);
-  b.add('velvet', box(1.5, 0.06, bl - 0.3), 0, y0 + 0.32, bz);
-  b.add('wood', planSlab(coffinPlan(0.32, 1.05), y0 + 0.35, 0.42, 0.02).translate(0, 0, bz));
-  b.add('steel', box(0.05, 0.015, 0.5), 0, y0 + 0.78, bz - 0.15);
-  b.add('steel', box(0.22, 0.015, 0.05), 0, y0 + 0.78, bz - 0.3);
-  // Roof crest: urn finials and black plumes.
-  for (const sx of [-1, 1])
-    for (const sz of [-1, 1]) {
-      const x = sx * 0.8;
-      const z = bz + sz * (bl / 2);
-      b.add('darkTrim', lathe([[0.001, 0], [0.09, 0.05], [0.1, 0.15], [0.05, 0.22], [0.001, 0.24]], 8), x, y0 + bh + 0.16, z);
-      for (let k = 0; k < 4; k++) b.add('darkTrim', spike(v3(x, y0 + bh + 0.38, z), v3(x + Math.cos(k * 1.6) * 0.1, H - 0.05 - (k % 2) * 0.1, z + Math.sin(k * 1.6) * 0.1), 0.06, 5));
-    }
-  // Driver's box with a skeleton coachman and green lanterns.
-  const fz = bz - bl / 2 - 0.45;
-  b.add('wood', box(1.2, 0.1, 0.55), 0, 1.92, fz + 0.05);
-  b.add('carPaint', box(1.2, 0.8, 0.06), 0, 1.55, fz + 0.32);
-  b.add('wood', box(1.0, 0.06, 0.45), 0, 1.2, fz - 0.32, -0.5, 0, 0);
-  skeletonParts(b, 0, 1.0, fz + 0.12, true);
+  b.add('bone', new THREE.SphereGeometry(r, 10, 8), 0, r, 0);
+  b.add('slime', cyl(r * 0.5, r * 0.5, 0.004, 12).rotateX(Q), 0, r * 1.05, -r * 0.88, -0.25, 0, 0);
+  b.add('darkTrim', cyl(r * 0.22, r * 0.22, 0.004, 8).rotateX(Q), 0, r * 1.07, -r * 0.95, -0.25, 0, 0);
+  return b.build();
+}
+
+function spider(t: ObjectType): PropParts {
+  void t;
+  const b = new Builder(); // a hand-sized black spider: two body parts, eight bent legs, red eyes
+  b.add('darkTrim', ell(0.022, 0.016, 0.026, 8, 6), 0, 0.03, -0.02);
+  b.add('darkTrim', ell(0.032, 0.026, 0.038, 8, 6), 0, 0.034, 0.03);
   for (const s of [-1, 1]) {
-    b.add('darkTrim', strut(v3(s * 0.75, 1.5, fz + 0.32), v3(s * 0.75, 2.15, fz + 0.32), 0.025, 5));
-    b.add('darkTrim', box(0.2, 0.04, 0.2), s * 0.75, 2.18, fz + 0.32);
-    b.add('ghostGlow', box(0.14, 0.22, 0.14), s * 0.75, 2.31, fz + 0.32);
-    b.add('darkTrim', new THREE.ConeGeometry(0.15, 0.14, 4).rotateY(Math.PI / 4), s * 0.75, 2.49, fz + 0.32);
+    b.add('taillight', new THREE.SphereGeometry(0.004, 4, 3), s * 0.007, 0.038, -0.044);
+    for (let i = 0; i < 4; i++) {
+      const hip = v3(s * 0.016, 0.03, -0.035 + i * 0.014);
+      const knee = v3(s * 0.042, 0.05, -0.05 + i * 0.028);
+      const foot = v3(s * 0.058, 0.002, -0.066 + i * 0.044);
+      b.add('darkTrim', strut(hip, knee, 0.0028, 3));
+      b.add('darkTrim', strut(knee, foot, 0.0024, 3));
+    }
   }
   return b.build();
 }
 
-// ── Class 7–8: haunted buildings ─────────────────────────────────────────────
-interface Face {
-  len: number;
-  at: (u: number, out: number) => [number, number];
-  ry: number;
-}
+/** Bat silhouette (unit wingspan ≈ 1.1), right half; mirrored for the left. */
+const BAT_HALF: [number, number][] = [[0, 0.1], [0.045, 0.2], [0.07, 0.1], [0.13, 0.11], [0.3, 0.22], [0.52, 0.3], [0.55, 0.14], [0.44, 0.04], [0.4, 0.1], [0.3, -0.03], [0.24, 0.04], [0.12, -0.06], [0.06, -0.02], [0, -0.18]];
+const batShape = (k: number) => poly([...BAT_HALF, ...BAT_HALF.slice(1, -1).reverse().map(([x, y]) => [-x, y] as [number, number])].map(([x, y]) => [x * k, y * k]));
 
-/** The four faces of an axis-aligned block: local +X runs along the face, front = outward. */
-function blockFaces(x0: number, x1: number, z0: number, z1: number): { front: Face; back: Face; left: Face; right: Face } {
-  const cx = (x0 + x1) / 2;
-  const cz = (z0 + z1) / 2;
-  return {
-    front: { len: x1 - x0, at: (u, o) => [cx + u, z0 - o], ry: 0 },
-    back: { len: x1 - x0, at: (u, o) => [cx - u, z1 + o], ry: Math.PI },
-    left: { len: z1 - z0, at: (u, o) => [x0 - o, cz - u], ry: Q },
-    right: { len: z1 - z0, at: (u, o) => [x1 + o, cz + u], ry: -Q },
-  };
-}
-
-type WinKind = 'lit' | 'dark' | 'boarded' | 'ghost';
-
-/** Deterministic per-window pick so every instance of a building type looks the same. */
-function hashKind(i: number, litBias = 0.5): WinKind {
-  const r = Math.abs(Math.sin(i * 12.9898 + 78.233) * 43758.5453) % 1;
-  if (r < litBias) return 'lit';
-  if (r < litBias + 0.22) return 'dark';
-  if (r < 0.97) return 'boarded';
-  return 'ghost';
-}
-
-/** Victorian sash window: glowing or dark pane, ivory trim, muntins, maybe boarded or a shutter askew. */
-function sashWindow(b: Builder, f: Face, u: number, y: number, w: number, h: number, kind: WinKind, i: number): void {
-  const put = (role: Role, g: THREE.BufferGeometry, uu: number, yy: number, out: number, rz = 0) => {
-    const [x, z] = f.at(uu, out);
-    b.add(role, g, x, yy, z, 0, f.ry, rz);
-  };
-  const pane: Role = kind === 'lit' ? 'windowGlow' : kind === 'ghost' ? 'ghostGlow' : 'glass';
-  put(pane, box(w, h, 0.04), u, y, 0.05);
-  put('bone', box(w + 0.32, 0.18, 0.12), u, y + h / 2 + 0.09, 0.08);
-  put('bone', slab(poly([[-(w + 0.4) / 2, 0], [(w + 0.4) / 2, 0], [0, 0.26]]), 0.1), u, y + h / 2 + 0.18, 0.1);
-  put('bone', box(w + 0.24, 0.08, 0.2), u, y - h / 2 - 0.04, 0.1);
-  for (const s of [-1, 1]) put('bone', box(0.09, h, 0.08), u + s * (w / 2 + 0.045), y, 0.06);
-  put('darkTrim', box(0.04, h, 0.03), u, y, 0.085);
-  put('darkTrim', box(w, 0.04, 0.03), u, y + 0.05, 0.085);
-  if (kind === 'boarded') {
-    put('wood', box(w + 0.16, 0.16, 0.03), u, y + h * 0.18, 0.12, 0.32);
-    put('wood', box(w + 0.16, 0.16, 0.03), u, y - h * 0.15, 0.125, -0.28);
-    put('wood', box(w + 0.1, 0.14, 0.03), u, y - h * 0.38, 0.13, 0.05);
-  } else if (i % 5 === 2) {
-    put('darkTrim', box(w * 0.5, h, 0.04), u - w * 0.78, y - 0.12, 0.1, 0.18); // shutter hanging off one hinge
-  }
-}
-
-/** Gable end triangle of base `span` and height `rise`, as a wall slab facing ±Z. */
-function gable(span: number, rise: number, depth: number): THREE.BufferGeometry {
-  return slab(poly([[-span / 2, 0], [span / 2, 0], [0, rise]]), depth);
-}
-
-/** Roof cresting: an iron rail with spikes along a ridge (along X, centred). */
-function cresting(b: Builder, len: number, x: number, y: number, z: number, ry = 0): void {
-  b.add('darkTrim', box(len, 0.05, 0.05), x, y + 0.12, z, 0, ry, 0);
-  const n = Math.floor(len / 0.4);
-  for (let i = 0; i <= n; i++) {
-    const u = -len / 2 + (i * len) / n;
-    const px = x + Math.cos(ry) * u;
-    const pz = z - Math.sin(ry) * u;
-    b.add('darkTrim', new THREE.ConeGeometry(0.035, i % 2 ? 0.28 : 0.42, 4), px, y + (i % 2 ? 0.14 : 0.21), pz);
-  }
-}
-
-function hauntedHouse(t: ObjectType): PropParts {
-  const [, H] = t.size; // 11 × 14 × 10: crooked Victorian with cross gable, turret, porch, cresting
+function batPlush(t: ObjectType): PropParts {
+  const [W] = t.size; // stuffed bat toy sitting with its wings spread
   const b = new Builder();
-  const wall: Role = 'concreteProp';
-  const plinth = 0.7;
-  const eave = plinth + 3.3 + 3.2;
-  // Main body, front wing, turret.
-  const main = { x0: -4.6, x1: 3.4, z0: -3.0, z1: 5.0 };
-  const wing = { x0: -5.5, x1: -1.3, z0: -5.0, z1: -3.0 };
-  b.add('stone', box(main.x1 - main.x0 + 0.2, plinth, main.z1 - main.z0 + 0.2), (main.x0 + main.x1) / 2, plinth / 2, (main.z0 + main.z1) / 2);
-  b.add('stone', box(wing.x1 - wing.x0 + 0.2, plinth, wing.z1 - wing.z0 + 0.2), (wing.x0 + wing.x1) / 2, plinth / 2, (wing.z0 + wing.z1) / 2 - 0.1);
-  b.add(wall, box(main.x1 - main.x0, eave - plinth, main.z1 - main.z0), (main.x0 + main.x1) / 2, (eave + plinth) / 2, (main.z0 + main.z1) / 2);
-  b.add(wall, box(wing.x1 - wing.x0, eave - plinth, wing.z1 - wing.z0 + 0.1), (wing.x0 + wing.x1) / 2, (eave + plinth) / 2, (wing.z0 + wing.z1) / 2 - 0.05);
-  const tx = 4.25;
-  const tz = -3.55;
-  const tr = 1.22;
-  const tTop = 9.2;
-  b.add('stone', cyl(tr + 0.1, tr + 0.1, plinth, 16), tx, plinth / 2, tz);
-  b.add(wall, cyl(tr, tr, tTop - plinth, 16), tx, (tTop + plinth) / 2, tz);
-  // Lap siding: thin boards on every face of body and wing (windows sit proud of them).
-  const siding = (fs: Face[]) => {
-    for (const f of fs)
-      for (let y = plinth + 0.3; y < eave - 0.3; y += 0.34) {
-        const [x, z] = f.at(0, 0.012);
-        b.add(wall, box(f.len + 0.02, 0.06, 0.024), x, y, z, 0, f.ry, 0);
-      }
-  };
-  const mf = blockFaces(main.x0, main.x1, main.z0, main.z1);
-  const wf = blockFaces(wing.x0, wing.x1, wing.z0, wing.z1);
-  siding([mf.back, mf.left, mf.right, wf.front, wf.left, { len: 4.3, at: (u, o) => [0.85 + u, main.z0 - o], ry: 0 }]);
-  for (let y = 1.2; y < tTop - 0.3; y += 0.68) b.add(wall, new THREE.TorusGeometry(tr + 0.01, 0.025, 3, 16).rotateX(Q), tx, y, tz);
-  // Corner boards and frieze.
-  for (const [x, z] of [[main.x0, main.z1], [main.x1, main.z1], [main.x0, main.z0], [wing.x0, wing.z0], [wing.x1, wing.z0], [wing.x0, wing.z1]] as const) b.add('bone', box(0.18, eave - plinth, 0.18), x, (eave + plinth) / 2, z);
-  for (const f of [mf.back, mf.left, mf.right, wf.front]) {
-    const [x, z] = f.at(0, 0.06);
-    b.add('bone', box(f.len + 0.2, 0.3, 0.1), x, eave - 0.2, z, 0, f.ry, 0);
-    const [x2, z2] = f.at(0, 0.06);
-    b.add('bone', box(f.len + 0.2, 0.12, 0.12), x2, plinth + 3.3, z2, 0, f.ry, 0); // floor band
-  }
-  // Windows.
-  let wi = 0;
-  const g0 = plinth + 1.75;
-  const g1 = plinth + 3.3 + 1.6;
-  const win = (f: Face, u: number, y: number, w = 0.95, h = 1.8) => sashWindow(b, f, u, y, w, h, hashKind(wi++ + 3), wi);
-  win(wf.front, 0, g0, 1.3, 1.9);
-  win(wf.front, 0, g1);
-  win(wf.left, 0, g0);
-  win(wf.left, 0, g1);
-  win(mf.front, 2.7, g1);
-  win(mf.front, 0.3, g1);
-  win(mf.front, 3.0, g0, 0.9, 1.7);
-  for (const u of [-2.4, 0, 2.4]) {
-    win(mf.back, u, g0);
-    win(mf.back, u, g1);
-  }
-  for (const u of [-2.2, 1.2]) {
-    win(mf.left, u - 0.4, g0);
-    win(mf.left, u - 0.4, g1);
-    win(mf.right, u, g0);
-    win(mf.right, u, g1);
-  }
-  // Turret windows on three sides and a band of glow at the top.
-  for (const a of [-0.4, 0.5, 1.5]) {
-    for (const y of [g0, g1, 8.2]) {
-      const k = hashKind(wi++ + 11, 0.6);
-      const role: Role = k === 'lit' ? 'windowGlow' : k === 'ghost' ? 'ghostGlow' : 'glass';
-      const x = tx + Math.sin(a) * (tr + 0.02);
-      const z = tz - Math.cos(a) * (tr + 0.02);
-      b.add(role, box(0.7, y > 8 ? 0.8 : 1.6, 0.05), x, y, z, 0, -a, 0);
-      b.add('bone', box(0.86, 0.1, 0.14), tx + Math.sin(a) * (tr + 0.06), y - (y > 8 ? 0.45 : 0.85), tz - Math.cos(a) * (tr + 0.06), 0, -a, 0);
-      b.add('bone', box(0.86, 0.12, 0.1), tx + Math.sin(a) * (tr + 0.05), y + (y > 8 ? 0.46 : 0.86), tz - Math.cos(a) * (tr + 0.05), 0, -a, 0);
-    }
-  }
-  b.add('bone', cyl(tr + 0.12, tr + 0.12, 0.3, 16), tx, tTop - 0.15, tz);
-  // Roofs: main gable (ridge along X), wing gable (ridge along Z), conical turret roof, porch shed.
-  const mainHalf = (main.z1 - main.z0) / 2 + 0.45;
-  const mainRise = H - 1.1 - eave;
-  const mz = (main.z0 + main.z1) / 2;
-  const mx = (main.x0 + main.x1) / 2;
-  const mAng = Math.atan2(mainRise, mainHalf);
-  for (const s of [-1, 1]) b.add('shingle', box(main.x1 - main.x0 + 0.7, 0.2, Math.hypot(mainHalf, mainRise)), mx, eave + mainRise / 2, mz + (s * mainHalf) / 2, s * mAng, 0, 0);
+  b.add('fabric', slab(batShape(W / 1.1), 0.02, 0.006, 2), 0, 0.1, 0.03, -0.25, 0, 0);
+  b.add('fabric', ell(0.065, 0.07, 0.055, 10, 8), 0, 0.07, 0);
+  b.add('fabric', new THREE.SphereGeometry(0.048, 10, 8), 0, 0.13, -0.01);
   for (const s of [-1, 1]) {
-    const gx = s < 0 ? main.x0 : main.x1;
-    b.add(wall, gable(main.z1 - main.z0, mainRise - 0.15, 0.3), gx - s * 0.15, eave, mz, 0, Q, 0);
-    for (const k of [-1, 1]) b.add('bone', box(0.12, 0.3, Math.hypot(mainHalf, mainRise)), gx + s * 0.2, eave + mainRise / 2 - 0.05, mz + (k * mainHalf) / 2, k * mAng, 0, 0); // bargeboards
-    const k = s < 0 ? 'witchGlow' : 'ghostGlow';
-    b.add(k, cyl(0.42, 0.42, 0.06, 16).rotateZ(Q), gx + s * 0.16, eave + 1.9, mz);
-    b.add('bone', new THREE.TorusGeometry(0.46, 0.07, 5, 16).rotateY(Q), gx + s * 0.19, eave + 1.9, mz);
+    b.add('fabric', new THREE.ConeGeometry(0.018, 0.045, 5), s * 0.026, 0.18, -0.005, 0, 0, -s * 0.25);
+    b.add('bone', new THREE.SphereGeometry(0.012, 6, 4), s * 0.018, 0.138, -0.05);
+    b.add('darkTrim', new THREE.SphereGeometry(0.006, 5, 3), s * 0.018, 0.138, -0.061);
+    b.add('bone', new THREE.ConeGeometry(0.004, 0.012, 3).rotateX(Math.PI), s * 0.008, 0.116, -0.052);
   }
-  b.add('darkTrim', box(main.x1 - main.x0 + 0.8, 0.12, 0.3), mx, eave + mainRise + 0.05, mz);
-  cresting(b, main.x1 - main.x0 - 0.4, mx, eave + mainRise + 0.1, mz);
-  const wHalf = (wing.x1 - wing.x0) / 2 + 0.4;
-  const wRise = 3.9;
-  const wx = (wing.x0 + wing.x1) / 2;
-  const wAng = Math.atan2(wRise, wHalf);
-  const wLen = wing.z1 - wing.z0 + 2.2;
-  const wzc = wing.z0 + wLen / 2 - 0.4;
-  for (const s of [-1, 1]) b.add('shingle', box(Math.hypot(wHalf, wRise), 0.2, wLen), wx + (s * wHalf) / 2, eave + wRise / 2, wzc, 0, 0, -s * wAng);
-  b.add(wall, gable(wing.x1 - wing.x0, wRise - 0.12, 0.3), wx, eave, wing.z0 + 0.15);
-  for (const s of [-1, 1]) b.add('bone', box(Math.hypot(wHalf, wRise), 0.3, 0.12), wx + (s * wHalf) / 2, eave + wRise / 2 - 0.05, wing.z0 - 0.12, 0, 0, -s * wAng);
-  b.add('bone', box(0.12, 1.2, 0.12), wx, eave + wRise + 0.4, wing.z0 - 0.1); // finial
-  b.add('windowGlow', slab(lancet(0.6, 1.1), 0.06), wx, eave + 1.0, wing.z0 - 0.02);
-  b.add('bone', slab(lancet(0.84, 1.3), 0.05), wx, eave + 0.92, wing.z0 + 0.01);
-  b.add('shingle', new THREE.ConeGeometry(tr + 0.38, H - 0.4 - tTop, 16), tx, tTop + (H - 0.4 - tTop) / 2, tz);
-  b.add('steel', cyl(0.025, 0.05, 0.7, 6), tx, H - 0.38, tz);
-  b.add('steel', new THREE.SphereGeometry(0.08, 8, 6), tx, H - 0.5, tz);
-  // Porch: deck, turned posts, shed roof, rail, steps; front door with a lit transom.
-  const px0 = -1.3;
-  const px1 = tx - tr;
-  const pz0 = -4.4;
-  const pcx = (px0 + px1) / 2;
-  b.add('wood', box(px1 - px0, 0.14, main.z0 - pz0), pcx, plinth - 0.07, (pz0 + main.z0) / 2);
-  for (const x of [px0 + 0.15, pcx - 0.5, pcx + 0.5, px1 - 0.1]) b.add('bone', lathe([[0.1, 0], [0.08, 0.2], [0.06, 0.4], [0.075, 1.4], [0.055, 2.4], [0.09, 2.6]], 8), x, plinth, pz0 + 0.12);
-  b.add('shingle', box(px1 - px0 + 0.4, 0.14, main.z0 - pz0 + 0.6), pcx, plinth + 2.95, (pz0 + main.z0) / 2 - 0.2, -0.28, 0, 0);
-  b.add('bone', box(px1 - px0 + 0.3, 0.22, 0.1), pcx, plinth + 2.66, pz0 + 0.1);
-  for (const [x0, x1] of [[px0, pcx - 0.6], [pcx + 0.6, px1]] as const) {
-    b.add('bone', box(x1 - x0, 0.06, 0.08), (x0 + x1) / 2, plinth + 0.9, pz0 + 0.12);
-    for (let x = x0 + 0.12; x < x1 - 0.05; x += 0.16) b.add('bone', box(0.035, 0.8, 0.035), x, plinth + 0.45, pz0 + 0.12);
-  }
-  for (let i = 0; i < 3; i++) b.add('stone', box(1.3, (plinth / 4) * (i + 1), 0.6 - 0.2 * i), pcx, (plinth / 8) * (i + 1), -5.0 + 0.2 * i + (0.6 - 0.2 * i) / 2);
-  const dx = pcx;
-  b.add('darkTrim', box(1.1, 2.3, 0.08), dx, plinth + 1.15, main.z0 - 0.04);
-  b.add('windowGlow', box(1.1, 0.35, 0.05), dx, plinth + 2.55, main.z0 - 0.03);
-  b.add('bone', box(1.4, 0.14, 0.12), dx, plinth + 2.8, main.z0 - 0.06);
-  for (const s of [-1, 1]) b.add('bone', box(0.12, 2.9, 0.1), dx + s * 0.62, plinth + 1.45, main.z0 - 0.05);
-  // Porch pumpkins on the steps and deck.
-  for (const [x, y, z, r] of [[pcx - 0.75, plinth, pz0 + 0.35, 0.24], [pcx + 0.75, plinth, pz0 + 0.35, 0.2], [pcx + 0.5, 0.18, pz0 - 0.35, 0.17]] as const) {
-    b.add('pumpkin', pumpkinGeo(r, r * 1.5, 8, 0.12, 12, 7), x, y, z);
-    carveFace(b, r, r * 1.5, y, 'pumpkinGlow', 0.9);
-    void x;
-  }
-  // Chimneys: one leans.
-  b.add('stone', box(0.9, 4.2, 0.8), -2.4, H - 2.0 - 0.1, 2.2, 0, 0, 0.07);
-  b.add('stone', box(1.1, 0.25, 1.0), -2.4 - 0.14, H - 0.15, 2.2, 0, 0, 0.07);
-  b.add('stone', box(0.8, 3.0, 0.7), 2.4, eave + mainRise - 1.0, 3.2);
-  b.add('stone', box(1.0, 0.2, 0.9), 2.4, eave + mainRise + 0.5, 3.2);
-  // Crooked: the whole house leans and its ridge sags a little.
-  b.deform = (v) => {
-    v.x += 0.016 * Math.max(0, v.y - plinth);
-    v.y -= 0.18 * THREE.MathUtils.smoothstep(v.y, eave, H) * Math.cos((v.x / 5.5) * Q);
-  };
   return b.build();
 }
 
-function hauntedManor(t: ObjectType): PropParts {
-  const [W, H, D] = t.size; // 17 × 24 × 14 Gothic manor: corner turrets with copper spires, lancets, rose window
+// ── New class 3–4 props ──────────────────────────────────────────────────────
+function crow(b: Adder, x: number, y: number, z: number, yaw: number): void {
+  const c = Math.cos(yaw);
+  const s = Math.sin(yaw);
+  const at = (dx: number, dy: number, dz: number) => [x + dx * c + dz * s, y + dy, z - dx * s + dz * c] as const;
+  b.add('darkTrim', ell(0.06, 0.06, 0.12, 8, 6), ...at(0, 0.06, 0), -0.3, yaw, 0);
+  b.add('darkTrim', new THREE.SphereGeometry(0.045, 8, 6), ...at(0, 0.14, -0.09));
+  b.add('darkTrim', new THREE.ConeGeometry(0.014, 0.07, 4).rotateX(-Q), ...at(0, 0.14, -0.15), 0, yaw, 0);
+  b.add('darkTrim', new THREE.ConeGeometry(0.04, 0.16, 4).rotateX(Q), ...at(0, 0.03, 0.16), 0, yaw, 0);
+  for (const k of [-1, 1]) b.add('signalAmber', new THREE.SphereGeometry(0.008, 4, 3), ...at(k * 0.03, 0.155, -0.12));
+}
+
+function crowPost(t: ObjectType): PropParts {
+  const [W, H] = t.size; // weathered post and crossbar with three crows
   const b = new Builder();
-  const wall: Role = 'propBrick';
-  const base = 1.0;
-  const groundH = 4.0;
-  const floorH = 3.4;
-  const floors = 3;
-  const eave = base + groundH + floors * floorH;
-  const x0 = -6.2;
-  const x1 = 6.2;
-  const z0 = -6.0;
-  const z1 = D / 2;
-  b.add('stone', box(x1 - x0 + 0.3, base, z1 - z0 + 0.3), 0, base / 2, (z0 + z1) / 2);
-  b.add(wall, box(x1 - x0, eave - base, z1 - z0), 0, (eave + base) / 2, (z0 + z1) / 2);
-  const F = blockFaces(x0, x1, z0, z1);
-  // String courses at each floor and a corbelled cornice.
-  for (const f of [F.front, F.back, F.left, F.right]) {
-    for (let k = 0; k <= floors; k++) {
-      const [x, z] = f.at(0, 0.08);
-      b.add('stone', box(f.len + 0.16, 0.18, 0.16), x, base + groundH + k * floorH - (k === floors ? 0.2 : 0), z, 0, f.ry, 0);
-    }
-    const [x, z] = f.at(0, 0.2);
-    b.add('stone', box(f.len + 0.4, 0.35, 0.4), x, eave + 0.05, z, 0, f.ry, 0);
+  b.add('wood', box(0.09, H - 0.25, 0.09), 0, (H - 0.25) / 2, 0);
+  b.add('wood', box(W, 0.06, 0.06), 0, H - 0.45, 0, 0, 0, 0.05);
+  b.add('stone', ell(0.2, 0.08, 0.18, 8, 4), 0, 0, 0);
+  crow(b, -W / 2 + 0.08, H - 0.43, 0, 0.6);
+  crow(b, W / 2 - 0.1, H - 0.4, 0, -0.9);
+  crow(b, 0, H - 0.25, 0, 2.6);
+  return b.build();
+}
+
+function lanternPost(t: ObjectType): PropParts {
+  const [, H] = t.size; // crooked post with a gallows arm and a carved pumpkin lantern on a chain
+  const b = new Builder();
+  b.add('stone', ell(0.26, 0.1, 0.24, 8, 4), 0, 0, 0.1);
+  b.add('wood', taper(v3(0, 0, 0.1), v3(0.04, 1.4, 0.1), 0.075, 0.065, 7));
+  b.add('wood', taper(v3(0.04, 1.4, 0.1), v3(-0.02, H - 0.1, 0.1), 0.065, 0.05, 7));
+  b.add('wood', new THREE.ConeGeometry(0.07, 0.14, 4), -0.02, H - 0.04, 0.1);
+  b.add('wood', taper(v3(-0.02, H - 0.3, 0.1), v3(0.5, H - 0.2, 0.1), 0.045, 0.035, 6));
+  b.add('wood', strut(v3(0.0, H - 0.75, 0.1), v3(0.3, H - 0.24, 0.1), 0.025, 5));
+  b.add('darkTrim', cyl(0.008, 0.008, 0.36, 4), 0.46, H - 0.4, 0.1);
+  const r = 0.17;
+  const ph = 0.27;
+  const y0 = H - 0.58 - ph;
+  b.add('plastic', pumpkinGeo(r, ph, 8, 0.12, 14, 8), 0.46, y0, 0.1);
+  carveFace(shifted(b, 0.46, 0, 0.1), r, ph, y0, 'pumpkinGlow', 0.9);
+  stem(b, 0.46, y0 + ph - 0.02, 0.1, 0.06, 0.02);
+  return b.build();
+}
+
+function spiderWeb(t: ObjectType): PropParts {
+  const [W, H] = t.size; // a web strung between two dead branches, with its owner waiting
+  const b = new Builder();
+  const lx = -W / 2 + 0.12;
+  const rx = W / 2 - 0.12;
+  b.add('wood', taper(v3(lx, 0, 0), v3(lx + 0.12, H - 0.05, 0.05), 0.07, 0.035, 6));
+  b.add('wood', taper(v3(rx, 0, 0), v3(rx - 0.05, H - 0.2, -0.04), 0.07, 0.035, 6));
+  b.add('wood', taper(v3(lx + 0.1, H - 0.25, 0.03), v3(rx - 0.06, H - 0.3, -0.03), 0.04, 0.03, 5));
+  const c = v3(0.02, H * 0.56, 0);
+  const n = 9;
+  const anchors: Vec[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + 0.2;
+    const ax = THREE.MathUtils.clamp(Math.cos(a) * W, lx + 0.1, rx - 0.08);
+    const ay = THREE.MathUtils.clamp(c.y + Math.sin(a) * H, 0.35, H - 0.32);
+    anchors.push(v3(ax, ay, 0));
+    b.add('bone', strut(c, anchors[i], 0.007, 3));
   }
-  // Lancet windows.
-  let wi = 0;
-  const lancetWin = (f: Face, u: number, y: number, w: number, h: number, kind: WinKind) => {
-    const pane: Role = kind === 'lit' ? 'windowGlow' : kind === 'ghost' ? 'ghostGlow' : 'glass';
-    const put = (role: Role, g: THREE.BufferGeometry, out: number, yy = y) => {
-      const [x, z] = f.at(u, out);
-      b.add(role, g, x, yy, z, 0, f.ry, 0);
-    };
-    put(pane, slab(lancet(w, h), 0.05, 0, 3), 0.04);
-    put('stone', slab(lancet(w + 0.3, h + 0.2), 0.06, 0, 3), 0.01, y - 0.06);
-    put('stone', box(w + 0.4, 0.1, 0.22), 0.1, y - 0.08);
-    put('darkTrim', box(0.05, h * 0.86, 0.03), 0.075, y + h * 0.43);
-    put('darkTrim', box(w, 0.05, 0.03), 0.075, y + h * 0.42);
-    if (kind === 'boarded') {
-      put('wood', box(w + 0.1, 0.16, 0.03).rotateZ(0.35), 0.1, y + h * 0.35);
-      put('wood', box(w + 0.1, 0.16, 0.03).rotateZ(-0.3), 0.105, y + h * 0.6);
+  for (let ring = 1; ring <= 5; ring++) {
+    const f = ring / 6;
+    for (let i = 0; i < n; i++) {
+      const p0 = c.clone().lerp(anchors[i], f);
+      const p1 = c.clone().lerp(anchors[(i + 1) % n], f);
+      p0.y -= 0.03 * ring;
+      p1.y -= 0.03 * ring;
+      b.add('bone', strut(p0, p1, 0.005, 3));
     }
-  };
-  const winRow = (f: Face, us: number[], skip: (u: number, k: number) => boolean = () => false) => {
-    for (let k = 0; k < floors + 1; k++) {
-      const y = k === 0 ? base + 0.9 : base + groundH + (k - 1) * floorH + 0.75;
-      const h = k === 0 ? 2.5 : 2.2;
-      for (const u of us) if (!skip(u, k)) lancetWin(f, u, y, 1.0, h, hashKind(wi++ + 21, 0.45));
-    }
-  };
-  winRow(F.front, [-3.25, 3.25]);
-  winRow(F.back, [-4.8, -2.4, 0, 2.4, 4.8]);
-  winRow(F.left, [-3.2, -0.4, 2.4, 5.0], (u) => u > 2.5);
-  winRow(F.right, [-5.0, -2.4, 0.4, 3.2], (u) => u < -2.5);
-  // Central front gable: projecting bay with the entrance, a balcony and a violet rose window.
-  const gw = 4.8;
-  const gz = z0 - 0.6;
-  b.add(wall, box(gw, eave - base, 0.6), 0, (eave + base) / 2, z0 - 0.3);
-  b.add('stone', box(gw + 0.3, base, 0.9), 0, base / 2, z0 - 0.3);
-  const gRise = 6.8;
-  b.add(wall, gable(gw + 0.2, gRise, 0.6), 0, eave, z0 - 0.3);
-  const gAng = Math.atan2(gRise, gw / 2 + 0.5);
-  const gSlope = Math.hypot(gw / 2 + 0.5, gRise);
+  }
+  b.add('darkTrim', ell(0.07, 0.06, 0.05, 8, 6), c.x + 0.25, c.y + 0.2, -0.02);
+  b.add('darkTrim', ell(0.05, 0.05, 0.04, 8, 6), c.x + 0.25, c.y + 0.29, -0.02);
+  for (const s of [-1, 1]) for (let i = 0; i < 4; i++) b.add('darkTrim', strut(v3(c.x + 0.25 + s * 0.04, c.y + 0.22 - i * 0.03, -0.02), v3(c.x + 0.25 + s * 0.16, c.y + 0.3 - i * 0.07, -0.04), 0.008, 3));
+  b.add('taillight', new THREE.SphereGeometry(0.01, 4, 3), c.x + 0.24, c.y + 0.31, -0.055);
+  b.add('taillight', new THREE.SphereGeometry(0.01, 4, 3), c.x + 0.27, c.y + 0.31, -0.055);
+  return b.build();
+}
+
+// ── New class 5–6 props ──────────────────────────────────────────────────────
+function witch(t: ObjectType): PropParts {
+  void t;
+  const b = new Builder(); // hunched witch stirring her cauldron: robe, straw hair, hat, glowing eyes
+  const z0 = 0.42;
+  b.add('fabric', lathe([[0.46, 0], [0.42, 0.18], [0.33, 0.75], [0.26, 1.18], [0.2, 1.36], [0.08, 1.44], [0.001, 1.45]], 14).scale(1, 1, 0.85), 0, 0, z0, -0.1, 0, 0);
+  b.add('fabric', ell(0.2, 0.16, 0.16, 10, 6), 0, 1.3, z0 + 0.12); // hump
+  const head = v3(0, 1.58, z0 - 0.2);
+  b.add('bone', ell(0.1, 0.12, 0.11, 12, 8), head.x, head.y, head.z);
+  b.add('bone', bend(new THREE.ConeGeometry(0.028, 0.16, 6).translate(0, 0.08, 0), 0.05, 0.16, 0.0, 0.03).rotateX(-Q - 0.4), head.x, head.y - 0.01, head.z - 0.09);
+  b.add('bone', ell(0.04, 0.035, 0.04, 6, 4), head.x, head.y - 0.1, head.z - 0.07);
   for (const s of [-1, 1]) {
-    b.add('shingle', box(gSlope, 0.24, 5.0), (s * (gw / 2 + 0.5)) / 2, eave + gRise / 2, z0 + 1.6, 0, 0, -s * gAng);
-    b.add('stone', box(gSlope, 0.32, 0.2), (s * (gw / 2 + 0.5)) / 2, eave + gRise / 2 + 0.05, gz - 0.06, 0, 0, -s * gAng);
+    b.add('ghostGlow', new THREE.SphereGeometry(0.014, 6, 4), s * 0.038, head.y + 0.025, head.z - 0.095);
+    for (let i = 0; i < 4; i++) b.add('straw', spike(v3(s * 0.08, head.y + 0.05 - i * 0.02, head.z + 0.02 + i * 0.03), v3(s * (0.16 + i * 0.03), head.y - 0.3 - i * 0.05, head.z + 0.06 + i * 0.04), 0.035, 4));
+    const sh = v3(s * 0.2, 1.3, z0 - 0.02);
+    const wr = v3(s * 0.12, 1.08, z0 - 0.42);
+    b.add('fabric', taper(sh, wr, 0.08, 0.11, 8));
+    b.add('bone', ell(0.04, 0.035, 0.05, 6, 4), wr.x * 0.6, wr.y - 0.02, wr.z - 0.05);
   }
-  b.add('stone', box(0.25, 1.6, 0.25), 0, eave + gRise + 0.5, gz);
-  b.add('witchGlow', cyl(1.05, 1.05, 0.06, 24).rotateX(Q), 0, eave + 2.4, gz - 0.01);
-  b.add('stone', new THREE.TorusGeometry(1.15, 0.13, 6, 24), 0, eave + 2.4, gz - 0.04);
-  b.add('stone', new THREE.TorusGeometry(0.4, 0.07, 6, 16), 0, eave + 2.4, gz - 0.05);
-  for (let i = 0; i < 8; i++) b.add('stone', box(0.07, 0.7, 0.06), Math.cos((i / 8) * Math.PI * 2) * 0.76, eave + 2.4 + Math.sin((i / 8) * Math.PI * 2) * 0.76, gz - 0.05, 0, 0, (i / 8) * Math.PI * 2 + Q);
-  const gf: Face = { len: gw, at: (u, o) => [u, gz - o], ry: 0 };
-  for (let k = 1; k <= floors; k++) for (const u of [-1.2, 1.2]) lancetWin(gf, u, base + groundH + (k - 1) * floorH + 0.75, 0.9, 2.2, hashKind(wi++ + 5, 0.55));
-  // Entrance: pointed door, lit fanlight, stone surround, steps, lanterns, balcony over it.
-  b.add('stone', slab(lancet(2.6, 3.9), 0.3, 0, 6), 0, base, gz - 0.1);
-  b.add('darkTrim', slab(lancet(1.9, 3.4), 0.2, 0, 6), 0, base, gz - 0.2);
-  b.add('windowGlow', slab(lancet(1.5, 0.9), 0.04, 0, 6).translate(0, 2.4, 0), 0, base, gz - 0.31);
-  for (let i = 0; i < 3; i++) b.add('stone', box(3.2, (base / 3) * (i + 1), 0.4 - 0.1 * i), 0, (base / 6) * (i + 1), -D / 2 + 0.1 * i + (0.4 - 0.1 * i) / 2);
+  witchHatParts(shifted(b, 0, 1.64, head.z + 0.02), 'fabric', 0, 0, 0, 0.95, -0.12);
+  b.add('wood', strut(v3(0, 1.1, z0 - 0.5), v3(-0.05, 0.6, z0 - 0.82), 0.02, 5)); // ladle
+  cauldronParts(shifted(b, 0, 0, -0.5), 0.85, true);
+  return b.build();
+}
+
+function bonePile(t: ObjectType, seed: number): PropParts {
+  const [W, H] = t.size; // a heap of bones and skulls on a mound of earth
+  const b = new Builder();
+  const R = W / 2 - 0.15;
+  b.add('concreteProp', ell(R, H * 0.42, R * 0.92, 14, 6), 0, 0, 0);
+  let k = seed * 9301 + 49297;
+  const rnd = () => ((k = (k * 9301 + 49297) % 233280) / 233280);
+  const surf = (r: number) => H * 0.42 * Math.sqrt(Math.max(0, 1 - (r / R) ** 2));
+  for (let i = 0; i < 22; i++) {
+    const a = rnd() * Math.PI * 2;
+    const r = Math.sqrt(rnd()) * R * 0.85;
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r * 0.92;
+    const y = surf(r) + 0.03;
+    const len = 0.35 + rnd() * 0.35;
+    const g = cyl(0.028, 0.032, len, 6).rotateX(Q);
+    b.add('bone', g, x, y, z, (rnd() - 0.5) * 0.6, rnd() * Math.PI, (rnd() - 0.5) * 0.5);
+  }
+  for (let i = 0; i < 5; i++) {
+    const a = rnd() * Math.PI * 2;
+    const r = rnd() * R * 0.6;
+    skullParts(b, Math.cos(a) * r, surf(r) - 0.04, Math.sin(a) * r, 1.7, 0, a + Math.PI, undefined);
+  }
+  skullParts(b, 0, H * 0.42 - 0.02, 0, 2.2, 0, 0.3);
+  return b.build();
+}
+
+function cryptGate(t: ObjectType): PropParts {
+  const [W] = t.size; // cemetery gate: stone piers with pumpkin lanterns, arched iron gates, one ajar
+  const b = new Builder();
+  const px = W / 2 - 0.35;
   for (const s of [-1, 1]) {
-    b.add('darkTrim', box(0.26, 0.38, 0.26), s * 1.7, base + 2.6, gz - 0.25);
-    b.add('windowGlow', box(0.18, 0.28, 0.18), s * 1.7, base + 2.6, gz - 0.25);
-    b.add('darkTrim', new THREE.ConeGeometry(0.2, 0.25, 4).rotateY(Math.PI / 4), s * 1.7, base + 2.92, gz - 0.25);
+    b.add('concreteProp', rbox(0.7, 2.7, 0.7, 0.04), s * px, 1.35, 0);
+    b.add('concreteProp', rbox(0.86, 0.2, 0.86, 0.03), s * px, 2.8, 0);
+    b.add('pumpkin', pumpkinGeo(0.22, 0.34, 8, 0.12, 14, 8), s * px, 2.9, 0);
+    carveFace(shifted(b, s * px, 0, 0), 0.22, 0.34, 2.9, 'pumpkinGlow', 0.9);
   }
-  b.add('stone', box(3.4, 0.2, 0.9), 0, base + groundH + 0.1, gz - 0.4);
-  b.add('darkTrim', box(3.4, 0.9, 0.04), 0, base + groundH + 0.65, gz - 0.83);
-  for (const s of [-1, 1]) b.add('darkTrim', box(0.04, 0.9, 0.85), s * 1.68, base + groundH + 0.65, gz - 0.4);
-  // Main roof: steep slate, ridge along X, cresting; two tall chimney stacks.
-  const half = (z1 - z0) / 2 + 0.5;
-  const rise = H - 0.7 - eave;
-  const zc = (z0 + z1) / 2;
+  const gw = px - 0.35;
+  for (const s of [-1, 1]) {
+    const leaf = new Builder();
+    for (let i = 0; i < 7; i++) {
+      const u = 0.08 + (i / 6) * (gw - 0.16);
+      const top = 2.05 + 0.35 * Math.cos((u / gw) * Q);
+      leaf.add('darkTrim', cyl(0.016, 0.016, top - 0.08, 5), s * u, 0.08 + (top - 0.08) / 2, 0);
+      leaf.add('darkTrim', new THREE.ConeGeometry(0.03, 0.12, 4), s * u, top + 0.06, 0);
+    }
+    for (const y of [0.35, 1.85]) leaf.add('darkTrim', box(gw, 0.04, 0.03), (s * gw) / 2, y, 0);
+    leaf.add('darkTrim', new THREE.TorusGeometry(0.12, 0.012, 3, 12), (s * gw) / 2, 1.1, 0);
+    // Leaves hinge on the piers; the right one stands ajar.
+    const hx = s * gw;
+    const open = s > 0 ? 0.55 : 0;
+    for (const [role, g] of Object.entries(leaf.build()) as [Role, THREE.BufferGeometry][]) b.add(role, g.translate(-hx, 0, 0).rotateY(open), hx, 0, 0);
+  }
+  b.add('darkTrim', new THREE.TorusGeometry(gw + 0.05, 0.04, 4, 20, Math.PI), 0, 2.4, 0);
+  for (let i = 1; i < 6; i++) {
+    const a = (i / 6) * Math.PI;
+    b.add('darkTrim', strut(v3(Math.cos(a) * 0.2, 2.4 + Math.sin(a) * 0.2, 0), v3(Math.cos(a) * (gw + 0.03), 2.4 + Math.sin(a) * (gw + 0.03), 0), 0.012, 3));
+  }
+  return b.build();
+}
+
+function giantSpider(t: ObjectType): PropParts {
+  const [W, H] = t.size; // hairy giant spider: eight jointed legs, hourglass mark, eight red eyes, fangs
+  const b = new Builder();
+  b.add('fabric', ell(0.55, 0.42, 0.65, 14, 10), 0, 1.25, -0.55);
+  b.add('fabric', ell(0.95, 0.85, 1.15, 16, 12), 0, 1.55, 0.75, -0.25, 0, 0);
+  b.add('velvet', ell(0.16, 0.04, 0.3, 8, 4), 0, 2.36, 0.7, -0.25, 0, 0);
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < 4; i++) {
+      const hip = v3(s * 0.38, 1.25, -0.85 + i * 0.26);
+      const knee = v3(s * (1.25 + 0.12 * Math.abs(i - 1.5)), H - 0.25 - 0.08 * i, -1.45 + i * 0.95);
+      const foot = v3(s * (W / 2 - 0.15), 0.03, -2.25 + i * 1.5);
+      limb(b, 'fabric', hip, knee, 0.11, 0.085, 7);
+      limb(b, 'fabric', knee, foot, 0.08, 0.035, 6);
+      b.add('fabric', spike(knee, knee.clone().add(v3(s * 0.12, 0.12, 0)), 0.05, 4));
+    }
+    b.add('bone', spike(v3(s * 0.12, 1.02, -1.1), v3(s * 0.07, 0.7, -1.2), 0.05, 5));
+    b.add('taillight', new THREE.SphereGeometry(0.075, 8, 6), s * 0.14, 1.48, -1.12);
+    for (let e = 0; e < 3; e++) b.add('taillight', new THREE.SphereGeometry(0.04, 6, 4), s * (0.06 + e * 0.1), 1.6 + (e % 2) * 0.05, -1.05 + e * 0.04);
+  }
+  return b.build();
+}
+
+function wishingWell(t: ObjectType): PropParts {
+  const [, H] = t.size; // haunted well: mossy stone ring, glowing brew, shingled roof, crank and bucket
+  const b = new Builder();
+  b.add('stone', lathe([[1.0, 0], [1.1, 0.05], [1.1, 0.95], [1.2, 1.0], [1.2, 1.12], [0.86, 1.12], [0.86, 0.2]], 20));
+  b.add('slime', cyl(0.87, 0.87, 0.04, 20), 0, 0.88, 0);
+  for (const [x, z] of [[0.3, -0.2], [-0.25, 0.3]] as const) b.add('slime', new THREE.SphereGeometry(0.1, 8, 4, 0, Math.PI * 2, 0, Q), x, 0.9, z);
+  for (const s of [-1, 1]) {
+    b.add('wood', box(0.16, 2.3, 0.16), s * 1.0, 2.2, 0);
+    b.add('wood', strut(v3(s * 1.0, 1.3, 0), v3(s * 1.0, 2.9, 0.5), 0.04, 4));
+  }
+  const half = 1.25;
+  const rise = H - 0.15 - 3.25;
   const ang = Math.atan2(rise, half);
-  for (const s of [-1, 1]) b.add('shingle', box(x1 - x0 + 0.6, 0.24, Math.hypot(half, rise)), 0, eave + rise / 2, zc + (s * half) / 2, s * ang, 0, 0);
-  for (const s of [-1, 1]) b.add(wall, gable(z1 - z0, rise - 0.2, 0.4), s * (x1 - 0.2), eave, zc, 0, Q, 0);
-  b.add('darkTrim', box(x1 - x0 + 0.6, 0.16, 0.36), 0, eave + rise + 0.05, zc);
-  cresting(b, x1 - x0 - 0.6, 0, eave + rise + 0.1, zc);
-  for (const s of [-1, 1]) {
-    b.add('stone', box(1.2, 5.0, 0.9), s * 3.6, H - 2.6, zc + 2.0);
-    b.add('stone', box(1.4, 0.25, 1.1), s * 3.6, H - 0.2, zc + 2.0);
-    for (const k of [-1, 1]) b.add('propBrick', cyl(0.13, 0.13, 0.55, 6), s * 3.6 + k * 0.3, H + 0.15, zc + 2.0);
-  }
-  // Dormers on the back slope.
-  for (const dxp of [-3.6, 0, 3.6]) {
-    const dzp = z1 - 1.6;
-    const dy = eave + 1.6;
-    b.add(wall, box(1.5, 1.9, 1.6), dxp, dy, dzp - 0.4);
-    b.add(wall, gable(1.5, 1.0, 0.2), dxp, dy + 0.95, dzp + 0.38);
-    for (const k of [-1, 1]) b.add('shingle', box(1.15, 0.12, 2.0), dxp + k * 0.42, dy + 1.4, dzp - 0.4, 0, 0, -k * 0.85);
-    lancetWin({ len: 1.5, at: (u, o) => [dxp - u, dzp + 0.38 + o], ry: Math.PI }, 0, dy - 0.7, 0.75, 1.4, dxp < 0 ? 'lit' : dxp > 0 ? 'ghost' : 'dark');
-  }
-  // Corner turrets: octagonal, battered, copper spires and finials.
-  const tr = 2.2;
-  const tTop = 17.0;
-  for (const s of [-1, 1]) {
-    const tx = s * (W / 2 - tr - 0.05);
-    const tz = -D / 2 + tr + 0.05;
-    b.add('stone', new THREE.CylinderGeometry(tr + 0.2, tr + 0.25, base, 8), tx, base / 2, tz);
-    b.add(wall, new THREE.CylinderGeometry(tr, tr + 0.08, tTop - base, 8), tx, (tTop + base) / 2, tz);
-    for (let k = 0; k <= floors; k++) b.add('stone', new THREE.CylinderGeometry(tr + 0.1, tr + 0.1, 0.2, 8), tx, base + groundH + k * floorH - (k === floors ? 0.2 : 0), tz);
-    b.add('stone', new THREE.CylinderGeometry(tr + 0.35, tr + 0.1, 0.6, 8), tx, tTop - 0.3, tz); // corbelled top
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
-      b.add('stone', box(0.5, 0.5, 0.3), tx + Math.cos(a) * (tr + 0.25), tTop + 0.25, tz + Math.sin(a) * (tr + 0.25), 0, -a + Q, 0); // merlons
-    }
-    b.add('copper', new THREE.ConeGeometry(tr + 0.15, H - 1.0 - tTop, 8), tx, tTop + (H - 1.0 - tTop) / 2, tz);
-    b.add('steel', cyl(0.03, 0.07, 1.0, 6), tx, H - 0.5, tz);
-    b.add('steel', new THREE.SphereGeometry(0.1, 8, 6), tx, H - 0.7, tz);
-    for (let k = 0; k <= floors; k++) {
-      const y = k === 0 ? base + 1.0 : base + groundH + (k - 1) * floorH + 0.8;
-      for (const ar of [Math.PI, Math.PI - s * Q * 0.5, Math.PI - s * Q]) {
-        const kind = hashKind(wi++ + 41, 0.5);
-        const pane: Role = kind === 'lit' ? 'windowGlow' : kind === 'ghost' ? 'ghostGlow' : 'glass';
-        const ox = Math.sin(ar);
-        const oz = Math.cos(ar);
-        b.add(pane, slab(lancet(0.75, 1.9), 0.05, 0, 4), tx + ox * (tr * 0.93 + 0.02), y, tz + oz * (tr * 0.93 + 0.02), 0, ar, 0);
-        b.add('stone', slab(lancet(1.0, 2.05), 0.05, 0, 4), tx + ox * (tr * 0.93 - 0.01), y - 0.05, tz + oz * (tr * 0.93 - 0.01), 0, ar, 0);
-      }
-    }
-  }
-  b.deform = (v) => {
-    v.x += 0.006 * v.y;
-  };
+  for (const s of [-1, 1]) b.add('shingle', box(2.8, 0.12, Math.hypot(half, rise) + 0.1), 0, 3.25 + rise / 2, (s * half) / 2, s * ang, 0, 0);
+  for (const s of [-1, 1]) b.add('wood', gable(2 * half - 0.2, rise - 0.08, 0.08), s * 1.05, 3.25, 0, 0, Q, 0);
+  b.add('wood', cyl(0.07, 0.07, 2.1, 8).rotateZ(Q), 0, 2.75, 0);
+  b.add('wood', strut(v3(1.08, 2.75, 0), v3(1.25, 2.55, 0), 0.03, 4));
+  b.add('darkTrim', cyl(0.012, 0.012, 1.0, 4), 0.1, 2.25, 0);
+  b.add('wood', lathe([[0.001, 0], [0.16, 0], [0.19, 0.3], [0.17, 0.3], [0.14, 0.04], [0.001, 0.04]], 10), 0.1, 1.45, 0);
+  b.add('copper', ell(0.45, 0.12, 0.3, 8, 4), 0.85, 0.15, -0.6);
+  b.add('copper', ell(0.35, 0.1, 0.3, 8, 4), -0.8, 0.12, 0.7);
+  skullParts(b, 0.75, 1.12, -0.75, 1.2, 0, 0.7);
   return b.build();
+}
+
+// ── Class 7–8 giants ─────────────────────────────────────────────────────────
+/** Re-texture box-projected roles after a model was resized (metre-scale UVs stay metre-scale). */
+function reproject(parts: PropParts): PropParts {
+  for (const [role, g] of Object.entries(parts) as [Role, THREE.BufferGeometry][]) {
+    const out = PROJECTED.has(role) ? boxProjectUV(g) : g;
+    out.computeBoundingSphere();
+    parts[role] = out;
+  }
+  return parts;
+}
+
+/** A giant version of an authored prop: built at the base size, scaled to the type's size. */
+function scaledFrom(base: Factory, baseSize: [number, number, number]): Factory {
+  return (t, seed) => {
+    const parts = base({ ...t, size: baseSize }, seed);
+    const [sx, sy, sz] = [t.size[0] / baseSize[0], t.size[1] / baseSize[1], t.size[2] / baseSize[2]];
+    for (const g of Object.values(parts)) g?.scale(sx, sy, sz);
+    return reproject(parts);
+  };
+}
+
+/** Uniformly scale a model built at a nominal scale so its height is H (base stays on y = 0). */
+function fitHeight(parts: PropParts, H: number): PropParts {
+  const bb = new THREE.Box3();
+  for (const g of Object.values(parts)) {
+    g!.computeBoundingBox();
+    bb.union(g!.boundingBox!);
+  }
+  const k = H / Math.max(1e-3, bb.max.y);
+  for (const g of Object.values(parts)) g!.scale(k, k, k);
+  return reproject(parts);
+}
+
+/** Rough rock: an icosphere pushed in and out by a deterministic 3-D ripple. */
+function rock(rx: number, ry: number, rz: number, detail: number, seed: number): THREE.BufferGeometry {
+  const g = new THREE.IcosahedronGeometry(1, detail);
+  g.deleteAttribute('uv');
+  g.deleteAttribute('normal');
+  const m = mergeVertices(g, 1e-5);
+  const p = m.getAttribute('position');
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i);
+    const y = p.getY(i);
+    const z = p.getZ(i);
+    const n = Math.sin(x * 3.1 + seed) * Math.cos(z * 2.7 - seed) * 0.5 + Math.sin(y * 4.3 + x * 1.7 + seed * 2) * 0.35 + Math.sin((x + z) * 6.1) * 0.12;
+    const k = 1 + n * 0.16;
+    p.setXYZ(i, x * rx * k, y * ry * k, z * rz * k);
+  }
+  m.computeVertexNormals();
+  return m;
+}
+
+function skullRock(t: ObjectType): PropParts {
+  const b = new Builder(); // a great skull grown out of a boulder, goo weeping from its eyes
+  b.add('stone', rock(4.3, 2.4, 4.2, 2, 1.3), 0, 1.0, 0.2);
+  for (const [x, z, r] of [[3.4, 2.2, 1.0], [-3.5, 1.4, 0.8], [2.4, -3.0, 0.7]] as const) b.add('stone', rock(r, r * 0.7, r, 1, x), x, 0.3, z);
+  const k = 30;
+  skullParts(b, 0, 2.2, -0.4, k, -0.08, 0, 'ghostGlow');
+  for (const s of [-1, 1]) for (let i = 0; i < 3; i++) b.add('slime', ell(0.12, 0.45 + i * 0.25, 0.1, 8, 6), s * (0.84 + i * 0.1 - 0.1), 2.2 + 1.7 - i * 0.55, -0.4 - 2.55 + i * 0.12);
+  b.add('slime', ell(1.3, 0.08, 0.8, 12, 4), 0, 0.05, -4.0);
+  return fitHeight(b.build(), t.size[1]);
+}
+
+function skullMountain(t: ObjectType, seed: number): PropParts {
+  const [, H] = t.size; // a crag piled with skulls; a giant skull at its foot forms a glowing cave
+  const b = new Builder();
+  b.add('stone', rock(8.4, H * 0.62, 8.2, 3, 2.1), 0, H * 0.3 - 1.2, 0.6);
+  b.add('stone', rock(3.0, 3.4, 3.0, 2, 4.4), 1.2, H - 3.6, 1.2);
+  let k = seed * 7 + 11;
+  const rnd = () => ((k = (k * 9301 + 49297) % 233280) / 233280);
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + rnd() * 0.3;
+    const y = 2 + rnd() * (H - 7);
+    const rr = 8.2 * Math.sqrt(Math.max(0.05, 1 - ((y + 1.2 - H * 0.3) / (H * 0.62)) ** 2)) * 0.92;
+    skullParts(b, Math.cos(a) * rr, y, 0.6 + Math.sin(a) * rr, 5 + rnd() * 5, 0, -a - Q, i % 4 === 0 ? 'ghostGlow' : undefined);
+  }
+  skullParts(b, 0, -0.4, -6.4, 42, 0, 0, 'ghostGlow');
+  b.add('slime', ell(2.4, 0.1, 1.6, 12, 4), 0, 0.05, -10.2);
+  for (const [x, z] of [[5.5, -5.5], [-6.5, -3.2], [6.8, 4.2]] as const) b.add('slime', ell(1.2, 0.08, 0.9, 10, 4), x, 0.05, z);
+  return reproject(b.build());
+}
+
+function hauntedTree(t: ObjectType, seed: number): PropParts {
+  const [W, H] = t.size; // ancient dead tree with a glowing carved face, gnarled limbs, hanging lanterns
+  const b = new Builder();
+  const bark: Role = 'timber';
+  let k = seed * 13 + 7;
+  const rnd = () => ((k = (k * 9301 + 49297) % 233280) / 233280);
+  // Roots.
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + 0.3;
+    limb(b, bark, v3(Math.cos(a) * 0.9, 0.9, Math.sin(a) * 0.9), v3(Math.cos(a) * (W / 2 - 1.2), -0.15, Math.sin(a) * (W / 2 - 1.2)), 0.55, 0.14, 8);
+  }
+  // Trunk: straight-ish face section, then kinks.
+  const pts = [v3(0, 0, 0), v3(0, 8, 0), v3(0.7, 11.5, 0.4), v3(0.2, 14.5, 0.9)];
+  const radii = [1.65, 1.3, 1.0, 0.75];
+  b.add(bark, new THREE.CylinderGeometry(radii[1], radii[0], 8, 14, 3), 0, 4, 0);
+  for (let i = 1; i < pts.length - 1; i++) limb(b, bark, pts[i], pts[i + 1], radii[i], radii[i + 1], 12);
+  // The face: hollow eyes and a jagged mouth, glowing from inside the trunk.
+  const R = 1.47;
+  const yc = 5.6;
+  const decal = (pts2: [number, number][], role: Role, d: number, grow = 1) => {
+    const cx = pts2.reduce((s2, q) => s2 + q[0], 0) / pts2.length;
+    const cy = pts2.reduce((s2, q) => s2 + q[1], 0) / pts2.length;
+    const g = new THREE.ExtrudeGeometry(poly(pts2.map(([x, y]) => [cx + (x - cx) * grow, cy + (y - cy) * grow])), { depth: d, bevelEnabled: false });
+    b.add(role, onShell(g, R, 100, R, yc, d));
+  };
+  const eyeL: [number, number][] = [[-0.95, 6.3], [-0.2, 6.15], [-0.45, 6.85]];
+  const eyeR: [number, number][] = [[0.2, 6.15], [0.95, 6.3], [0.45, 6.85]];
+  const mouth: [number, number][] = [[-0.8, 4.9], [-0.5, 4.6], [-0.3, 4.85], [-0.05, 4.5], [0.2, 4.82], [0.45, 4.55], [0.8, 4.9], [0.55, 4.05], [0.2, 4.3], [-0.1, 3.95], [-0.45, 4.25]];
+  for (const shape of [eyeL, eyeR, mouth]) {
+    decal(shape, 'pumpkinGlow', 0.14);
+    decal(shape, 'darkTrim', 0.1, 1.25);
+  }
+  // Limbs: seven big gnarled branches forking twice, tips drooping.
+  const top = pts[pts.length - 1];
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + rnd() * 0.5;
+    const from = pts[1 + (i % 3)].clone().lerp(top, 0.3 + (i % 3) * 0.2);
+    let q = from.clone();
+    let r = 0.55;
+    let dir = new THREE.Vector3(Math.cos(a), 0.55 + rnd() * 0.4, Math.sin(a)).normalize();
+    for (let sgm = 0; sgm < 3; sgm++) {
+      const len = (3.0 - sgm * 0.7) * (0.85 + rnd() * 0.3);
+      let next = q.clone().addScaledVector(dir, len);
+      next.x = THREE.MathUtils.clamp(next.x, -W / 2 + 0.4, W / 2 - 0.4);
+      next.z = THREE.MathUtils.clamp(next.z, -W / 2 + 0.4, W / 2 - 0.4);
+      next.y = Math.min(next.y, H - 0.4);
+      limb(b, bark, q, next, r, r * 0.6, 7);
+      if (sgm >= 1) {
+        const fd = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.9 * (rnd() < 0.5 ? -1 : 1)).setY(dir.y + 0.2).normalize();
+        const tip = next.clone().addScaledVector(fd, 1.6);
+        tip.y = Math.min(tip.y, H - 0.2);
+        b.add(bark, taper(next, tip, r * 0.5, 0.05, 5));
+      }
+      if (sgm === 1 && i % 2 === 0) {
+        // A pumpkin lantern hanging on a chain from this limb.
+        const hang = q.clone().lerp(next, 0.6);
+        b.add('darkTrim', cyl(0.025, 0.025, 1.4, 4), hang.x, hang.y - 0.7, hang.z);
+        b.add('pumpkin', pumpkinGeo(0.4, 0.62, 8, 0.12, 12, 7), hang.x, hang.y - 2.0, hang.z);
+        b.add('pumpkinGlow', ell(0.16, 0.12, 0.05, 6, 4), hang.x, hang.y - 1.7, hang.z - 0.39);
+      }
+      q = next;
+      r *= 0.6;
+      dir = dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), (rnd() - 0.5) * 0.8).setY(dir.y - 0.25).normalize();
+    }
+  }
+  return reproject(b.build());
+}
+
+function giantSkeleton(t: ObjectType): PropParts {
+  // A giant skeleton clawing out of its grave: torso and skull above the mound, one arm raised,
+  // the other hand planted. Authored at 1.75 m skeleton scale (ground at y 0.95), then fitted.
+  const b = new Builder();
+  const g0 = 0.95;
+  const P = (x: number, y: number, z: number) => v3(x, y - g0, z);
+  const r = 0.024;
+  skullParts(b, 0.02, 1.53 - g0, 0.0, 1.1, -0.15, 0.2, 'ghostGlow');
+  for (let i = 0; i < 7; i++) b.add('bone', cyl(0.024, 0.026, 0.03, 6), 0, 1.06 + i * 0.056 - g0, 0.05);
+  for (let i = 0; i < 6; i++) {
+    const y = 1.43 - i * 0.052 - g0;
+    const rr = 0.1 + Math.sin(((i + 1) / 7) * Math.PI) * 0.035;
+    b.add('bone', new THREE.TorusGeometry(rr, 0.011, 4, 10, Math.PI * 0.86).rotateX(Q).rotateY(Math.PI / 2 + Math.PI * 0.07).scale(1, 1, 0.75), 0, y, 0.02, 0.18, 0, 0);
+  }
+  b.add('bone', box(0.03, 0.22, 0.016), 0, 1.33 - g0, -0.065, 0.1, 0, 0);
+  for (const s of [-1, 1]) b.add('bone', strut(P(s * 0.03, 1.47, -0.05), P(s * 0.17, 1.48, 0), 0.012, 5));
+  // Raised arm (+X) reaching up, the other planted on the mound (−X).
+  const shR = P(0.18, 1.46, 0.01);
+  const elR = P(0.33, 1.76, -0.06);
+  const wrR = P(0.36, 2.06, -0.12);
+  limb(b, 'bone', shR, elR, r, r * 0.85, 6);
+  limb(b, 'bone', elR, wrR, r * 0.8, r * 0.7, 6);
+  b.add('bone', box(0.06, 0.08, 0.025), wrR.x, wrR.y + 0.05, wrR.z, -0.2, 0, 0);
+  for (let f = 0; f < 4; f++) b.add('bone', strut(v3(wrR.x - 0.02 + f * 0.013, wrR.y + 0.09, wrR.z), v3(wrR.x - 0.03 + f * 0.018, wrR.y + 0.15, wrR.z - 0.03), 0.006, 3));
+  const shL = P(-0.18, 1.46, 0.01);
+  const elL = P(-0.36, 1.16, -0.14);
+  const wrL = P(-0.46, 0.98, -0.32);
+  limb(b, 'bone', shL, elL, r, r * 0.85, 6);
+  limb(b, 'bone', elL, wrL, r * 0.8, r * 0.7, 6);
+  b.add('bone', box(0.08, 0.02, 0.07), wrL.x - 0.02, wrL.y - 0.02, wrL.z - 0.04, 0, 0.4, 0);
+  for (let f = 0; f < 4; f++) b.add('bone', strut(v3(wrL.x - 0.04 + f * 0.02, wrL.y - 0.02, wrL.z - 0.07), v3(wrL.x - 0.07 + f * 0.03, wrL.y - 0.035, wrL.z - 0.13), 0.006, 3));
+  // Grave mound, broken slab and rubble.
+  b.add('concreteProp', ell(0.6, 0.1, 0.48, 14, 5), 0, 0, 0.02);
+  b.add('concreteProp', box(0.3, 0.035, 0.5), 0.34, 0.06, 0.2, 0.2, 0.4, 0.25);
+  for (const [x, z, s] of [[-0.3, 0.3, 0.05], [0.4, -0.25, 0.04], [-0.1, -0.38, 0.035], [0.15, 0.4, 0.045]] as const) b.add('concreteProp', new THREE.DodecahedronGeometry(s, 0), x, 0.05, z, x, z, 0);
+  return fitHeight(b.build(), t.size[1]);
+}
+
+function giantCauldronBase(t: ObjectType): PropParts {
+  return giantCauldron(t);
 }
 
 export const HALLOWEEN_BUILDERS = {
@@ -1487,6 +1455,27 @@ export const HALLOWEEN_BUILDERS = {
   lollipop,
   candle,
   bone: boneProp,
+  eyeball,
+  spider,
+  batPlush,
+  crowPost,
+  lanternPost,
+  spiderWeb,
+  witch,
+  bonePile,
+  cryptGate,
+  giantSpider,
+  wishingWell,
+  giantJack: scaledFrom(giantPumpkin, [3.0, 2.6, 3.0]),
+  colossalPumpkin: scaledFrom(giantPumpkin, [3.0, 2.6, 3.0]),
+  mausoleum: scaledFrom(crypt, [4.4, 4.9, 6.0]),
+  giantObelisk: scaledFrom(tombstone, [0.95, 2.8, 0.95]),
+  giantScarecrow: scaledFrom(scarecrow, [1.7, 2.35, 0.55]),
+  witchHatTower: scaledFrom(witchHat, [0.5, 0.6, 0.5]),
+  skullRock,
+  skullMountain,
+  hauntedTree,
+  giantSkeleton,
   skull,
   miniPumpkin,
   candyBucket,
@@ -1501,16 +1490,11 @@ export const HALLOWEEN_BUILDERS = {
   coffin,
   slimeGhost,
   scarecrow,
-  candyCart,
-  hearse,
   vampireCoffin,
   vampire,
   werewolf,
-  giantCauldron,
+  giantCauldron: scaledFrom(giantCauldronBase, [2.7, 2.9, 2.7]),
   crypt,
   giantPumpkin,
   pumpkinCarriage,
-  hauntedCarriage,
-  bHauntedHouse: hauntedHouse,
-  bHauntedManor: hauntedManor,
 } satisfies Partial<Record<Shape, Factory>>;

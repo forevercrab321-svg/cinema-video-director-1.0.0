@@ -52,6 +52,16 @@ export interface CityDef {
    * starter scrap ring. Keep its total rewardMass close to the generic ring so starts stay fair.
    */
   starterRing?: [ObjectTypeId, number, number][];
+  /**
+   * Atmosphere hints for the Halloween FX layer (world/halloweenFx.ts): where the lanterns hang
+   * (light pools), the graveyard extent (wisps), mist zones (paths and hollows) and bat roosts.
+   */
+  fxHints?: {
+    lanterns: { x: number; y: number; z: number }[];
+    graveyard: Bounds | null;
+    mistZones: { x: number; z: number; r: number }[];
+    roosts: { x: number; z: number; h: number }[];
+  };
   build(lib: MaterialLibrary): CityBuild;
   dressing: DressingSpec;
   /** What tearing down the climax structure means here ("the Eiffel Tower"). */

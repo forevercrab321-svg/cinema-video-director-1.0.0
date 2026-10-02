@@ -1280,10 +1280,14 @@ export class ArenaGame {
   attachAtmosphere(fx: HalloweenFx): void {
     this.atmosphere = fx;
     this.scene.add(fx.root);
-    const lanterns = this.world.objects.filter((o) => /LANTERN/.test(o.typeId)).map((o) => ({ x: o.x, y: o.baseY, z: o.z }));
+    // The map's own hints first (graveyard, mist hollows, roosts, lanterns), else derive from its objects.
+    const h = this.city.fxHints;
+    const lanterns = h?.lanterns.length ? h.lanterns : this.world.objects.filter((o) => /LANTERN/.test(o.typeId)).map((o) => ({ x: o.x, y: o.baseY, z: o.z }));
     if (lanterns.length) fx.setLanterns(lanterns.slice(0, 64));
-    const roosts = this.world.objects.filter((o) => o.def.objectClass >= 7).map((o) => ({ x: o.x, z: o.z, h: o.def.size[1] }));
+    const roosts = h?.roosts.length ? h.roosts : this.world.objects.filter((o) => o.def.objectClass >= 7).map((o) => ({ x: o.x, z: o.z, h: o.def.size[1] }));
     if (roosts.length) fx.setRoosts(roosts.slice(0, 16));
+    if (h?.graveyard) fx.setGraveyard(h.graveyard);
+    if (h?.mistZones.length) fx.setMistZones(h.mistZones);
   }
 
   dispose(): void {

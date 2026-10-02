@@ -263,7 +263,6 @@ export function buildDressing(spec: DressingSpec): Dressing {
   };
   for (const [tx, tz, base] of trees) {
     if (spec.dead) {
-      pitParts.push(new THREE.BoxGeometry(1.2, 0.03, 1.2).translate(tx, base + 0.015, tz));
       colliders.push({ cx: tx, cz: tz, hx: 0.24, hz: 0.24, yaw: 0 });
       deadTree(tx, tz, base);
       continue;
