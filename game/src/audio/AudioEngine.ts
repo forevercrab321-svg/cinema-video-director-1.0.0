@@ -21,9 +21,18 @@ const FILE_TRACK_GAIN = 0.5;
 
 /**
  * Presentation-only cues the arena sends on top of the shared GameEvent set (they never touch
- * the simulation): dash cooldown ready, and the crash stun from dashing into something too big.
+ * the simulation): dash cooldown ready, the crash stun from dashing into something too big, and
+ * the Halloween hunt cues (docs/halloween-mode.md). `hunterNear` is sent every frame with the
+ * nearest hunter's closeness (0 = none near, silent; 1 = on top of you) and drives a heartbeat.
  */
-export type FeelEvent = { kind: 'dashReady' } | { kind: 'stun'; size: number };
+export type FeelEvent =
+  | { kind: 'dashReady' }
+  | { kind: 'stun'; size: number }
+  | { kind: 'huntStart' }
+  | { kind: 'hunterRise' }
+  | { kind: 'caught'; me: boolean }
+  | { kind: 'scoresLocked' }
+  | { kind: 'hunterNear'; level: number };
 
 /** Small-pickup streak: each chained tick climbs a major-pentatonic step (semitones), then resets. */
 const STREAK_STEPS = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
@@ -61,6 +70,10 @@ export class AudioEngine {
   private vol = loadSettings();
   /** Held by platform ads: silent until released, independent of the player's mute. */
   private adHold = false;
+  /** Hunter-proximity heartbeat: nodes built once on first use, beats scheduled as automation. */
+  private heart: { osc: OscillatorNode; env: GainNode; level: GainNode } | null = null;
+  private heartLevel = 0;
+  private nextBeat = 0;
 
   /** Window/document listeners, removed again in dispose(). */
   private readonly listeners: [EventTarget, string, EventListener][] = [];
@@ -353,6 +366,290 @@ export class AudioEngine {
       case 'horn':
         this.horn(e.horn ?? 'clown');
         break;
+      case 'huntStart':
+        this.huntStart();
+        break;
+      case 'hunterRise':
+        this.hunterRise();
+        break;
+      case 'caught':
+        this.caught(e.me);
+        break;
+      case 'scoresLocked':
+        this.toll(0);
+        this.toll(1.7);
+        break;
+      case 'hunterNear':
+        this.hunterNear(e.level);
+        break;
+    }
+  }
+
+  // ── Halloween hunt cues ─────────────────────────────────────────────────────
+  /** A per-cue bus into the SFX gain: `level` scales the whole cue, `cutoff` muffles it (distance). */
+  private bus(level: number, cutoff = 20000): GainNode {
+    const ctx = this.ctx!;
+    const g = ctx.createGain();
+    g.gain.value = level;
+    if (cutoff < 20000) {
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = cutoff;
+      g.connect(f).connect(this.sfx);
+    } else g.connect(this.sfx);
+    return g;
+  }
+
+  /** One oscillator into `out` with a pitch path of [time offset, Hz] points and a percussive envelope. */
+  private partial(out: AudioNode, type: OscillatorType, path: [number, number][], at: number, peak: number, attack: number, decay: number, detune = 0): OscillatorNode {
+    const ctx = this.ctx!;
+    const t = ctx.currentTime + at;
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.detune.value = detune;
+    o.frequency.setValueAtTime(path[0][1], t);
+    for (const [dt, hz] of path.slice(1)) o.frequency.linearRampToValueAtTime(hz, t + dt);
+    const g = ctx.createGain();
+    o.connect(g).connect(out);
+    this.env(g, t, peak, attack, decay);
+    o.start(t);
+    o.stop(t + attack + decay + 0.05);
+    return o;
+  }
+
+  /** Filtered noise into `out`, starting `at` seconds from now; the caller shapes gain and filter. */
+  private noiseTo(out: AudioNode, type: BiquadFilterType, freq: number, q: number, at: number, dur: number): { filter: BiquadFilterNode; gain: GainNode; t: number } {
+    const ctx = this.ctx!;
+    const t = ctx.currentTime + at;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    src.loop = true;
+    const filter = ctx.createBiquadFilter();
+    filter.type = type;
+    filter.frequency.setValueAtTime(freq, t);
+    filter.Q.value = q;
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    src.connect(filter).connect(gain).connect(out);
+    src.start(t, Math.random() * 0.5);
+    src.stop(t + dur + 0.05);
+    return { filter, gain, t };
+  }
+
+  /** Pull the BGM down under a big cue, then let it back up. */
+  private duckMusic(depth: number, hold: number): void {
+    const t = this.ctx!.currentTime;
+    this.music.gain.cancelScheduledValues(t);
+    this.music.gain.setTargetAtTime(0.22 * depth * this.vol.music, t, 0.05);
+    this.music.gain.setTargetAtTime(0.22 * this.vol.music, t + hold, 0.5);
+  }
+
+  /**
+   * The hunt begins (~2.5 s): a struck gong over a swelling A-minor organ chord with a tritone in
+   * it, a noise whoosh rising underneath, and a falling "ha-ha-ha" formant laugh on top.
+   */
+  private huntStart(): void {
+    const ctx = this.ctx!;
+    this.duckMusic(0.3, 2.3);
+    this.boom(0.45, 2.2);
+    // Gong: inharmonic partials, the low ones ring longest.
+    const gong = this.bus(1);
+    ([[1, 0.11, 2.6], [1.48, 0.07, 2.2], [2.11, 0.06, 1.7], [2.73, 0.045, 1.3], [3.9, 0.03, 0.9]] as const).forEach(([r, peak, dec]) =>
+      this.partial(gong, 'sine', [[0, 82 * r], [dec, 82 * r * 0.985]], 0, peak, 0.004, dec));
+    const strike = this.noiseTo(gong, 'bandpass', 1400, 1, 0, 0.2);
+    this.env(strike.gain, strike.t, 0.12, 0.002, 0.18);
+    // Organ chord: A1 A2 C3 Eb3 A3, detuned pairs, swelling in and ringing out.
+    const organ = this.bus(1);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1500;
+    const og = ctx.createGain();
+    lp.connect(og).connect(organ);
+    const t = ctx.currentTime;
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(1, t + 0.12);
+    og.gain.setTargetAtTime(0.55, t + 0.2, 0.6);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 2.5);
+    for (const semi of [0, 12, 15, 18, 24]) {
+      for (const d of [-7, 7]) {
+        const o = ctx.createOscillator();
+        o.type = semi < 12 ? 'sawtooth' : 'square';
+        o.frequency.value = 55 * Math.pow(2, semi / 12);
+        o.detune.value = d;
+        const g = ctx.createGain();
+        g.gain.value = 0.022;
+        o.connect(g).connect(lp);
+        o.start(t);
+        o.stop(t + 2.55);
+      }
+    }
+    // Rising whoosh underneath.
+    const w = this.noiseTo(this.sfx, 'bandpass', 160, 2, 0, 2.1);
+    w.filter.frequency.exponentialRampToValueAtTime(3600, w.t + 1.9);
+    w.gain.gain.setValueAtTime(0.0001, w.t);
+    w.gain.gain.exponentialRampToValueAtTime(0.13, w.t + 1.8);
+    w.gain.gain.exponentialRampToValueAtTime(0.0001, w.t + 2.1);
+    this.laugh(0.75);
+  }
+
+  /** "Ha-ha-ha-ha-haaa": a gated buzzy voice through two sweeping vowel formants, falling in pitch. */
+  private laugh(at: number): void {
+    const ctx = this.ctx!;
+    const t = ctx.currentTime + at;
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    const gate = ctx.createGain();
+    gate.gain.setValueAtTime(0, t);
+    const out = this.bus(1);
+    const formants: [number, number, number][] = [[750, 480, 0.14], [1250, 820, 0.08]];
+    for (const [from, to, level] of formants) {
+      const f = ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.Q.value = 6;
+      f.frequency.setValueAtTime(from, t);
+      f.frequency.linearRampToValueAtTime(to, t + 1.5);
+      const g = ctx.createGain();
+      g.gain.value = level * 4;
+      gate.connect(f).connect(g).connect(out);
+    }
+    o.connect(gate);
+    const syll = 6;
+    for (let k = 0; k < syll; k++) {
+      const s = t + k * 0.2;
+      const last = k === syll - 1;
+      const hz = 210 - k * 16;
+      o.frequency.setValueAtTime(hz * 1.06, s);
+      o.frequency.exponentialRampToValueAtTime(hz * (last ? 0.7 : 0.9), s + (last ? 0.55 : 0.15));
+      gate.gain.setValueAtTime(0, s);
+      gate.gain.linearRampToValueAtTime(1 - k * 0.08, s + 0.025);
+      gate.gain.linearRampToValueAtTime(0, s + (last ? 0.6 : 0.15));
+    }
+    o.start(t);
+    o.stop(t + syll * 0.2 + 0.5);
+  }
+
+  /** The hunters climb out of the plaza: a long ground rumble, a low thud and two wooden creaks. */
+  private hunterRise(): void {
+    this.rumble(2.4, 0.75);
+    this.boom(0.3, 1.4);
+    const out = this.bus(1);
+    const creak = (at: number, base: number, dur: number) => {
+      const ctx = this.ctx!;
+      const t = ctx.currentTime + at;
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      // A slow, uneven buzz through a narrow resonance reads as a straining hinge / coffin lid.
+      const steps = 8;
+      o.frequency.setValueAtTime(base, t);
+      for (let k = 1; k <= steps; k++) o.frequency.linearRampToValueAtTime(base * (0.75 + Math.random() * 0.6), t + (dur * k) / steps);
+      const f = ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = 1100;
+      f.Q.value = 7;
+      const g = ctx.createGain();
+      o.connect(f).connect(g).connect(out);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.35, t + 0.08);
+      g.gain.setTargetAtTime(0.2, t + 0.1, dur * 0.4);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    };
+    creak(0.3, 38, 1.1);
+    creak(1.25, 52, 0.8);
+  }
+
+  /**
+   * Somebody is caught. me = true: a full scare sting (dissonant orchestral hit + a scream-like
+   * resonant noise sweep), the BGM ducks. me = false: the same sting, far away and muffled.
+   */
+  private caught(me: boolean): void {
+    const out = this.bus(me ? 1 : 0.6, me ? 20000 : 2000);
+    if (me) {
+      this.duckMusic(0.25, 1.4);
+      this.boom(0.55, 1.1);
+    }
+    // Orchestral hit: a D cluster with minor 2nds and a tritone, brassy saws, bright → dark.
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(4200, t);
+    lp.frequency.exponentialRampToValueAtTime(500, t + 1.1);
+    lp.connect(out);
+    for (const semi of [-12, 0, 1, 6, 12, 13]) for (const d of [-9, 9]) this.partial(lp, 'sawtooth', [[0, 146.83 * Math.pow(2, semi / 12)]], 0, 0.032, 0.006, 1.15, d);
+    const hit = this.noiseTo(out, 'lowpass', 2400, 0.6, 0, 0.25);
+    this.env(hit.gain, hit.t, 0.3, 0.002, 0.22);
+    // Scream: narrow-band noise that shrieks up and sags, plus a wavering high voice.
+    const scr = this.noiseTo(out, 'bandpass', 900, 9, 0.05, 1.1);
+    scr.filter.frequency.exponentialRampToValueAtTime(2900, scr.t + 0.25);
+    scr.filter.frequency.exponentialRampToValueAtTime(1900, scr.t + 1.1);
+    this.env(scr.gain, scr.t, 0.55, 0.06, 1.0);
+    const v = this.partial(out, 'sawtooth', [[0, 720], [0.22, 1320], [1.0, 980]], 0.05, 0.045, 0.05, 0.95);
+    const vib = ctx.createOscillator();
+    const depth = ctx.createGain();
+    vib.frequency.value = 7.5;
+    depth.gain.value = 45;
+    vib.connect(depth).connect(v.frequency);
+    vib.start(t);
+    vib.stop(t + 1.1);
+  }
+
+  /** One church-bell stroke (G3 strike tone) with its minor-third tierce and long hum. */
+  private toll(at: number): void {
+    const out = this.bus(1);
+    const f = 196;
+    const partials: [number, number, number][] = [[0.5, 0.11, 4.2], [1, 0.09, 3.2], [1.19, 0.07, 2.6], [1.5, 0.045, 2.0], [2, 0.075, 2.2], [2.66, 0.03, 1.3], [3.01, 0.025, 1.0], [4.16, 0.015, 0.6]];
+    for (const [r, peak, dec] of partials) this.partial(out, 'sine', [[0, f * r]], at, peak, 0.003, dec, r === 0.5 ? 3 : 0);
+    const clang = this.noiseTo(out, 'bandpass', 2200, 1.5, at, 0.08);
+    this.env(clang.gain, clang.t, 0.1, 0.001, 0.06);
+  }
+
+  /** Hunter proximity → heartbeat volume and rate. Called every frame; allocates nothing after the first beat. */
+  private hunterNear(level: number): void {
+    const l = Math.max(0, Math.min(1, Number.isFinite(level) ? level : 0));
+    if (l === this.heartLevel || (l > 0 && Math.abs(l - this.heartLevel) < 0.01)) return;
+    if (!this.heart) {
+      if (l === 0) return;
+      const ctx = this.ctx!;
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = 50;
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 280;
+      const env = ctx.createGain();
+      env.gain.value = 0;
+      const lv = ctx.createGain();
+      lv.gain.value = 0;
+      osc.connect(f).connect(env).connect(lv).connect(this.sfx);
+      osc.start();
+      this.heart = { osc, env, level: lv };
+    }
+    const t = this.ctx!.currentTime;
+    if (this.heartLevel === 0) this.nextBeat = Math.max(this.nextBeat, t + 0.03);
+    this.heartLevel = l;
+    this.heart.level.gain.setTargetAtTime(l > 0 ? 0.15 + 0.45 * l : 0, t, 0.12);
+  }
+
+  /** Queue heartbeats ("lub-dub") ahead of the clock, as automation on the one heartbeat voice. */
+  private scheduleHeart(): void {
+    const h = this.heart;
+    if (!h || this.heartLevel <= 0) return;
+    const ctx = this.ctx!;
+    if (this.nextBeat < ctx.currentTime) this.nextBeat = ctx.currentTime + 0.02;
+    while (this.nextBeat < ctx.currentTime + 0.12) {
+      const b = this.nextBeat;
+      const gap = 0.27 - 0.09 * this.heartLevel;
+      for (const [at, peak] of [[0, 1], [gap, 0.6]] as const) {
+        h.osc.frequency.setValueAtTime(100, b + at);
+        h.osc.frequency.exponentialRampToValueAtTime(46, b + at + 0.13);
+        h.env.gain.setValueAtTime(0.0001, b + at);
+        h.env.gain.exponentialRampToValueAtTime(peak, b + at + 0.012);
+        h.env.gain.exponentialRampToValueAtTime(0.0001, b + at + 0.17);
+      }
+      // 62 bpm when a hunter is barely in range, 150 bpm when it is on top of you.
+      this.nextBeat += 60 / (62 + 88 * this.heartLevel);
     }
   }
 
@@ -784,6 +1081,7 @@ export class AudioEngine {
       this.step++;
       this.nextStepTime += stepDur;
     }
+    this.scheduleHeart();
   }
 
   private playStep(i: number, t: number): void {
@@ -883,15 +1181,16 @@ export class AudioEngine {
       src.start(t, Math.random() * 0.5);
       src.stop(t + dur + 0.02);
     };
+    const tier = Math.max(this.tier, th.minTier ?? 1);
     const lead = th.lead.pattern[i];
     if (lead !== null && lead !== undefined) voice(note(lead), th.lead.wave, th.lead.level, th.lead.decay, th.lead);
     if (th.hat.includes(i)) noise(7500, 0.12, 0.05);
-    if (this.tier >= 2 && th.kick.includes(i)) voice(120, 'sine', 0.8, 0.28, { drop: 0.3 });
-    if (this.tier >= 2 && th.snare.includes(i)) noise(1800, 0.35, 0.14);
+    if (tier >= 2 && th.kick.includes(i)) voice(120, 'sine', th.kickLevel ?? 0.8, 0.28, { drop: 0.3 });
+    if (tier >= 2 && th.snare.includes(i)) noise(1800, 0.35, 0.14);
     const bass = th.bass.pattern[i];
-    if (this.tier >= 3 && bass !== null && bass !== undefined) voice(note(bass), th.bass.wave, th.bass.level, 0.3, th.bass.boing ? { drop: 0.86 } : {});
+    if (tier >= 3 && bass !== null && bass !== undefined) voice(note(bass), th.bass.wave, th.bass.level, th.bass.decay ?? 0.3, { pluck: th.bass.pluck, drop: th.bass.boing ? 0.86 : undefined });
     const bell = th.bell?.pattern[i];
-    if (this.tier >= 2 && th.bell && bell !== null && bell !== undefined) voice(note(bell), 'sine', th.bell.level, 0.9, { pluck: true });
-    if (this.tier >= 4 && th.accent?.steps.includes(i)) for (const c of th.accent.chord) voice(note(c), th.accent.wave, th.accent.level, th.accent.decay);
+    if (tier >= 2 && th.bell && bell !== null && bell !== undefined) voice(note(bell), 'sine', th.bell.level, 0.9, { pluck: true });
+    if (tier >= 4 && th.accent?.steps.includes(i)) for (const c of th.accent.chord) voice(note(c), th.accent.wave, th.accent.level, th.accent.decay);
   }
 }

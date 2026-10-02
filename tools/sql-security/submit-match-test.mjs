@@ -85,7 +85,8 @@ const FRIEND = 'aaaaaaaa-0000-4000-8000-000000000002';
 const VICTIM = 'aaaaaaaa-0000-4000-8000-000000000003';
 const CHEAT = 'aaaaaaaa-0000-4000-8000-000000000004';
 const CAPPER = 'aaaaaaaa-0000-4000-8000-000000000005';
-sql(`insert into auth.users (id) values ('${HOST}'), ('${FRIEND}'), ('${VICTIM}'), ('${CHEAT}'), ('${CAPPER}');
+const SPOOKY = 'aaaaaaaa-0000-4000-8000-000000000006';
+sql(`insert into auth.users (id) values ('${HOST}'), ('${FRIEND}'), ('${VICTIM}'), ('${CHEAT}'), ('${CAPPER}'), ('${SPOOKY}');
 update public.players set display_name = 'Hosty' where id = '${HOST}';
 update public.players set display_name = 'Cheaty' where id = '${CHEAT}';`);
 const coins = (id) => Number(one(`select coins from public.players where id = '${id}';`));
@@ -168,6 +169,31 @@ const happy = {
   ok((await call(CHEAT, { ...forged, rows: [forged.rows[0], forged.rows[0]] })).status === 403, 'C1 caller listed twice → 403');
   ok((await call(CHEAT, { ...forged, city: 'atlantis' })).status === 400, 'unknown city → 400');
   ok((await call(CHEAT, { ...forged, rows: [...forged.rows, ...forged.rows] })).status === 400, 'more than 4 rows → 400');
+}
+
+// ── 0007: Halloween Town — 6 rows, 10-minute rounds, its own coin table; other maps unchanged ──
+{
+  const six = {
+    room: 'BOO66',
+    city: 'halloween',
+    durationS: 600.2,
+    startedAt: new Date(Date.now() - 610_000).toISOString(),
+    endReason: 'time',
+    build: 'dev',
+    rows: [0, 1, 2, 3, 4, 5].map((slot) => ({ slot, playerId: slot === 5 ? SPOOKY : null, vehicle: 'collector', rank: slot === 5 ? 1 : slot + 2, mass: 1000 * (6 - slot), kills: slot === 5 ? 1 : 0, deaths: 0, objects: 10 })),
+  };
+  const before = coins(SPOOKY);
+  const r = await call(SPOOKY, six);
+  ok(r.status === 200 && r.json?.coins === 135, `halloween: 6 rows accepted, rank 1 pays 120 + 1 kill [${r.status} ${JSON.stringify(r.json)}]`);
+  ok(coins(SPOOKY) === before + 135, 'halloween: caller credited');
+  const st = one(`select m.duration_s || ',' || count(mp.*) || ',' || max(mp.slot) from public.matches m join public.match_players mp on mp.match_id = m.id where m.id = '${r.json?.matchId}' group by m.duration_s;`);
+  ok(st === '600.2,6,5', `halloween: 600 s round and slots 0..5 stored [${st}]`);
+  backdate(SPOOKY);
+  const long = await call(SPOOKY, { ...six, room: 'BOO67', durationS: 9999, startedAt: undefined });
+  ok(long.status === 200 && Number(one(`select duration_s from public.matches where id = '${long.json?.matchId}';`)) === 630, 'halloween: duration clamped to 630 s');
+  backdate(SPOOKY);
+  ok((await call(SPOOKY, { ...six, room: 'BOO68', rows: [...six.rows, { ...six.rows[0], slot: 6 }] })).status === 400, 'halloween: 7 rows → 400');
+  ok((await call(SPOOKY, { ...six, room: 'BOO69', city: 'paris' })).status === 400, 'paris: still at most 4 rows (6 → 400)');
 }
 
 // ── Daily cap ────────────────────────────────────────────────────────────────

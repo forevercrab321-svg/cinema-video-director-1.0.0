@@ -38,4 +38,4 @@ export const VEHICLES: Record<VehicleLook, VehicleDef> = {
 export const VEHICLE_ORDER: VehicleLook[] = ['collector', 'dozer', 'racer', 'magnet'];
 
 /** Player slot colours (chips, rings, name tags), in slot order. */
-export const SLOT_COLORS = [0xffb347, 0x5ec8ff, 0xff6b8a, 0x8be07a] as const;
+export const SLOT_COLORS = [0xffb347, 0x5ec8ff, 0xff6b8a, 0x8be07a, 0xc89bff, 0xf5f07a] as const;

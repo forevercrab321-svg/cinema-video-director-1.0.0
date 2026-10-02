@@ -1,3 +1,5 @@
+import { HALLOWEEN, isHalloween } from './halloween';
+
 /**
  * ARENA — competitive multiplayer balance (central config, like growth.ts).
  * Up to 4 machines grow in the same city. Bigger machines eat smaller ones; each machine has
@@ -135,3 +137,16 @@ export const arenaConfig = {
    */
   hostGraceMs: 2500,
 } as const;
+
+/** Seats in a room on this map (6 on the Halloween map, 4 elsewhere). */
+export function maxPlayersFor(city: string | undefined): number {
+  return isHalloween(city) ? HALLOWEEN.maxPlayers : arenaConfig.maxPlayers;
+}
+
+/** Full round length on this map (s): the Halloween round is twice as long (grow + hunt). */
+export function roundSecondsFor(city: string | undefined): number {
+  return isHalloween(city) ? HALLOWEEN.huntAt + HALLOWEEN.huntSeconds : arenaConfig.roundSeconds;
+}
+
+/** The most seats any map has (wire limits, the room directory). */
+export const MAX_SEATS = Math.max(arenaConfig.maxPlayers, HALLOWEEN.maxPlayers);

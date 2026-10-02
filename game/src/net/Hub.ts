@@ -1,4 +1,5 @@
 import { backendConfigured, supabase } from '../backend/supabase';
+import { MAX_SEATS, maxPlayersFor } from '../config/arena';
 import { cleanName } from '../arena/nameFilter';
 import { tabId } from './RealtimeLink';
 
@@ -36,7 +37,7 @@ export const HUB_TIMING = {
   pumpMs: 1000,
 } as const;
 
-export const HUB_LIMITS = { listRooms: 50, maxPlayers: 4, maxLeftS: 900, maxOnline: 1_000_000, maxSnapshotJson: 64_000 } as const;
+export const HUB_LIMITS = { listRooms: 50, maxPlayers: MAX_SEATS, maxLeftS: 900, maxOnline: 1_000_000, maxSnapshotJson: 64_000 } as const;
 
 export type HubState = 'hub' | 'lobby' | 'play' | 'watch';
 export type RoomPhase = 'waiting' | 'warmup' | 'playing' | 'results';
@@ -128,7 +129,7 @@ const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFi
 
 /** Joinable: public, waiting or warming up vs AI, a free seat. */
 export function isJoinable(r: RoomAnnounce): boolean {
-  return r.public && (r.phase === 'waiting' || r.phase === 'warmup') && r.humans < HUB_LIMITS.maxPlayers;
+  return r.public && (r.phase === 'waiting' || r.phase === 'warmup') && r.humans < maxPlayersFor(r.city);
 }
 
 /**
@@ -137,7 +138,7 @@ export function isJoinable(r: RoomAnnounce): boolean {
  */
 export function sortRooms<T extends RoomAnnounce>(rooms: T[]): T[] {
   const RANK: Record<RoomPhase, number> = { waiting: 0, warmup: 1, results: 2, playing: 3 };
-  const rank = (r: T) => (r.humans >= HUB_LIMITS.maxPlayers ? 4 : RANK[r.phase]);
+  const rank = (r: T) => (r.humans >= maxPlayersFor(r.city) ? 4 : RANK[r.phase]);
   return rooms.sort((a, b) => rank(a) - rank(b) || b.humans - a.humans || a.since - b.since || (a.code < b.code ? -1 : 1));
 }
 
@@ -153,8 +154,8 @@ export function roomArg(self: HubSelf): Record<string, unknown> | null {
     host: true,
     name: cleanName(a.host, '').slice(0, 16),
     city: CITY.test(a.city) ? a.city : '',
-    players: clamp(Math.round(num(a.humans) ?? 0), 0, HUB_LIMITS.maxPlayers),
-    max: HUB_LIMITS.maxPlayers,
+    players: clamp(Math.round(num(a.humans) ?? 0), 0, maxPlayersFor(a.city)),
+    max: maxPlayersFor(a.city),
     phase: PHASES.includes(a.phase) ? a.phase : 'waiting',
     public: !!a.public,
     bots: !!a.bots,
@@ -194,8 +195,8 @@ export function parseSnapshot(raw: unknown, now: number): Snapshot | null {
     const phase = PHASES.includes(x.phase as RoomPhase) ? (x.phase as RoomPhase) : null;
     if (!code || !phase || seen.has(code)) continue;
     seen.add(code);
-    const humans = clamp(Math.round(num(x.players) ?? 0), 0, HUB_LIMITS.maxPlayers);
-    const max = HUB_LIMITS.maxPlayers;
+    const max = maxPlayersFor(typeof x.city === 'string' ? x.city : '');
+    const humans = clamp(Math.round(num(x.players) ?? 0), 0, max);
     const age = clamp(num(x.age) ?? 0, 0, 60);
     const updatedAt = now - age * 1000;
     const leftRaw = phase === 'playing' || phase === 'results' ? num(x.ends_in) : null;
@@ -368,7 +369,7 @@ export class HubPresence implements HubLike {
       const i = rooms.findIndex((r) => r.code === mine);
       if (i >= 0) rooms.splice(i, 1);
       const left = num(a.left);
-      rooms.push({ ...a, code: mine, key: mine, max: HUB_LIMITS.maxPlayers, updatedAt: now, joinable: isJoinable(a), full: a.humans >= HUB_LIMITS.maxPlayers, mine: true, endsAt: left === null ? 0 : now + left * 1000 });
+      rooms.push({ ...a, code: mine, key: mine, max: maxPlayersFor(a.city), updatedAt: now, joinable: isJoinable(a), full: a.humans >= maxPlayersFor(a.city), mine: true, endsAt: left === null ? 0 : now + left * 1000 });
     }
     const listed = sortRooms(rooms).slice(0, HUB_LIMITS.listRooms);
     const total = snap ? Math.max(snap.rooms, listed.length) : listed.length;

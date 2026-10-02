@@ -20,6 +20,12 @@ Run each file as one query, in this order, waiting for “Success” before the 
    one transaction, idempotent. The game works without it (the client election decides, as
    before) and starts using it as soon as it exists — no redeploy needed.
 
+4. `supabase/migrations/0007_six_player_rooms.sql` — Halloween Town (2026-10-02): `submit_match`
+   accepts city `halloween` with up to 6 rows and rounds up to 630 s (its own coin table); the
+   room directory accepts 6 players / 6 seats for Halloween rooms. Other maps unchanged (4 rows,
+   330 s). Needs 0005; idempotent. Until it is applied a 6-player Halloween room still plays,
+   but its result submission is rejected (400) and the directory shows it as 4/4.
+
 Optional check afterwards: paste `supabase/tests/lobby.sql` into the editor. It rolls itself back
 and ends with `lobby.sql: all checks passed`.
 

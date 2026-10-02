@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { L } from '../i18n';
 import { AudioEngine } from '../audio/AudioEngine';
-import { arenaConfig as A } from '../config/arena';
+import { roundSecondsFor } from '../config/arena';
+import { HALLOWEEN } from '../config/halloween';
 import { bakeSkyEnvironment } from '../art/environment';
 import { RenderPipeline } from '../art/postfx';
 import { installRenderGuards, type AppContext } from '../app';
@@ -379,16 +380,18 @@ export async function runArena(ctx: AppContext): Promise<void> {
       else portal.gameplayStop();
     }
     // [platform-room] Room info for the portal (CrazyGames updateRoom / invite button); the adapter forwards changes only.
-    portal.reportRoom?.(net instanceof SupabaseNet ? { code: net.room, players: session.net.peers().length, maxPlayers: A.maxPlayers } : null);
+    portal.reportRoom?.(net instanceof SupabaseNet ? { code: net.room, players: session.net.peers().length, maxPlayers: session.seats() } : null);
     if (game) {
       game.step(dt);
-      audio?.setTension(game.phase === 'playing' && A.roundSeconds - game.matchTime < 30);
+      audio?.setTension(game.phase === 'playing' && game.timeLeft(roundSecondsFor(game.city.id)) < 30);
+      // Halloween: the chase gets its own score from the moment the scores lock.
+      if (game.hunt) audio?.setTheme(game.hunt.stage() === 'grow' ? game.city.id : 'halloween-hunt');
       ui.renderRound(game);
       if (session.match.ph === 'results' && shownResultsEp !== session.match.ep) {
         shownResultsEp = session.match.ep;
         const standings = session.match.standings ?? game.standings();
         const me = standings.find((s) => s.id === session.selfId());
-        const earned = me && !testMode ? award(me.rank, me.kills, game.city.level) : { coins: 0, unlocked: null };
+        const earned = me && !testMode ? award(me.rank, me.kills, game.city.level, game.hunt ? HALLOWEEN.coinsByRank : undefined) : { coins: 0, unlocked: null };
         ui.showResults(standings, session.selfId(), earned);
         if (me?.rank === 1) {
           portal.happy();
@@ -521,6 +524,9 @@ export async function runArena(ctx: AppContext): Promise<void> {
       grants: g?.grants.size ?? 0,
       actors: g?.actors.map((a) => ({ id: a.id, name: a.name, kind: a.kind, owned: a.owned, mass: Math.round(a.mass), d: +a.diameter.toFixed(2), x: +a.x.toFixed(1), z: +a.z.toFixed(1), lives: a.lives, alive: a.alive, out: a.eliminated, kills: a.kills, objects: a.objects })) ?? [],
       standings: session.match.standings ?? null,
+      hunt: g?.hunt
+        ? { start: g.hunt.start, stage: g.hunt.stage(), caught: [...g.hunt.caught.keys()], scores: Object.fromEntries(g.hunt.scores), hunters: g.hunt.hunters.map((h) => ({ x: +h.x.toFixed(1), z: +h.z.toFixed(1), pose: h.pose, target: h.target?.id ?? null })) }
+        : null,
     };
   }
 }
@@ -551,6 +557,6 @@ async function submitMatch(session: ArenaSession, game: ArenaGame, standings: im
     const r = session.match.roster.find((x) => x.id === st.id);
     return { slot: r?.slot ?? 0, playerId: r?.kind === 'player' ? (uidOf.get(st.id) ?? null) : null, vehicle: r?.vehicle ?? 'collector', rank: st.rank, mass: st.mass, kills: st.kills, deaths: st.deaths, objects: st.objects, leftEarly: !!game.byId.get(st.id)?.left };
   });
-  const reason = game.climaxLeft() === 0 ? 'landmark' : game.matchTime >= 299 ? 'time' : 'last_standing';
+  const reason = game.hunt ? (game.matchTime >= game.hunt.endsAt() - 1 ? 'time' : 'all_caught') : game.climaxLeft() === 0 ? 'landmark' : game.matchTime >= 299 ? 'time' : 'last_standing';
   await sb.functions.invoke('submit-match', { body: { room: (session.net as SupabaseNet).room, city: game.city.id, durationS: game.matchTime, endReason: reason, build: import.meta.env.VITE_BUILD_ID ?? 'dev', rows } }).catch(() => undefined);
 }

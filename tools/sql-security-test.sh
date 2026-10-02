@@ -3,7 +3,7 @@
 #
 # Spins up a throw-away Postgres cluster, loads a minimal Supabase stand-in (roles anon /
 # authenticated / service_role, auth.users, auth.uid() from request.jwt.claim.sub, Supabase's
-# default grants), applies supabase/migrations 0001 → 0006 (0005 and 0006 twice: idempotent),
+# default grants), applies supabase/migrations 0001 → 0007 (0005, 0006 and 0007 twice: idempotent),
 # then:
 #   1. supabase/tests/lobby.sql            — the lobby sanity checks (normal flows + clamping)
 #   2. tools/sql-security/exploits.sql     — every audit exploit must fail, normal flows must work
@@ -79,6 +79,12 @@ step "Migration 0006 (twice: idempotent)"
 echo "  applied 0006"
 "${PSQL[@]}" -f "$ROOT/supabase/migrations/0006_room_host.sql"
 echo "  applied 0006 again"
+
+step "Migration 0007 (twice: idempotent)"
+"${PSQL[@]}" -f "$ROOT/supabase/migrations/0007_six_player_rooms.sql"
+echo "  applied 0007"
+"${PSQL[@]}" -f "$ROOT/supabase/migrations/0007_six_player_rooms.sql"
+echo "  applied 0007 again"
 
 step "supabase/tests/lobby.sql"
 "${PSQL[@]}" -t -f "$ROOT/supabase/tests/lobby.sql" | grep -E 'passed' | sed 's/^ */  /'

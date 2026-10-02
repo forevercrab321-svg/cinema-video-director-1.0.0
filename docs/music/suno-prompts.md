@@ -100,6 +100,58 @@
   Nom nom nom — one more bite!
   ```
 
+## 7. 万圣节小镇（Halloween Town，2026-10-02）
+
+这张图的一局分两半，各用一首（玩法见 `docs/halloween-mode.md`）：
+
+| 文件 | 什么时候放 | 情绪 |
+| --- | --- | --- |
+| `halloween.mp3` | 上半场：吃糖果、长大 | **诡异但可爱**，像动画片里的怪物派对，一样洗脑 |
+| `halloween-hunt.mp3` | 下半场：三个恐怖角色追所有人 | **紧张的追逐**，心跳感、越听越慌，但不刺耳、不一直很吵 |
+
+写提示词的规矩：
+- 只描述风格，**不写任何现成歌曲或电影配乐的名字**，也不要求模仿某一首的旋律（避免版权问题）。
+- **纯音乐**。最多只留无歌词的「呜——」合声或一声怪笑，不要唱词。
+- 要能**无缝循环**：开头不要淡入，结尾回到开头的和弦，不要淡出。
+- 时长 1:30–3:00，响度约 −14 LUFS（和其他城市一致，游戏里会统一压到 BGM 的音量）。
+
+游戏里已有同思路的程序音乐兜底（`themes.ts` 里的 `halloween` 和 `halloween-hunt`，试听：`renders/review/audio/bgm-halloween.wav`、`bgm-halloween-hunt.wav`）。把 Suno 导出的文件放进 `public/music/`，游戏会自动换成它。
+
+### 7a. 上半场 — 《糖果墓园摇摆舞》 → `halloween.mp3`
+
+- **Style**：`spooky cute Halloween novelty instrumental, playful monster party, toy harpsichord and cheesy combo organ hook in A minor, plucky pizzicato bass, xylophone skeleton-bone rattles, theremin-like whistle, finger snaps, bouncy 1960s cartoon rock-and-roll groove, 124 BPM, catchy creeping call and answer melody, funny not scary, loopable, instrumental`
+- **Exclude**：`lyrics, singing, lead vocals, rap, gore, screaming, heavy metal, distortion, slow, sad, lo-fi hiss`
+- **Structure**：
+  ```
+  [Intro: organ plays the creeping hook alone, no fade in]
+  [Hook: call and answer, 2 bars, repeat]
+  [Hook: pizzicato bass and finger snaps join]
+  [Break: xylophone bone rattle, spooky "ooooh" choir, wordless]
+  [Hook: full band, playful]
+  [Bridge: harpsichord tiptoes, theremin whistle answers]
+  [Hook: everyone together]
+  [Outro: hook once more, ends on the opening chord, clean loop point]
+  ```
+
+### 7b. 下半场 — 《他们来了》 → `halloween-hunt.mp3`
+
+- **Style**：`tense horror chase instrumental, driving low staccato string ostinato in E minor, heartbeat kick drum, dissonant brass and string stabs with minor seconds and tritones, eerie high music box bell, tremolo violins rising, ticking clock percussion, 150 BPM, suspenseful cartoon horror, scary but not gory, steady energy, loopable, instrumental`
+- **Exclude**：`lyrics, singing, vocals, screaming, gore, dubstep, trap, heavy distortion, long silence, slow intro, fade out, happy`
+- **Structure**：
+  ```
+  [Intro: heartbeat and low ostinato start immediately]
+  [Chase: ostinato drives, tremolo strings climb]
+  [Stab: dissonant hits, music box bell answers]
+  [Chase: ticking percussion joins, tension builds]
+  [Break: heartbeat alone for 2 bars, a distant wordless laugh]
+  [Chase: full, relentless but not louder]
+  [Outro: back to the opening ostinato, clean loop point]
+  ```
+
+**挑版本时注意**：下半场那首最容易越来越吵、越来越快。挑**从头到尾音量和速度都稳定**的版本；结尾突然加速或炸响的不要。上半场挑前 5 秒就能听出「万圣节」又能哼出来的。
+
+**版权（请创意总监核对）**：Suno 的服务条款规定，**只有付费订阅期间生成的曲子才有商用权**，免费账号生成的歌只能非商用。这两首请用付费账号（Pro / Premier）生成，并截图保存生成记录；条款会变，生成前请在自己的套餐页面再确认一次。
+
 ---
 
 ## 已采用的版本（2026-09-26）
@@ -125,5 +177,7 @@
 | `public/music/paris.mp3` | 巴黎 |
 | `public/music/scrap.mp3` | 废料城 |
 | `public/music/victory.mp3` | 第 1 名的胜利音乐（替换内置合成号角） |
+| `public/music/halloween.mp3` | 万圣节小镇上半场（还没生成时用内置程序音乐） |
+| `public/music/halloween-hunt.mp3` | 万圣节小镇下半场「追杀」（还没生成时用内置程序音乐） |
 
 BGM 建议 1:30–3:00、响度约 −14 LUFS；胜利音乐 4–6 秒。
