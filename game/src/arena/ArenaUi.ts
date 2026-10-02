@@ -213,8 +213,8 @@ body:has(#arena .lobby:not([hidden])) .ge-full { display: none; }
 /* Phones play in landscape: HUD hugs the corners, thumbs own the bottom corners. */
 @media (pointer: coarse), (max-height: 520px) {
   #arena .timer { top: calc(4px + var(--ge-st)); padding: 2px 10px 3px; } #arena .timer b { font-size: 20px; } #arena .timer span, #arena .timer .lock { font-size: 9.5px; letter-spacing: .06em; }
-  #arena .board { top: calc(6px + var(--ge-st)); right: calc(8px + var(--ge-sr)); width: 156px; padding: 4px 8px; } #arena .row { font-size: 11px; gap: 5px; padding: 1px 0; grid-template-columns: 10px 8px 1fr auto; } #arena .row .lv2, #arena .row .hp { display: none; } #arena .row .ms { min-width: 0; }
-  #arena .map { width: 96px; height: 96px; top: calc(100px + var(--ge-st)); right: calc(8px + var(--ge-sr)); bottom: auto; left: auto; }
+  #arena .board { top: calc(6px + var(--ge-st)); right: calc(8px + var(--ge-sr)); width: 156px; padding: 4px 8px; } #arena .row { font-size: 11px; line-height: 14px; gap: 5px; padding: 1px 0; grid-template-columns: 10px 8px 1fr auto; } #arena .row .lv2, #arena .row .hp { display: none; } #arena .row .ms { min-width: 0; }
+  #arena .map { width: 96px; height: 96px; top: calc(114px + var(--ge-st)); right: calc(8px + var(--ge-sr)); bottom: auto; left: auto; }
   #arena .feed { top: calc(84px + var(--ge-st)); left: calc(8px + var(--ge-sl)); right: auto; width: 230px; align-items: flex-start; } #arena .feed div { font-size: 10.5px; padding: 3px 8px; }
   #arena .combo { left: calc(168px + var(--ge-sl)); bottom: auto; top: calc(8px + var(--ge-st)); font-size: 14px; }
   #arena .center b { font-size: 56px; } #arena .center span { font-size: 12px; }

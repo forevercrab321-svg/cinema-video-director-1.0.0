@@ -7,22 +7,18 @@
   "egAt": 308.5,
   "caughtAt": 318.69999999998254
  },
- "falsewake": {
-  "lastEmote": 6,
-  "by": "me-mz6r9k7rt0zt"
- },
  "guesthonk": {
-  "woke": null,
+  "woke": "tab-i4lksg1dtfii",
   "remote": {
-   "x": -81.5,
-   "z": -83,
+   "x": -24.6,
+   "z": 84.4,
    "emote": 0,
-   "emoteSeq": 5,
-   "say": "📯"
+   "emoteSeq": 0,
+   "say": ""
   },
   "egg": {
-   "x": -83,
-   "z": -83,
+   "x": -88,
+   "z": 88,
    "by": null,
    "stealth": []
   }

@@ -1146,6 +1146,7 @@ export class ArenaGame {
       a.emoteSeq = s[13];
       const id = Math.floor(s[12]);
       if (id > 0 && id < EMOTES.length) {
+        a.emote = id; // the host reads it (a guest's horn wakes Egg Valley)
         this.sayFor(a, EMOTES[id], 2.2);
         const focus = this.cameraTarget();
         if (id === HORN && focus && Math.hypot(focus.x - a.x, focus.z - a.z) < 60 + focus.diameter * 6) this.onEvent?.({ kind: 'horn', horn: a.horn });
