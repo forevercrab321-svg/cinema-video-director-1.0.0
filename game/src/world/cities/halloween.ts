@@ -45,16 +45,16 @@ const SQ2 = Math.SQRT2;
 const MOONLIGHT: Palette = {
   sunDirection: HALLOWEEN_MOON_DIR.clone(),
   sunColor: new THREE.Color(0xb8c6ff),
-  sunIntensity: 2.6,
+  sunIntensity: 2.4,
   sky: { top: new THREE.Color(0x0d1230), mid: new THREE.Color(0x3a2a68), horizon: new THREE.Color(0xd8743e), ground: new THREE.Color(0x1a1622), sun: new THREE.Color(0xe9eeff) },
   clouds: -0.25,
   fog: new THREE.Color(0x3d3558),
   fogNear: 70,
   fogFar: 400,
   hemiSky: new THREE.Color(0x9a92d6),
-  hemiGround: new THREE.Color(0x4c3e56),
-  hemiIntensity: 1.75,
-  envIntensity: 0.9,
+  hemiGround: new THREE.Color(0x6a5a78),
+  hemiIntensity: 2.6,
+  envIntensity: 1.4,
   cloudTint: new THREE.Color(0.3, 0.3, 0.42),
 };
 
