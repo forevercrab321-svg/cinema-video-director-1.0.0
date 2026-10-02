@@ -24,13 +24,13 @@ export const HALLOWEEN = {
   hunterHeight: 3.0,
   hunterReach: 0.75,
   /** Villain speed as a share of a standard machine's top speed at huntMass, ramping over the hunt. */
-  speedStart: 0.8,
-  speedEnd: 1.0,
+  speedStart: 0.92,
+  speedEnd: 1.12,
   /** Close to its target a villain lunges: speed × lungeMul for lungeSeconds, then cools down. */
-  lungeRange: 5,
-  lungeMul: 1.5,
+  lungeRange: 6,
+  lungeMul: 1.7,
   lungeSeconds: 0.6,
-  lungeCooldown: 3.5,
+  lungeCooldown: 3,
   /** Villains walk through props (they are horror villains) but slower inside one. */
   phaseSlow: 0.7,
   /** Villains share the runners out: a target another villain already chases counts this many metres farther. */

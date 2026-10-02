@@ -105,7 +105,8 @@ async function solo(run) {
   }
   console.log(`      catches over the hunt: ${curve.join(' ')}`);
   ok(s.phase === 'results', `[solo ${run}] round ends in results [${s.phase} at ${s.t.toFixed(1)} s]`);
-  ok(s.t <= HUNT_AT + HUNT_SECONDS + 0.5, `[solo ${run}] round lasts at most ${HUNT_AT + HUNT_SECONDS} s [${s.t.toFixed(1)}]`);
+  ok(s.t <= HUNT_AT + HUNT_SECONDS + 2.5, // the test steps in 2 s chunks
+     `[solo ${run}] round lasts at most ${HUNT_AT + HUNT_SECONDS} s [${s.t.toFixed(1)}]`);
   const st = s.standings ?? [];
   const caught = new Set(s.hunt.caught);
   ok(st.length === 6 && st.every((x) => (caught.has(x.id) ? x.mass === 0 && !x.alive : x.mass === locked[x.id])), `[solo ${run}] results: caught = 0, runners keep their locked score`);

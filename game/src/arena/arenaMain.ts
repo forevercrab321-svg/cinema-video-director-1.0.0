@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { L } from '../i18n';
 import { AudioEngine } from '../audio/AudioEngine';
 import { roundSecondsFor } from '../config/arena';
-import { HALLOWEEN } from '../config/halloween';
+import { HALLOWEEN, isHalloween } from '../config/halloween';
 import { bakeSkyEnvironment } from '../art/environment';
 import { RenderPipeline } from '../art/postfx';
 import { installRenderGuards, type AppContext } from '../app';
@@ -60,8 +60,10 @@ export async function runArena(ctx: AppContext): Promise<void> {
   const audio = testMode ? null : new AudioEngine();
 
   const envFor = (scene: THREE.Scene, city: CityDef) => {
-    scene.environment = ctx.hdri?.texture ?? bakeSkyEnvironment(renderer, city.palette);
-    scene.environmentRotation.y = ctx.hdri?.rotationFor(city.palette.sunDirection) ?? 0;
+    // The daylight HDRI would light a night map like noon: Halloween Town bakes its own moonlit sky.
+    const hdri = isHalloween(city.id) ? null : ctx.hdri;
+    scene.environment = hdri?.texture ?? bakeSkyEnvironment(renderer, city.palette);
+    scene.environmentRotation.y = hdri?.rotationFor(city.palette.sunDirection) ?? 0;
     scene.environmentIntensity = city.palette.envIntensity;
   };
   const usePipeline = (g: ArenaGame) => {
