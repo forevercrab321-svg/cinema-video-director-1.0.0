@@ -87,5 +87,5 @@ Each owner applies the shrink and revive to its own machine (as with mass today)
 | Villains (3 bosses) | DONE, NEEDS CD REVIEW | `renders/review/hunters/` |
 | Atmosphere / VFX | DONE | `renders/review/halloween-fx/`, 8–10 draw calls |
 | Music / SFX | DONE (procedural); Suno tracks optional | `docs/music/suno-prompts.md` §7 |
-| Migration 0007 | WRITTEN, tested locally; **CD applies in Supabase** | `bash tools/sql-security-test.sh` |
+| Migration 0007 | DONE — applied to production (grow-everything, main) 2026-10-02; read-only check confirms 0005, 0006 and 0007 objects present | `bash tools/sql-security-test.sh`; CD's SQL Editor check |
 | Perf | High tier 258–339 draw calls in play (6 machines × ~30 parts dominate); world itself 43 | `tools/halloween-shots.mjs` |
