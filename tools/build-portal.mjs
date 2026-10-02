@@ -24,10 +24,12 @@ if (target === 'gamedistribution' && !hasEnv('VITE_GD_GAME_ID')) console.warn('â
 
 execSync('npx vite build -c vite.portal.config.mjs', { cwd: root, stdio: 'inherit', env: { ...process.env, VITE_PORTAL: target, VITE_PORTAL_BUILD: '1' } });
 for (const f of ['robots.txt', 'manifest.webmanifest', 'og.png']) rmSync(resolve(out, f), { force: true });
+// Portal uploaders (and the browser agent that drives them) refuse SVG files; the PNG favicon covers it.
+for (const f of ['icons/icon.svg', 'icons/icon-maskable.svg']) rmSync(resolve(out, f), { force: true });
 const html = resolve(out, 'index.html');
 if (!existsSync(html) || !readFileSync(html, 'utf8').includes('<script')) throw new Error('portal index.html missing the game script (public/index.html overwrote it?)');
 // Portal pages must not link out to our own site: drop the manifest link and absolute icon paths.
-writeFileSync(html, readFileSync(html, 'utf8').replace(/\s*<link rel="manifest"[^>]*>/, '').replaceAll('href="/icons/', 'href="./icons/'));
+writeFileSync(html, readFileSync(html, 'utf8').replace(/\s*<link rel="manifest"[^>]*>/, '').replace(/\s*<link[^>]*icon\.svg[^>]*>/g, '').replaceAll('href="/icons/', 'href="./icons/'));
 if (target === 'crazygames') {
   const leaks = readdirSync(resolve(out, 'assets')).filter((f) => /Poki|GameDistribution/.test(f) || /poki-sdk|game-cdn\.poki|gamedistribution\.com/.test(readFileSync(resolve(out, 'assets', f), 'latin1')));
   if (leaks.length) throw new Error(`crazygames build still references another portal SDK: ${leaks.join(', ')}`);
