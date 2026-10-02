@@ -1,0 +1,179 @@
+{
+ "rows": [
+  {
+   "kind": "roost",
+   "x": -24.06,
+   "z": -85.31,
+   "eligible": false,
+   "blocked12": true,
+   "blockedBody": true,
+   "clearance": 0,
+   "nearestReachable": 0.69,
+   "wakeable": true,
+   "pathCells": 118
+  },
+  {
+   "kind": "roost",
+   "x": 71.48,
+   "z": -34.65,
+   "eligible": false,
+   "blocked12": true,
+   "blockedBody": true,
+   "clearance": 0,
+   "nearestReachable": 3.45,
+   "wakeable": true,
+   "pathCells": 119
+  },
+  {
+   "kind": "roost",
+   "x": 80.63,
+   "z": -80.63,
+   "eligible": false,
+   "blocked12": true,
+   "blockedBody": true,
+   "clearance": 0,
+   "nearestReachable": 3.35,
+   "wakeable": true,
+   "pathCells": 180
+  },
+  {
+   "kind": "roost",
+   "x": 30.76,
+   "z": 76.89,
+   "eligible": false,
+   "blocked12": true,
+   "blockedBody": true,
+   "clearance": 0,
+   "nearestReachable": 3.08,
+   "wakeable": true,
+   "pathCells": 120
+  },
+  {
+   "kind": "roost",
+   "x": -67.49,
+   "z": 32.66,
+   "eligible": false,
+   "blocked12": true,
+   "blockedBody": true,
+   "clearance": 0.2,
+   "nearestReachable": 0.61,
+   "wakeable": true,
+   "pathCells": 107
+  },
+  {
+   "kind": "roost",
+   "x": -85.37,
+   "z": 85.37,
+   "eligible": false,
+   "blocked12": true,
+   "blockedBody": true,
+   "clearance": 0,
+   "nearestReachable": 0.89,
+   "wakeable": true,
+   "pathCells": 182
+  },
+  {
+   "kind": "graveyard",
+   "x": -83,
+   "z": -83,
+   "eligible": false,
+   "blocked12": true,
+   "blockedBody": false,
+   "clearance": 0.45,
+   "nearestReachable": 1,
+   "wakeable": true,
+   "pathCells": 167
+  },
+  {
+   "kind": "graveyard",
+   "x": -17,
+   "z": -83,
+   "eligible": false,
+   "blocked12": true,
+   "blockedBody": true,
+   "clearance": 0,
+   "nearestReachable": 2,
+   "wakeable": true,
+   "pathCells": 100
+  },
+  {
+   "kind": "graveyard",
+   "x": -83,
+   "z": -17,
+   "eligible": true,
+   "blocked12": false,
+   "blockedBody": false,
+   "clearance": 2.5,
+   "nearestReachable": 0,
+   "wakeable": true,
+   "pathCells": 100
+  },
+  {
+   "kind": "graveyard",
+   "x": -17,
+   "z": -17,
+   "eligible": false,
+   "blocked12": false,
+   "blockedBody": false,
+   "clearance": 3.05,
+   "nearestReachable": 0,
+   "wakeable": true,
+   "pathCells": 34
+  },
+  {
+   "kind": "corner",
+   "x": -88,
+   "z": -88,
+   "eligible": true,
+   "blocked12": false,
+   "blockedBody": false,
+   "clearance": 3.05,
+   "nearestReachable": 0,
+   "wakeable": true,
+   "pathCells": 176
+  },
+  {
+   "kind": "corner",
+   "x": 88,
+   "z": -88,
+   "eligible": true,
+   "blocked12": false,
+   "blockedBody": false,
+   "clearance": 3.05,
+   "nearestReachable": 0,
+   "wakeable": true,
+   "pathCells": 180
+  },
+  {
+   "kind": "corner",
+   "x": -88,
+   "z": 88,
+   "eligible": true,
+   "blocked12": false,
+   "blockedBody": false,
+   "clearance": 3.05,
+   "nearestReachable": 0,
+   "wakeable": true,
+   "pathCells": 182
+  },
+  {
+   "kind": "corner",
+   "x": 88,
+   "z": 88,
+   "eligible": true,
+   "blocked12": false,
+   "blockedBody": false,
+   "clearance": 3.05,
+   "nearestReachable": 0,
+   "wakeable": true,
+   "pathCells": 176
+  }
+ ],
+ "freeN": 29094,
+ "reachN": 28616,
+ "boxes": 2126,
+ "live": {
+  "x": 88,
+  "z": -88
+ }
+}

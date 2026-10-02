@@ -47,8 +47,11 @@ export const arenaConfig = {
    * median leader mass): Scrap 913 / 15,537 / 47,195 kg at 30 / 90 / 120 s and a first car at 62 s,
    * vs ~150 / ~1,900 / 2,700–9,400 kg and 104–120 s in the other cities. Scaling class 3 to 0.3 and
    * class 4 to 0.6 brings Scrap to ~300 / ~2,000 / ~4,700 kg and a first car at ~119 s.
+   * Halloween Town has ~2× Paris's class 3–4 mass (11.4 t vs 5.9 t): its first half reached class
+   * 5 at 44 s (leader) vs Paris 113 s. Class 3 × 0.35 and class 4 × 0.55 bring it to 94 s, and
+   * classes 4–8 within ±20 % of Paris (tools/halloween-balance.mjs, 2026-10-02).
    */
-  cityRewardScale: { scrap: [1, 1, 0.9, 0.3, 0.6], halloween: [1, 1, 0.9, 0.45, 0.55] } as Readonly<Record<string, readonly number[]>>,
+  cityRewardScale: { scrap: [1, 1, 0.9, 0.3, 0.6], halloween: [1, 1, 0.9, 0.35, 0.55] } as Readonly<Record<string, readonly number[]>>,
   /** The machine that recycles the last landmark part gains this share of its mass. */
   landmarkBonus: 0.25,
   /** Penalty: slamming a locked object while dashing stuns and sheds mass. */

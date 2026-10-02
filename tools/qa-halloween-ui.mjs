@@ -109,6 +109,19 @@ for (const v of views) {
   const vp = VIEWS[v];
   for (const lang of langs) {
     const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: 1, isMobile: vp.touch && vp.width < 1000, hasTouch: vp.touch });
+    // Banners (2.4–3 s) and toasts (1.5 s) are real-time Web Animations: under a loaded headless
+    // CPU they are over before the screenshot. Freeze every new animation at 40 % (fully opaque)
+    // until the next capture, so each state shows the banner / toast it triggered.
+    await ctx.addInitScript(() => {
+      const orig = Element.prototype.animate;
+      window.__frozen = [];
+      Element.prototype.animate = function (kf, opts) {
+        const a = orig.call(this, kf, opts);
+        const d = typeof opts === 'number' ? opts : opts?.duration ?? 0;
+        if (d >= 1000) { a.pause(); a.currentTime = d * 0.4; window.__frozen.push(a); }
+        return a;
+      };
+    });
     const p = await ctx.newPage();
     const errors = [];
     p.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
@@ -120,6 +133,7 @@ for (const v of views) {
       await p.screenshot({ path: file, type: 'jpeg', quality: 72 });
       const a = await p.evaluate(audit);
       run.states[state] = { file: file.replace(root + '/', ''), ...a };
+      await p.evaluate(() => { for (const x of window.__frozen) x.cancel(); window.__frozen = []; });
       console.log(`${v}/${lang}/${state}: names real=[${a.realNames}] portal=[${a.portalNames}] off=${a.offscreen.length} clip=${a.clipped.length} overlaps=[${a.overlaps.join(', ')}] horn=${a.blocks.horn ? `${a.blocks.horn.w}x${a.blocks.horn.h}@${a.blocks.horn.x},${a.blocks.horn.y} hit=${a.hornHit}` : '—'} dash=${a.blocks.dash ? `${a.blocks.dash.w}x${a.blocks.dash.h} hit=${a.dashHit}` : '—'}`);
       return a;
     };
@@ -133,7 +147,10 @@ for (const v of views) {
       const lob = await shot('lobby');
       run.lobbyText = await p.evaluate(() => {
         const t = document.querySelector('#arena .lobby')?.innerText ?? '';
-        return { halloween: /Halloween Town|万圣节小镇/.test(t), event: /EVENT|活动/.test(t), seats: (t.match(/[0-9]\s*\/\s*6/) || [null])[0], rules: /Egg Valley|蛋之谷/.test(document.querySelector('#arena .lobby')?.innerHTML ?? '') };
+        const slots = [...document.querySelectorAll('#arena .lobby .slots .slot')];
+        const box = document.querySelector('#arena .lobby .slots');
+        const vis = slots.filter((d) => { const r = d.getBoundingClientRect(); const b = box.getBoundingClientRect(); return r.top >= b.top - 1 && r.bottom <= b.bottom + 1; }).length;
+        return { halloween: /Halloween Town|万圣节小镇/.test(t), sixPlayers: /6 players|6 人/.test(t), slots: slots.length, slotsFullyVisible: vis, slotsScrollable: box ? box.scrollHeight > box.clientHeight + 1 : null, rules: /Egg Valley|蛋之谷/.test(document.querySelector('#arena .lobby')?.innerHTML ?? '') };
       });
       void lob;
       await p.evaluate(() => { window.__ARENA__.session.start(); });
@@ -144,11 +161,12 @@ for (const v of views) {
       await shot('halftime');
       await step(3.2);
       await shot('rise');
+      await p.evaluate(() => (window.__ARENA__.game().hunt.egg.botHonkAt = 1e9)); // AI rivals must not wake her first in this UI pass
       await step(4.5);
       await shot('chase');
       // Egg Valley: park next to her (toast), then honk through the real horn button (tap / click).
       const egg = await p.evaluate(() => window.__ARENA__.summary().hunt.egg);
-      const park = () => p.evaluate(({ x, z }) => { const g = window.__ARENA__.game(); if (!g.local?.alive) return false; g.local.x = x + 2; g.local.z = z + 2; g.local.speed = 0; g.local.invulnerableUntil = g.matchTime + 1; return true; }, egg);
+      const park = () => p.evaluate(({ x, z }) => { const g = window.__ARENA__.game(); g.hunt.egg.botHonkAt = 1e9; if (!g.local?.alive) return false; g.local.x = x + 2; g.local.z = z + 2; g.local.speed = 0; g.local.invulnerableUntil = g.matchTime + 1; return true; }, egg);
       await park();
       await step(0.3);
       await park();

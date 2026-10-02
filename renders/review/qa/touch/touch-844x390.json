@@ -1,0 +1,38 @@
+{
+ "base": "http://127.0.0.1:5211/game/",
+ "before": {
+  "x": 0,
+  "z": 88,
+  "heading": 0,
+  "speed": 0,
+  "dashTime": 0,
+  "emote": 0,
+  "emoteSeq": 0,
+  "alive": true
+ },
+ "held": {
+  "x": 0,
+  "z": 84.61,
+  "heading": 0,
+  "speed": 3.65,
+  "dashTime": 0,
+  "emote": 0,
+  "emoteSeq": 0,
+  "alive": true
+ },
+ "moved": 3.3900000000000006,
+ "dashBox": {
+  "x": 738,
+  "y": 286,
+  "width": 84,
+  "height": 84
+ },
+ "hornBox": {
+  "x": 448,
+  "y": 340,
+  "width": 44,
+  "height": 44
+ },
+ "under": "canvas.",
+ "errors": []
+}

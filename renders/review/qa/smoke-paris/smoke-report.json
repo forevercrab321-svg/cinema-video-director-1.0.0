@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-02T06:26:40.108Z",
+  "date": "2026-10-02T06:38:13.036Z",
   "base": "http://127.0.0.1:5196/game/",
   "viewport": {
     "width": 960,
@@ -9,21 +9,21 @@
   "tiers": {
     "low": {
       "tier": "low",
-      "loadMs": 30995,
+      "loadMs": 43133,
       "lobby": {
         "mean": 126.4,
         "std": 42.8,
         "colours": 241
       },
       "dash": {
-        "mean": 98.6,
-        "std": 38.6,
-        "colours": 292
+        "mean": 100.8,
+        "std": 42,
+        "colours": 310
       },
       "play": {
-        "mean": 101.3,
-        "std": 40.7,
-        "colours": 306
+        "mean": 104.8,
+        "std": 49.1,
+        "colours": 163
       },
       "start": {
         "x": 0,
@@ -34,14 +34,14 @@
         "dashCooldown": 0
       },
       "end": {
-        "x": 10.827895187144408,
-        "z": 60.37788244004478,
-        "mass": 5.726,
+        "x": -12.145772161114026,
+        "z": 87.3516542191552,
+        "mass": 9.567910906377998,
         "alive": true,
         "dashTime": 0,
         "dashCooldown": 0
       },
-      "moved": 5.436717317641857,
+      "moved": 5.7046184995638685,
       "gpu": {
         "round1": {
           "textures": 33,
@@ -84,7 +84,7 @@
       "tier": "low",
       "name": "W moves the machine",
       "pass": true,
-      "detail": "5.44 m in 2 s"
+      "detail": "5.70 m in 2 s"
     },
     {
       "tier": "low",
@@ -96,19 +96,19 @@
       "tier": "low",
       "name": "MASS grows from eating",
       "pass": true,
-      "detail": "5.0 → 5.7 kg"
+      "detail": "5.0 → 9.6 kg"
     },
     {
       "tier": "low",
       "name": "gameplay canvas is not blank",
       "pass": true,
-      "detail": "{\"mean\":101.3,\"std\":40.7,\"colours\":306}"
+      "detail": "{\"mean\":104.8,\"std\":49.1,\"colours\":163}"
     },
     {
       "tier": "low",
       "name": "dash frame is not blank",
       "pass": true,
-      "detail": "{\"mean\":98.6,\"std\":38.6,\"colours\":292}"
+      "detail": "{\"mean\":100.8,\"std\":42,\"colours\":310}"
     },
     {
       "tier": "low",

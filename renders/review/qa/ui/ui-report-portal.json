@@ -1,0 +1,2617 @@
+{
+ "base": "http://127.0.0.1:4181/",
+ "tag": "portal",
+ "runs": [
+  {
+   "view": "desktop",
+   "lang": "en",
+   "states": {
+    "lobby": {
+     "file": "renders/review/qa/ui/portal-desktop-en-lobby.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "lobby": {
+       "x": 0,
+       "y": 0,
+       "w": 1920,
+       "h": 1080,
+       "text": "GROW EVERYTHING Arena Up to 6 players · Halloween hunt ◎ 0 🛒 Shop 中文 ⚙ 📖 Story 1 Pick a level 1 LEVEL Shanghai Shikumen lanes around the Pearl 2 LEVEL New Yor"
+      },
+      "start": {
+       "x": 1752,
+       "y": 1008,
+       "w": 110,
+       "h": 56,
+       "text": "Start"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": false,
+     "dashHit": false,
+     "tags": []
+    },
+    "grow": {
+     "file": "renders/review/qa/ui/portal-desktop-en-grow.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 809,
+       "y": 14,
+       "w": 301,
+       "h": 59,
+       "text": "4:59 Halloween Town · 🎃 Hunt starts in"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) ♥♥♥ 5.0 kg ate 0 · Collector 2 Hoover-9 ♥♥♥ 5.0 kg 3 Gearjaw ♥♥♥ 5.0 kg 4 Magna ♥♥♥ 5.0 kg 5 Rustbucket ♥♥♥ 5.0 kg 6 Chomp ♥♥♥ 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "panel": {
+       "x": 24,
+       "y": 923,
+       "w": 282,
+       "h": 135,
+       "text": "MASS TIER 1 5.0KG SCRAP COLLECTOR NEXT · BOXES & BAGS · 25.2 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester (you)",
+       "sw": 109,
+       "cw": 100
+      }
+     ],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "Hoover-9 · 5.0 kg",
+      "◀ Gearjaw · 123 m",
+      "▶ Magna · 123 m",
+      "Rustbucket · 5.0 kg",
+      "▶ Chomp · 67 m"
+     ]
+    },
+    "halftime": {
+     "file": "renders/review/qa/ui/portal-desktop-en-halftime.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 793,
+       "y": 14,
+       "w": 333,
+       "h": 59,
+       "text": "4:59 Halloween Town · 👻 They are coming…"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) 🏃 5.0 kg score locked · running 2 Hoover-9 🏃 5.0 kg 3 Gearjaw 🏃 5.0 kg 4 Magna 🏃 5.0 kg 5 Rustbucket 🏃 5.0 kg 6 Chomp 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "banner": {
+       "x": 607,
+       "y": 118,
+       "w": 706,
+       "h": 72,
+       "text": "HALF TIME · SCORES LOCKED Shrinking… something is coming"
+      },
+      "panel": {
+       "x": 24,
+       "y": 923,
+       "w": 282,
+       "h": 135,
+       "text": "MASS TIER 1 5.0KG SCRAP COLLECTOR NEXT · BOXES & BAGS · 25.2 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "Hoover-9 · 5.0 kg",
+      "◀ Gearjaw · 122 m",
+      "▶ Magna · 123 m",
+      "Rustbucket · 5.0 kg",
+      "▶ Chomp · 69 m"
+     ]
+    },
+    "rise": {
+     "file": "renders/review/qa/ui/portal-desktop-en-rise.jpg",
+     "realNames": [],
+     "portalNames": [
+      "The Shock Doctor",
+      "The Cannibal",
+      "The Motel Keeper"
+     ],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 793,
+       "y": 14,
+       "w": 333,
+       "h": 59,
+       "text": "4:56 Halloween Town · 👻 They are coming…"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) 🏃 5.0 kg score locked · running 2 Hoover-9 🏃 5.0 kg 3 Gearjaw 🏃 5.0 kg 4 Magna 🏃 5.0 kg 5 Rustbucket 🏃 5.0 kg 6 Chomp 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "banner": {
+       "x": 732,
+       "y": 118,
+       "w": 455,
+       "h": 72,
+       "text": "3 BOSSES AWAKEN Can't eat them. Can't beat them. RUN."
+      },
+      "panel": {
+       "x": 24,
+       "y": 909,
+       "w": 282,
+       "h": 149,
+       "text": "MASS TIER 2 120KG INTAKE CHASSIS NEXT · DUMPSTERS & MACHINES · 394 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "☠ BOSS · The Shock Doctor",
+      "☠ BOSS · The Cannibal",
+      "☠ BOSS · The Motel Keeper",
+      "Hoover-9 · 120 kg",
+      "◀ Gearjaw · 131 m",
+      "▶ Magna · 125 m",
+      "Rustbucket · 120 kg",
+      "▶ Chomp · 77 m"
+     ]
+    },
+    "chase": {
+     "file": "renders/review/qa/ui/portal-desktop-en-chase.jpg",
+     "realNames": [],
+     "portalNames": [
+      "The Shock Doctor",
+      "The Cannibal",
+      "The Motel Keeper"
+     ],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 832,
+       "y": 14,
+       "w": 257,
+       "h": 59,
+       "text": "4:52 Halloween Town · 👻 Survive!"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) 🏃 5.0 kg score locked · running 2 Hoover-9 🏃 5.0 kg 3 Gearjaw 🏃 5.0 kg 4 Magna 🏃 5.0 kg 5 Rustbucket 🏃 5.0 kg 6 Chomp 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "banner": {
+       "x": 594,
+       "y": 118,
+       "w": 732,
+       "h": 72,
+       "text": "RUN! The Shock Doctor, The Cannibal, The Motel Keeper are hunting you"
+      },
+      "panel": {
+       "x": 24,
+       "y": 909,
+       "w": 282,
+       "h": 149,
+       "text": "MASS TIER 2 120KG INTAKE CHASSIS NEXT · DUMPSTERS & MACHINES · 394 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "☠ BOSS · The Shock Doctor",
+      "☠ BOSS · The Cannibal",
+      "☠ BOSS · The Motel Keeper",
+      "Hoover-9 · 120 kg",
+      "Gearjaw · 120 kg",
+      "▶ Magna · 110 m",
+      "Rustbucket · 120 kg",
+      "▶ Chomp · 82 m"
+     ]
+    },
+    "egg-toast": {
+     "file": "renders/review/qa/ui/portal-desktop-en-egg-toast.jpg",
+     "realNames": [],
+     "portalNames": [
+      "The Shock Doctor",
+      "The Cannibal",
+      "The Motel Keeper"
+     ],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 832,
+       "y": 14,
+       "w": 257,
+       "h": 59,
+       "text": "4:51 Halloween Town · 👻 Survive!"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) 🏃 5.0 kg score locked · running 2 Hoover-9 🏃 5.0 kg 3 Gearjaw 🏃 5.0 kg 4 Magna 🏃 5.0 kg 5 Rustbucket 🏃 5.0 kg 6 Chomp 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "toast": {
+       "x": 757,
+       "y": 648,
+       "w": 407,
+       "h": 14,
+       "text": "Someone is hiding here… HONK 📯 to wake her!"
+      },
+      "panel": {
+       "x": 24,
+       "y": 909,
+       "w": 282,
+       "h": 149,
+       "text": "MASS TIER 2 120KG INTAKE CHASSIS NEXT · DUMPSTERS & MACHINES · 394 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "◀ Hoover-9 · 71 m",
+      "◀ Gearjaw · 191 m",
+      "▶ Magna · 108 m",
+      "◀ Rustbucket · 162 m",
+      "▶ Chomp · 162 m"
+     ]
+    },
+    "egg-banner": {
+     "file": "renders/review/qa/ui/portal-desktop-en-egg-banner.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 832,
+       "y": 14,
+       "w": 257,
+       "h": 59,
+       "text": "4:51 Halloween Town · 👻 Survive!"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) 🍳 7.0 kg score locked · running 2 Hoover-9 🏃 5.0 kg 3 Gearjaw 🏃 5.0 kg 4 Magna 🏃 5.0 kg 5 Rustbucket 🏃 5.0 kg 6 Chomp 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "feed": {
+       "x": 1624,
+       "y": 168,
+       "w": 280,
+       "h": 40,
+       "text": "🍳 Tester woke Egg Valley! Invisible for 10s, score +1/3"
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "banner": {
+       "x": 653,
+       "y": 118,
+       "w": 615,
+       "h": 72,
+       "text": "EGG VALLEY'S EGG PACK! Invisible 10s · bosses can't see you · score +1/3"
+      },
+      "toast": {
+       "x": 907,
+       "y": 648,
+       "w": 107,
+       "h": 14,
+       "text": "👻 INVISIBLE"
+      },
+      "panel": {
+       "x": 24,
+       "y": 909,
+       "w": 282,
+       "h": 149,
+       "text": "MASS TIER 2 120KG INTAKE CHASSIS NEXT · DUMPSTERS & MACHINES · 394 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [
+      "board×feed (254×5)"
+     ],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "📯",
+      "◀ Hoover-9 · 71 m",
+      "◀ Gearjaw · 190 m",
+      "▶ Magna · 108 m",
+      "◀ Rustbucket · 161 m",
+      "▶ Chomp · 161 m"
+     ]
+    },
+    "results": {
+     "file": "renders/review/qa/ui/portal-desktop-en-results.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 832,
+       "y": 14,
+       "w": 257,
+       "h": 59,
+       "text": "0:00 Halloween Town · 👻 Survive!"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 159,
+       "text": "1 👑 Tester (you) 🏃 7.0 kg score locked · running 2 Hoover-9 🏃 5.0 kg 3 Gearjaw 🏃 5.0 kg 4 Magna 🏃 5.0 kg 5 Rustbucket 🏃 5.0 kg 6 Chomp 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "toast": {
+       "x": 874,
+       "y": 648,
+       "w": 173,
+       "h": 14,
+       "text": "Visible again · RUN!"
+      },
+      "panel": {
+       "x": 24,
+       "y": 909,
+       "w": 282,
+       "h": 149,
+       "text": "MASS TIER 2 120KG INTAKE CHASSIS NEXT · DUMPSTERS & MACHINES · 394 kg"
+      },
+      "results": {
+       "x": 680,
+       "y": 306,
+       "w": 560,
+       "h": 469,
+       "text": "👑 Champion Tester · 7.0 kg # Player Mass Eats Eaten Items 1 Tester 7.0 kg 0 0 0 2 Hoover-9 5.0 kg 0 0 0 3 Gearjaw 5.0 kg 0 0 0 4 Magna 5.0 kg 0 0 0 5 Rustbucke"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": false,
+     "dashHit": false,
+     "tags": [
+      "📯",
+      "◀ Hoover-9 · 75 m",
+      "◀ Gearjaw · 182 m",
+      "▼ Magna · 106 m",
+      "◀ Rustbucket · 155 m",
+      "▼ Chomp · 154 m"
+     ]
+    }
+   },
+   "lobbyText": {
+    "halloween": true,
+    "sixPlayers": true,
+    "slots": 6,
+    "slotsFullyVisible": 6,
+    "slotsScrollable": false,
+    "rules": true
+   },
+   "hornTapped": true,
+   "eggWokenByHornButton": true,
+   "resultsRows": 6,
+   "errors": [
+    "console: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED"
+   ]
+  },
+  {
+   "view": "desktop",
+   "lang": "zh",
+   "states": {
+    "lobby": {
+     "file": "renders/review/qa/ui/portal-desktop-zh-lobby.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "lobby": {
+       "x": 0,
+       "y": 0,
+       "w": 1920,
+       "h": 1080,
+       "text": "GROW EVERYTHING 竞技场 最多 6 人 · 万圣节大逃杀 ◎ 0 🛒 商店 EN ⚙ 📖 剧情模式 1 选关卡 1 关 上海SHANGHAI 石库门弄堂环绕东方明珠 2 关 纽约NEW YORK 🔒 赢下第 1 关解锁 3 关 巴黎PARIS 🔒 赢下第 2 关解锁 ★ 加分 废料城SCRAP C"
+      },
+      "start": {
+       "x": 1733,
+       "y": 1008,
+       "w": 130,
+       "h": 56,
+       "text": "开始比赛"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": false,
+     "dashHit": false,
+     "tags": []
+    },
+    "grow": {
+     "file": "renders/review/qa/ui/portal-desktop-zh-grow.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 863,
+       "y": 14,
+       "w": 194,
+       "h": 59,
+       "text": "4:59 万圣节小镇 · 🎃 距离下半场"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 164,
+       "text": "1 👑 Tester（你） ♥♥♥ 5.0 kg 吞 0 · 回收者 2 Magna ♥♥♥ 5.0 kg 3 Rustbucket ♥♥♥ 5.0 kg 4 Scrapper ♥♥♥ 5.0 kg 5 Gearjaw ♥♥♥ 5.0 kg 6 Hoover-9 ♥♥♥ 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "panel": {
+       "x": 24,
+       "y": 915,
+       "w": 282,
+       "h": 143,
+       "text": "质量 1 阶 5.0KG 拾荒机 下一级 · 纸箱和垃圾袋 · 25.2 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester（你）",
+       "sw": 105,
+       "cw": 100
+      }
+     ],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "Magna · 5.0 kg",
+      "◀ Rustbucket · 124 m",
+      "▶ Scrapper · 124 m",
+      "Gearjaw · 5.0 kg",
+      "▶ Hoover-9 · 67 m"
+     ]
+    },
+    "halftime": {
+     "file": "renders/review/qa/ui/portal-desktop-zh-halftime.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 857,
+       "y": 14,
+       "w": 207,
+       "h": 59,
+       "text": "4:59 万圣节小镇 · 👻 它们来了……"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 164,
+       "text": "1 👑 Tester（你） 🏃 5.0 kg 锁定分数 · 还在逃 2 Magna 🏃 5.0 kg 3 Rustbucket 🏃 5.0 kg 4 Scrapper 🏃 5.0 kg 5 Gearjaw 🏃 5.0 kg 6 Hoover-9 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "banner": {
+       "x": 727,
+       "y": 118,
+       "w": 465,
+       "h": 75,
+       "text": "上半场结束 · 分数已锁定 马上变小……有东西要来了"
+      },
+      "panel": {
+       "x": 24,
+       "y": 915,
+       "w": 282,
+       "h": 143,
+       "text": "质量 1 阶 5.0KG 拾荒机 下一级 · 纸箱和垃圾袋 · 25.2 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "Magna · 5.0 kg",
+      "◀ Rustbucket · 125 m",
+      "▶ Scrapper · 124 m",
+      "Gearjaw · 5.0 kg",
+      "▶ Hoover-9 · 67 m"
+     ]
+    },
+    "rise": {
+     "file": "renders/review/qa/ui/portal-desktop-zh-rise.jpg",
+     "realNames": [],
+     "portalNames": [
+      "电击院长",
+      "食人魔",
+      "汽车旅馆老板"
+     ],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 857,
+       "y": 14,
+       "w": 207,
+       "h": 59,
+       "text": "4:56 万圣节小镇 · 👻 它们来了……"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 164,
+       "text": "1 👑 Tester（你） 🏃 5.0 kg 锁定分数 · 还在逃 2 Magna 🏃 5.0 kg 3 Rustbucket 🏃 5.0 kg 4 Scrapper 🏃 5.0 kg 5 Gearjaw 🏃 5.0 kg 6 Hoover-9 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "banner": {
+       "x": 776,
+       "y": 118,
+       "w": 368,
+       "h": 75,
+       "text": "三个 BOSS 苏醒了 吃不掉，打不过——只能逃"
+      },
+      "panel": {
+       "x": 24,
+       "y": 915,
+       "w": 282,
+       "h": 143,
+       "text": "质量 2 阶 120KG 吞吐底盘 下一级 · 大垃圾箱和机器 · 394 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "☠ BOSS · 电击院长",
+      "☠ BOSS · 食人魔",
+      "☠ BOSS · 汽车旅馆老板",
+      "Magna · 120 kg",
+      "◀ Rustbucket · 134 m",
+      "▶ Scrapper · 123 m",
+      "Gearjaw · 120 kg",
+      "▶ Hoover-9 · 74 m"
+     ]
+    },
+    "chase": {
+     "file": "renders/review/qa/ui/portal-desktop-zh-chase.jpg",
+     "realNames": [],
+     "portalNames": [
+      "电击院长",
+      "食人魔",
+      "汽车旅馆老板"
+     ],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 869,
+       "y": 14,
+       "w": 181,
+       "h": 59,
+       "text": "4:52 万圣节小镇 · 👻 活下去！"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 164,
+       "text": "1 👑 Tester（你） 🏃 5.0 kg 锁定分数 · 还在逃 2 Magna 🏃 5.0 kg 3 Rustbucket 🏃 5.0 kg 4 Scrapper 🏃 5.0 kg 5 Gearjaw 🏃 5.0 kg 6 Hoover-9 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "banner": {
+       "x": 796,
+       "y": 118,
+       "w": 328,
+       "h": 75,
+       "text": "快逃！ 电击院长、食人魔、汽车旅馆老板 来抓人了"
+      },
+      "panel": {
+       "x": 24,
+       "y": 915,
+       "w": 282,
+       "h": 143,
+       "text": "质量 2 阶 120KG 吞吐底盘 下一级 · 大垃圾箱和机器 · 394 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "☠ BOSS · 电击院长",
+      "☠ BOSS · 食人魔",
+      "☠ BOSS · 汽车旅馆老板",
+      "Magna · 120 kg",
+      "Rustbucket · 120 kg",
+      "▶ Scrapper · 109 m",
+      "Gearjaw · 120 kg",
+      "▶ Hoover-9 · 79 m"
+     ]
+    },
+    "egg-toast": {
+     "file": "renders/review/qa/ui/portal-desktop-zh-egg-toast.jpg",
+     "realNames": [],
+     "portalNames": [
+      "电击院长",
+      "食人魔",
+      "汽车旅馆老板"
+     ],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 869,
+       "y": 14,
+       "w": 181,
+       "h": 59,
+       "text": "4:51 万圣节小镇 · 👻 活下去！"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 164,
+       "text": "1 👑 Tester（你） 🏃 5.0 kg 锁定分数 · 还在逃 2 Magna 🏃 5.0 kg 3 Rustbucket 🏃 5.0 kg 4 Scrapper 🏃 5.0 kg 5 Gearjaw 🏃 5.0 kg 6 Hoover-9 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "toast": {
+       "x": 838,
+       "y": 648,
+       "w": 244,
+       "h": 17,
+       "text": "有人藏在这里…… 按喇叭 📯 叫醒她！"
+      },
+      "panel": {
+       "x": 24,
+       "y": 915,
+       "w": 282,
+       "h": 143,
+       "text": "质量 2 阶 120KG 吞吐底盘 下一级 · 大垃圾箱和机器 · 394 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "◀ Magna · 188 m",
+      "◀ Rustbucket · 206 m",
+      "◀ Scrapper · 68 m",
+      "◀ Gearjaw · 232 m",
+      "◀ Hoover-9 · 20 m"
+     ]
+    },
+    "egg-banner": {
+     "file": "renders/review/qa/ui/portal-desktop-zh-egg-banner.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 869,
+       "y": 14,
+       "w": 181,
+       "h": 59,
+       "text": "4:51 万圣节小镇 · 👻 活下去！"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 164,
+       "text": "1 👑 Tester（你） 🍳 7.0 kg 锁定分数 · 还在逃 2 Magna 🏃 5.0 kg 3 Rustbucket 🏃 5.0 kg 4 Scrapper 🏃 5.0 kg 5 Gearjaw 🏃 5.0 kg 6 Hoover-9 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "feed": {
+       "x": 1624,
+       "y": 168,
+       "w": 280,
+       "h": 42,
+       "text": "🍳 Tester 叫醒了蛋之谷！隐身 10 秒，分数 +1/3"
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "banner": {
+       "x": 773,
+       "y": 118,
+       "w": 373,
+       "h": 75,
+       "text": "蛋之谷的煎蛋背包！ 隐身 10 秒 · BOSS 看不见你 · 分数 +1/3"
+      },
+      "toast": {
+       "x": 928,
+       "y": 648,
+       "w": 65,
+       "h": 17,
+       "text": "👻 隐身中"
+      },
+      "panel": {
+       "x": 24,
+       "y": 915,
+       "w": 282,
+       "h": 143,
+       "text": "质量 2 阶 120KG 吞吐底盘 下一级 · 大垃圾箱和机器 · 394 kg"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [
+      "board×feed (254×10)"
+     ],
+     "hornHit": true,
+     "dashHit": false,
+     "tags": [
+      "📯",
+      "◀ Magna · 187 m",
+      "◀ Rustbucket · 205 m",
+      "Scrapper · 120 kg",
+      "◀ Gearjaw · 232 m",
+      "◀ Hoover-9 · 21 m"
+     ]
+    },
+    "results": {
+     "file": "renders/review/qa/ui/portal-desktop-zh-results.jpg",
+     "realNames": [],
+     "portalNames": [
+      "汽车旅馆老板"
+     ],
+     "vw": 1920,
+     "vh": 1080,
+     "blocks": {
+      "timer": {
+       "x": 869,
+       "y": 14,
+       "w": 181,
+       "h": 59,
+       "text": "0:00 万圣节小镇 · 👻 活下去！"
+      },
+      "board": {
+       "x": 1650,
+       "y": 14,
+       "w": 254,
+       "h": 164,
+       "text": "1 👑 Tester（你） 🏃 7.0 kg 锁定分数 · 还在逃 2 Magna 🏃 5.0 kg 3 Rustbucket 🏃 5.0 kg 4 Scrapper 🏃 5.0 kg 5 Gearjaw 🏃 5.0 kg 6 Hoover-9 🏃 5.0 kg"
+      },
+      "map": {
+       "x": 1720,
+       "y": 832,
+       "w": 184,
+       "h": 184,
+       "text": ""
+      },
+      "emotes": {
+       "x": 838,
+       "y": 1020,
+       "w": 244,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 988,
+       "y": 1020,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "toast": {
+       "x": 902,
+       "y": 648,
+       "w": 116,
+       "h": 17,
+       "text": "隐身结束 · 快跑！"
+      },
+      "panel": {
+       "x": 24,
+       "y": 915,
+       "w": 282,
+       "h": 143,
+       "text": "质量 2 阶 120KG 吞吐底盘 下一级 · 大垃圾箱和机器 · 394 kg"
+      },
+      "results": {
+       "x": 680,
+       "y": 299,
+       "w": 560,
+       "h": 483,
+       "text": "👑 冠军 Tester · 7.0 kg # 玩家 质量 吞噬 被吞 物件 1 Tester 7.0 kg 0 0 0 2 Magna 5.0 kg 0 0 0 3 Rustbucket 5.0 kg 0 0 0 4 Scrapper 5.0 kg 0 0 0 5 Gearjaw 5.0 kg 0 0 0 6 Hoo"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": false,
+     "dashHit": false,
+     "tags": [
+      "☠ BOSS · 汽车旅馆老板",
+      "📯",
+      "Magna · 120 kg",
+      "◀ Rustbucket · 196 m",
+      "Scrapper · 120 kg",
+      "◀ Gearjaw · 223 m",
+      "Hoover-9 · 120 kg"
+     ]
+    }
+   },
+   "lobbyText": {
+    "halloween": true,
+    "sixPlayers": true,
+    "slots": 6,
+    "slotsFullyVisible": 6,
+    "slotsScrollable": false,
+    "rules": true
+   },
+   "hornTapped": true,
+   "eggWokenByHornButton": true,
+   "resultsRows": 6,
+   "errors": [
+    "console: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED"
+   ]
+  },
+  {
+   "view": "phoneL",
+   "lang": "en",
+   "states": {
+    "lobby": {
+     "file": "renders/review/qa/ui/portal-phoneL-en-lobby.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "lobby": {
+       "x": 0,
+       "y": 0,
+       "w": 844,
+       "h": 390,
+       "text": "GROW EVERYTHING Arena ◎ 0 🛒 中文 ⚙ 📖 1 Pick a level 1 Shanghai Shikumen lanes around the Pearl 2 New York 🔒 Win level 1 to unlock 3 Paris 🔒 Win level 2 to unl"
+      },
+      "start": {
+       "x": 746,
+       "y": 336,
+       "w": 88,
+       "h": 48,
+       "text": "Start"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": false,
+     "dashHit": false,
+     "tags": []
+    },
+    "grow": {
+     "file": "renders/review/qa/ui/portal-phoneL-en-grow.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 310,
+       "y": 4,
+       "w": 225,
+       "h": 46,
+       "text": "4:59 Halloween Town · 🎃 Hunt starts in"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 98,
+       "text": "1 👑 Tester (you) 5.0 kg 2 Hoover-9 5.0 kg 3 Magna 5.0 kg 4 Rustbucket 5.0 kg 5 Chomp 5.0 kg 6 Gearjaw 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "dash": {
+       "x": 738,
+       "y": 286,
+       "w": 84,
+       "h": 84,
+       "text": "DASH"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 67,
+       "text": "TIER 1 5.0KG"
+      }
+     },
+     "offscreen": [
+      {
+       "cls": "tag",
+       "text": "Rustbucket · 5.0 kg",
+       "x": 724,
+       "y": 72,
+       "w": 135,
+       "h": 17
+      }
+     ],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester (you)",
+       "sw": 92,
+       "cw": 84
+      }
+     ],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": true,
+     "tags": [
+      "Hoover-9 · 5.0 kg",
+      "Magna · 5.0 kg",
+      "Rustbucket · 5.0 kg",
+      "Chomp · 5.0 kg",
+      "▶ Gearjaw · 66 m"
+     ]
+    },
+    "halftime": {
+     "file": "renders/review/qa/ui/portal-phoneL-en-halftime.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 297,
+       "y": 4,
+       "w": 250,
+       "h": 46,
+       "text": "4:59 Halloween Town · 👻 They are coming…"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 98,
+       "text": "1 👑 Tester (you) 5.0 kg 2 Hoover-9 5.0 kg 3 Magna 5.0 kg 4 Rustbucket 5.0 kg 5 Chomp 5.0 kg 6 Gearjaw 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "feed": {
+       "x": 8,
+       "y": 84,
+       "w": 230,
+       "h": 43,
+       "text": "🎃 Scores locked. Second half: don’t get caught — caught = score 0!"
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "dash": {
+       "x": 738,
+       "y": 286,
+       "w": 84,
+       "h": 84,
+       "text": "DASH"
+      },
+      "banner": {
+       "x": 199,
+       "y": 86,
+       "w": 446,
+       "h": 53,
+       "text": "HALF TIME · SCORES LOCKED Shrinking… something is coming"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 67,
+       "text": "TIER 1 5.0KG"
+      }
+     },
+     "offscreen": [
+      {
+       "cls": "tag",
+       "text": "Magna · 5.0 kg",
+       "x": -4,
+       "y": 72,
+       "w": 106,
+       "h": 17
+      },
+      {
+       "cls": "tag",
+       "text": "Rustbucket · 5.0 kg",
+       "x": 737,
+       "y": 72,
+       "w": 135,
+       "h": 17
+      }
+     ],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester (you)",
+       "sw": 92,
+       "cw": 84
+      }
+     ],
+     "overlaps": [
+      "feed×banner (39×41)"
+     ],
+     "hornHit": true,
+     "dashHit": true,
+     "tags": [
+      "Hoover-9 · 5.0 kg",
+      "Magna · 5.0 kg",
+      "Rustbucket · 5.0 kg",
+      "Chomp · 5.0 kg",
+      "▶ Gearjaw · 65 m"
+     ]
+    },
+    "rise": {
+     "file": "renders/review/qa/ui/portal-phoneL-en-rise.jpg",
+     "realNames": [],
+     "portalNames": [
+      "The Shock Doctor",
+      "The Cannibal",
+      "The Motel Keeper"
+     ],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 297,
+       "y": 4,
+       "w": 250,
+       "h": 46,
+       "text": "4:56 Halloween Town · 👻 They are coming…"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 98,
+       "text": "1 👑 Tester (you) 5.0 kg 2 Hoover-9 5.0 kg 3 Magna 5.0 kg 4 Rustbucket 5.0 kg 5 Chomp 5.0 kg 6 Gearjaw 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "dash": {
+       "x": 738,
+       "y": 286,
+       "w": 84,
+       "h": 84,
+       "text": "DASH"
+      },
+      "banner": {
+       "x": 278,
+       "y": 86,
+       "w": 288,
+       "h": 53,
+       "text": "3 BOSSES AWAKEN Can't eat them. Can't beat them. RUN."
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 67,
+       "text": "TIER 2 120KG"
+      }
+     },
+     "offscreen": [],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester (you)",
+       "sw": 92,
+       "cw": 84
+      }
+     ],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": true,
+     "tags": [
+      "☠ BOSS · The Shock Doctor",
+      "☠ BOSS · The Cannibal",
+      "☠ BOSS · The Motel Keeper",
+      "Hoover-9 · 120 kg",
+      "Magna · 120 kg",
+      "▶ Rustbucket · 122 m",
+      "Chomp · 120 kg",
+      "▶ Gearjaw · 73 m"
+     ]
+    },
+    "chase": {
+     "file": "renders/review/qa/ui/portal-phoneL-en-chase.jpg",
+     "realNames": [],
+     "portalNames": [
+      "The Shock Doctor",
+      "The Cannibal",
+      "The Motel Keeper"
+     ],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 326,
+       "y": 4,
+       "w": 192,
+       "h": 46,
+       "text": "4:52 Halloween Town · 👻 Survive!"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 98,
+       "text": "1 👑 Tester (you) 5.0 kg 2 Hoover-9 5.0 kg 3 Magna 5.0 kg 4 Rustbucket 5.0 kg 5 Chomp 5.0 kg 6 Gearjaw 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "dash": {
+       "x": 738,
+       "y": 286,
+       "w": 84,
+       "h": 84,
+       "text": "DASH"
+      },
+      "banner": {
+       "x": 179,
+       "y": 86,
+       "w": 486,
+       "h": 53,
+       "text": "RUN! The Shock Doctor, The Cannibal, The Motel Keeper are hunting you"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 67,
+       "text": "TIER 2 120KG"
+      }
+     },
+     "offscreen": [],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester (you)",
+       "sw": 92,
+       "cw": 84
+      }
+     ],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": true,
+     "tags": [
+      "☠ BOSS · The Shock Doctor",
+      "☠ BOSS · The Cannibal",
+      "☠ BOSS · The Motel Keeper",
+      "Hoover-9 · 120 kg",
+      "Magna · 120 kg",
+      "▶ Rustbucket · 109 m",
+      "Chomp · 120 kg",
+      "▶ Gearjaw · 77 m"
+     ]
+    },
+    "egg-toast": {
+     "file": "renders/review/qa/ui/portal-phoneL-en-egg-toast.jpg",
+     "realNames": [],
+     "portalNames": [
+      "The Shock Doctor",
+      "The Cannibal",
+      "The Motel Keeper"
+     ],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 326,
+       "y": 4,
+       "w": 192,
+       "h": 46,
+       "text": "4:51 Halloween Town · 👻 Survive!"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 98,
+       "text": "1 👑 Tester (you) 5.0 kg 2 Hoover-9 5.0 kg 3 Magna 5.0 kg 4 Rustbucket 5.0 kg 5 Chomp 5.0 kg 6 Gearjaw 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "dash": {
+       "x": 738,
+       "y": 286,
+       "w": 84,
+       "h": 84,
+       "text": "DASH"
+      },
+      "toast": {
+       "x": 219,
+       "y": 234,
+       "w": 407,
+       "h": 14,
+       "text": "Someone is hiding here… HONK 📯 to wake her!"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 67,
+       "text": "TIER 2 120KG"
+      }
+     },
+     "offscreen": [],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester (you)",
+       "sw": 92,
+       "cw": 84
+      }
+     ],
+     "overlaps": [],
+     "hornHit": true,
+     "dashHit": true,
+     "tags": [
+      "▶ Hoover-9 · 108 m",
+      "◀ Magna · 72 m",
+      "▶ Rustbucket · 203 m",
+      "Chomp · 120 kg",
+      "▶ Gearjaw · 230 m"
+     ]
+    },
+    "egg-banner": {
+     "file": "renders/review/qa/ui/portal-phoneL-en-egg-banner.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 326,
+       "y": 4,
+       "w": 192,
+       "h": 46,
+       "text": "4:51 Halloween Town · 👻 Survive!"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 98,
+       "text": "1 👑 Tester (you) 7.0 kg 2 Hoover-9 5.0 kg 3 Magna 5.0 kg 4 Rustbucket 5.0 kg 5 Chomp 5.0 kg 6 Gearjaw 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "feed": {
+       "x": 8,
+       "y": 84,
+       "w": 230,
+       "h": 31,
+       "text": "🍳 Tester woke Egg Valley! Invisible for 10s, score +1/3"
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "dash": {
+       "x": 738,
+       "y": 286,
+       "w": 84,
+       "h": 84,
+       "text": "DASH"
+      },
+      "banner": {
+       "x": 228,
+       "y": 86,
+       "w": 388,
+       "h": 53,
+       "text": "EGG VALLEY'S EGG PACK! Invisible 10s · bosses can't see you · score +1/3"
+      },
+      "toast": {
+       "x": 369,
+       "y": 234,
+       "w": 107,
+       "h": 14,
+       "text": "👻 INVISIBLE"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 67,
+       "text": "TIER 2 120KG"
+      }
+     },
+     "offscreen": [],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester (you)",
+       "sw": 92,
+       "cw": 84
+      }
+     ],
+     "overlaps": [
+      "feed×banner (10×29)"
+     ],
+     "hornHit": true,
+     "dashHit": true,
+     "tags": [
+      "📯",
+      "▶ Hoover-9 · 108 m",
+      "◀ Magna · 72 m",
+      "▶ Rustbucket · 202 m",
+      "▶ Chomp · 20 m",
+      "▶ Gearjaw · 229 m"
+     ]
+    },
+    "results": {
+     "file": "renders/review/qa/ui/portal-phoneL-en-results.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 326,
+       "y": 4,
+       "w": 192,
+       "h": 46,
+       "text": "0:00 Halloween Town · 👻 Survive!"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 98,
+       "text": "1 👑 Tester (you) 7.0 kg 2 Hoover-9 5.0 kg 3 Magna 5.0 kg 4 Rustbucket 5.0 kg 5 Chomp 5.0 kg 6 Gearjaw 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "feed": {
+       "x": 8,
+       "y": 84,
+       "w": 230,
+       "h": 31,
+       "text": "🍳 Tester woke Egg Valley! Invisible for 10s, score +1/3"
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "toast": {
+       "x": 336,
+       "y": 234,
+       "w": 173,
+       "h": 14,
+       "text": "Visible again · RUN!"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 67,
+       "text": "TIER 2 120KG"
+      },
+      "results": {
+       "x": 142,
+       "y": 19,
+       "w": 560,
+       "h": 352,
+       "text": "👑 Champion Tester · 7.0 kg # Player Mass Eats Eaten Items 1 Tester 7.0 kg 0 0 0 2 Hoover-9 5.0 kg 0 0 0 3 Magna 5.0 kg 0 0 0 4 Rustbucket 5.0 kg 0 0 0 5 Chomp "
+      }
+     },
+     "offscreen": [],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester (you)",
+       "sw": 92,
+       "cw": 84
+      }
+     ],
+     "overlaps": [],
+     "hornHit": false,
+     "dashHit": false,
+     "tags": [
+      "📯",
+      "▶ Hoover-9 · 106 m",
+      "▼ Magna · 75 m",
+      "▶ Rustbucket · 192 m",
+      "▶ Chomp · 29 m",
+      "▶ Gearjaw · 218 m"
+     ]
+    }
+   },
+   "lobbyText": {
+    "halloween": true,
+    "sixPlayers": true,
+    "slots": 6,
+    "slotsFullyVisible": 6,
+    "slotsScrollable": false,
+    "rules": true
+   },
+   "hornTapped": true,
+   "eggWokenByHornButton": true,
+   "resultsRows": 6,
+   "errors": [
+    "console: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED"
+   ]
+  },
+  {
+   "view": "phoneL",
+   "lang": "zh",
+   "states": {
+    "lobby": {
+     "file": "renders/review/qa/ui/portal-phoneL-zh-lobby.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "lobby": {
+       "x": 0,
+       "y": 0,
+       "w": 844,
+       "h": 390,
+       "text": "GROW EVERYTHING 竞技场 ◎ 0 🛒 EN ⚙ 📖 1 选关卡 1 上海 石库门弄堂环绕东方明珠 2 纽约 🔒 赢下第 1 关解锁 3 巴黎 🔒 赢下第 2 关解锁 ★ 废料城 一切从这条小巷开始 🎃 万圣节小镇 先吃糖长大，再逃离怪物 · 6 人 · 10 分钟 2 选车辆 回收者 各项均衡的"
+      },
+      "start": {
+       "x": 729,
+       "y": 336,
+       "w": 105,
+       "h": 48,
+       "text": "开始比赛"
+      }
+     },
+     "offscreen": [],
+     "clipped": [],
+     "overlaps": [],
+     "hornHit": false,
+     "dashHit": false,
+     "tags": []
+    },
+    "grow": {
+     "file": "renders/review/qa/ui/portal-phoneL-zh-grow.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 348,
+       "y": 4,
+       "w": 149,
+       "h": 46,
+       "text": "4:59 万圣节小镇 · 🎃 距离下半场"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 100,
+       "text": "1 👑 Tester（你） 5.0 kg 2 Hoover-9 5.0 kg 3 Scrapper 5.0 kg 4 Magna 5.0 kg 5 Gearjaw 5.0 kg 6 Chomp 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "dash": {
+       "x": 738,
+       "y": 286,
+       "w": 84,
+       "h": 84,
+       "text": "冲刺"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 69,
+       "text": "1 阶 5.0KG"
+      }
+     },
+     "offscreen": [
+      {
+       "cls": "tag",
+       "text": "Scrapper · 5.0 kg",
+       "x": -4,
+       "y": 72,
+       "w": 121,
+       "h": 17
+      }
+     ],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester（你）",
+       "sw": 89,
+       "cw": 84
+      }
+     ],
+     "overlaps": [
+      "board×map (96×6)"
+     ],
+     "hornHit": true,
+     "dashHit": true,
+     "tags": [
+      "Hoover-9 · 5.0 kg",
+      "Scrapper · 5.0 kg",
+      "Magna · 5.0 kg",
+      "Gearjaw · 5.0 kg",
+      "▶ Chomp · 66 m"
+     ]
+    },
+    "halftime": {
+     "file": "renders/review/qa/ui/portal-phoneL-zh-halftime.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 342,
+       "y": 4,
+       "w": 159,
+       "h": 46,
+       "text": "4:59 万圣节小镇 · 👻 它们来了……"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 100,
+       "text": "1 👑 Tester（你） 5.0 kg 2 Hoover-9 5.0 kg 3 Scrapper 5.0 kg 4 Magna 5.0 kg 5 Gearjaw 5.0 kg 6 Chomp 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "feed": {
+       "x": 8,
+       "y": 84,
+       "w": 230,
+       "h": 34,
+       "text": "🎃 分数已锁定。下半场：别被抓住，被抓分数清零！"
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "dash": {
+       "x": 738,
+       "y": 286,
+       "w": 84,
+       "h": 84,
+       "text": "冲刺"
+      },
+      "banner": {
+       "x": 275,
+       "y": 86,
+       "w": 294,
+       "h": 56,
+       "text": "上半场结束 · 分数已锁定 马上变小……有东西要来了"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 69,
+       "text": "1 阶 5.0KG"
+      }
+     },
+     "offscreen": [
+      {
+       "cls": "tag",
+       "text": "Scrapper · 5.0 kg",
+       "x": -12,
+       "y": 72,
+       "w": 121,
+       "h": 17
+      }
+     ],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester（你）",
+       "sw": 89,
+       "cw": 84
+      }
+     ],
+     "overlaps": [
+      "board×map (96×6)"
+     ],
+     "hornHit": true,
+     "dashHit": true,
+     "tags": [
+      "Hoover-9 · 5.0 kg",
+      "Scrapper · 5.0 kg",
+      "Magna · 5.0 kg",
+      "Gearjaw · 5.0 kg",
+      "▶ Chomp · 66 m"
+     ]
+    },
+    "rise": {
+     "file": "renders/review/qa/ui/portal-phoneL-zh-rise.jpg",
+     "realNames": [],
+     "portalNames": [
+      "电击院长",
+      "食人魔",
+      "汽车旅馆老板"
+     ],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 342,
+       "y": 4,
+       "w": 159,
+       "h": 46,
+       "text": "4:56 万圣节小镇 · 👻 它们来了……"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 100,
+       "text": "1 👑 Tester（你） 5.0 kg 2 Hoover-9 5.0 kg 3 Scrapper 5.0 kg 4 Magna 5.0 kg 5 Gearjaw 5.0 kg 6 Chomp 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "dash": {
+       "x": 738,
+       "y": 286,
+       "w": 84,
+       "h": 84,
+       "text": "冲刺"
+      },
+      "banner": {
+       "x": 306,
+       "y": 86,
+       "w": 232,
+       "h": 56,
+       "text": "三个 BOSS 苏醒了 吃不掉，打不过——只能逃"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 69,
+       "text": "2 阶 120KG"
+      }
+     },
+     "offscreen": [
+      {
+       "cls": "tag",
+       "text": "Magna · 120 kg",
+       "x": 764,
+       "y": 79,
+       "w": 109,
+       "h": 17
+      }
+     ],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester（你）",
+       "sw": 89,
+       "cw": 84
+      }
+     ],
+     "overlaps": [
+      "board×map (96×6)"
+     ],
+     "hornHit": true,
+     "dashHit": true,
+     "tags": [
+      "☠ BOSS · 电击院长",
+      "☠ BOSS · 食人魔",
+      "☠ BOSS · 汽车旅馆老板",
+      "Hoover-9 · 120 kg",
+      "Scrapper · 120 kg",
+      "Magna · 120 kg",
+      "Gearjaw · 120 kg",
+      "▶ Chomp · 73 m"
+     ]
+    },
+    "chase": {
+     "file": "renders/review/qa/ui/portal-phoneL-zh-chase.jpg",
+     "realNames": [],
+     "portalNames": [
+      "电击院长",
+      "食人魔",
+      "汽车旅馆老板"
+     ],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 353,
+       "y": 4,
+       "w": 139,
+       "h": 46,
+       "text": "4:52 万圣节小镇 · 👻 活下去！"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 100,
+       "text": "1 👑 Tester（你） 5.0 kg 2 Hoover-9 5.0 kg 3 Scrapper 5.0 kg 4 Magna 5.0 kg 5 Gearjaw 5.0 kg 6 Chomp 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "dash": {
+       "x": 738,
+       "y": 286,
+       "w": 84,
+       "h": 84,
+       "text": "冲刺"
+      },
+      "banner": {
+       "x": 308,
+       "y": 86,
+       "w": 228,
+       "h": 56,
+       "text": "快逃！ 电击院长、食人魔、汽车旅馆老板 来抓人了"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 69,
+       "text": "2 阶 120KG"
+      }
+     },
+     "offscreen": [],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester（你）",
+       "sw": 89,
+       "cw": 84
+      }
+     ],
+     "overlaps": [
+      "board×map (96×6)"
+     ],
+     "hornHit": true,
+     "dashHit": true,
+     "tags": [
+      "☠ BOSS · 电击院长",
+      "☠ BOSS · 食人魔",
+      "☠ BOSS · 汽车旅馆老板",
+      "Hoover-9 · 120 kg",
+      "Scrapper · 120 kg",
+      "▶ Magna · 111 m",
+      "Gearjaw · 120 kg",
+      "▶ Chomp · 77 m"
+     ]
+    },
+    "egg-toast": {
+     "file": "renders/review/qa/ui/portal-phoneL-zh-egg-toast.jpg",
+     "realNames": [],
+     "portalNames": [
+      "电击院长",
+      "食人魔",
+      "汽车旅馆老板"
+     ],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 353,
+       "y": 4,
+       "w": 139,
+       "h": 46,
+       "text": "4:51 万圣节小镇 · 👻 活下去！"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 100,
+       "text": "1 👑 Tester（你） 5.0 kg 2 Hoover-9 5.0 kg 3 Scrapper 5.0 kg 4 Magna 5.0 kg 5 Gearjaw 5.0 kg 6 Chomp 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "dash": {
+       "x": 738,
+       "y": 286,
+       "w": 84,
+       "h": 84,
+       "text": "冲刺"
+      },
+      "toast": {
+       "x": 300,
+       "y": 234,
+       "w": 244,
+       "h": 17,
+       "text": "有人藏在这里…… 按喇叭 📯 叫醒她！"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 69,
+       "text": "2 阶 120KG"
+      }
+     },
+     "offscreen": [],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester（你）",
+       "sw": 89,
+       "cw": 84
+      }
+     ],
+     "overlaps": [
+      "board×map (96×6)"
+     ],
+     "hornHit": true,
+     "dashHit": true,
+     "tags": [
+      "◀ Hoover-9 · 187 m",
+      "◀ Scrapper · 207 m",
+      "◀ Magna · 69 m",
+      "◀ Gearjaw · 232 m",
+      "◀ Chomp · 21 m"
+     ]
+    },
+    "egg-banner": {
+     "file": "renders/review/qa/ui/portal-phoneL-zh-egg-banner.jpg",
+     "realNames": [],
+     "portalNames": [],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 353,
+       "y": 4,
+       "w": 139,
+       "h": 46,
+       "text": "4:51 万圣节小镇 · 👻 活下去！"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 100,
+       "text": "1 👑 Tester（你） 7.0 kg 2 Hoover-9 5.0 kg 3 Scrapper 5.0 kg 4 Magna 5.0 kg 5 Gearjaw 5.0 kg 6 Chomp 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "feed": {
+       "x": 8,
+       "y": 84,
+       "w": 230,
+       "h": 34,
+       "text": "🍳 Tester 叫醒了蛋之谷！隐身 10 秒，分数 +1/3"
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "dash": {
+       "x": 738,
+       "y": 286,
+       "w": 84,
+       "h": 84,
+       "text": "冲刺"
+      },
+      "banner": {
+       "x": 300,
+       "y": 86,
+       "w": 244,
+       "h": 56,
+       "text": "蛋之谷的煎蛋背包！ 隐身 10 秒 · BOSS 看不见你 · 分数 +1/3"
+      },
+      "toast": {
+       "x": 390,
+       "y": 234,
+       "w": 65,
+       "h": 17,
+       "text": "👻 隐身中"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 69,
+       "text": "2 阶 120KG"
+      }
+     },
+     "offscreen": [],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester（你）",
+       "sw": 89,
+       "cw": 84
+      }
+     ],
+     "overlaps": [
+      "board×map (96×6)"
+     ],
+     "hornHit": true,
+     "dashHit": true,
+     "tags": [
+      "📯",
+      "◀ Hoover-9 · 186 m",
+      "◀ Scrapper · 206 m",
+      "Magna · 120 kg",
+      "◀ Gearjaw · 232 m",
+      "◀ Chomp · 22 m"
+     ]
+    },
+    "results": {
+     "file": "renders/review/qa/ui/portal-phoneL-zh-results.jpg",
+     "realNames": [],
+     "portalNames": [
+      "电击院长",
+      "食人魔",
+      "汽车旅馆老板"
+     ],
+     "vw": 844,
+     "vh": 390,
+     "blocks": {
+      "timer": {
+       "x": 353,
+       "y": 4,
+       "w": 139,
+       "h": 46,
+       "text": "0:00 万圣节小镇 · 👻 活下去！"
+      },
+      "board": {
+       "x": 664,
+       "y": 6,
+       "w": 172,
+       "h": 100,
+       "text": "1 👑 Tester（你） 7.0 kg 2 Hoover-9 5.0 kg 3 Scrapper 5.0 kg 4 Magna 5.0 kg 5 Gearjaw 5.0 kg 6 Chomp 5.0 kg"
+      },
+      "map": {
+       "x": 740,
+       "y": 100,
+       "w": 96,
+       "h": 96,
+       "text": ""
+      },
+      "emotes": {
+       "x": 304,
+       "y": 340,
+       "w": 236,
+       "h": 44,
+       "text": "😂 👋 🐷 📯 🎥"
+      },
+      "horn": {
+       "x": 448,
+       "y": 340,
+       "w": 44,
+       "h": 44,
+       "text": "📯"
+      },
+      "toast": {
+       "x": 364,
+       "y": 234,
+       "w": 116,
+       "h": 17,
+       "text": "隐身结束 · 快跑！"
+      },
+      "panel": {
+       "x": 8,
+       "y": 6,
+       "w": 158,
+       "h": 69,
+       "text": "2 阶 120KG"
+      },
+      "results": {
+       "x": 142,
+       "y": 16,
+       "w": 560,
+       "h": 358,
+       "text": "👑 冠军 Tester · 7.0 kg # 玩家 质量 吞噬 被吞 物件 1 Tester 7.0 kg 0 0 0 2 Hoover-9 5.0 kg 0 0 0 3 Scrapper 5.0 kg 0 0 0 4 Magna 5.0 kg 0 0 0 5 Gearjaw 5.0 kg 0 0 0 6 Chomp"
+      }
+     },
+     "offscreen": [
+      {
+       "cls": "tag hunter",
+       "text": "☠ BOSS · 电击院长",
+       "x": -50,
+       "y": 64,
+       "w": 139,
+       "h": 23
+      },
+      {
+       "cls": "tag hunter",
+       "text": "☠ BOSS · 食人魔",
+       "x": -51,
+       "y": 65,
+       "w": 126,
+       "h": 23
+      }
+     ],
+     "clipped": [
+      {
+       "cls": "nm",
+       "text": "👑 Tester（你）",
+       "sw": 89,
+       "cw": 84
+      }
+     ],
+     "overlaps": [
+      "board×map (96×6)"
+     ],
+     "hornHit": false,
+     "dashHit": false,
+     "tags": [
+      "☠ BOSS · 电击院长",
+      "☠ BOSS · 食人魔",
+      "☠ BOSS · 汽车旅馆老板",
+      "📯",
+      "Hoover-9 · 120 kg",
+      "◀ Scrapper · 198 m",
+      "Magna · 120 kg",
+      "Gearjaw · 120 kg",
+      "Chomp · 120 kg"
+     ]
+    }
+   },
+   "lobbyText": {
+    "halloween": true,
+    "sixPlayers": true,
+    "slots": 6,
+    "slotsFullyVisible": 6,
+    "slotsScrollable": false,
+    "rules": true
+   },
+   "hornTapped": true,
+   "eggWokenByHornButton": true,
+   "resultsRows": 6,
+   "errors": [
+    "console: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED"
+   ]
+  }
+ ]
+}

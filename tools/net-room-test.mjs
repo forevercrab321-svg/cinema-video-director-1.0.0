@@ -58,7 +58,23 @@ Object.defineProperty(globalThis, 'performance', {
   value: { now: () => now - t0, getEntriesByType: () => [{ type: forceId ? 'reload' : 'navigate' }] },
   configurable: true,
 });
-const flush = () => new Promise((r) => realImmediate(r));
+// WebCrypto (the lease's ECDSA sign / verify / key ops) resolves on a worker thread: under CPU
+// load one setImmediate is not enough and virtual time ran ahead of a pending signature (the
+// "~1 in 4" lease-mode flake). Count the in-flight crypto ops and let flush() wait for them.
+let cryptoInFlight = 0;
+{
+  const subtle = globalThis.crypto?.subtle;
+  if (subtle) for (const k of ['sign', 'verify', 'importKey', 'exportKey', 'generateKey', 'digest']) {
+    const orig = subtle[k]?.bind(subtle);
+    if (!orig) continue;
+    Object.defineProperty(subtle, k, { configurable: true, value: (...a) => { cryptoInFlight++; return orig(...a).finally(() => cryptoInFlight--); } });
+  }
+}
+const flush = async () => {
+  await new Promise((r) => realImmediate(r));
+  for (let i = 0; cryptoInFlight > 0 && i < 10000; i++) await new Promise((r) => realImmediate(r));
+  await new Promise((r) => realImmediate(r));
+};
 async function advanceTo(target) {
   for (;;) {
     let next = null;

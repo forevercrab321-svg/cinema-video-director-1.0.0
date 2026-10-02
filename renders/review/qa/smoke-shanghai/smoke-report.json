@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-02T06:23:27.416Z",
+  "date": "2026-10-02T06:34:42.767Z",
   "base": "http://127.0.0.1:5196/game/",
   "viewport": {
     "width": 960,
@@ -9,21 +9,21 @@
   "tiers": {
     "low": {
       "tier": "low",
-      "loadMs": 29529,
+      "loadMs": 35602,
       "lobby": {
         "mean": 132.6,
         "std": 37.1,
         "colours": 341
       },
       "dash": {
-        "mean": 106.6,
-        "std": 43,
-        "colours": 389
+        "mean": 105.8,
+        "std": 38.5,
+        "colours": 392
       },
       "play": {
-        "mean": 115.3,
-        "std": 28.7,
-        "colours": 187
+        "mean": 101.9,
+        "std": 32.4,
+        "colours": 238
       },
       "start": {
         "x": 0,
@@ -34,14 +34,14 @@
         "dashCooldown": 0
       },
       "end": {
-        "x": -7.685845023102774,
-        "z": 87.84062501054642,
-        "mass": 7.680858094765031,
+        "x": -8.349623525891918,
+        "z": 83.39957198667727,
+        "mass": 7.098103631980385,
         "alive": true,
         "dashTime": 0,
         "dashCooldown": 0
       },
-      "moved": 4.111228373767388,
+      "moved": 6.963040625000502,
       "gpu": {
         "round1": {
           "textures": 33,
@@ -50,7 +50,7 @@
         "restarts": [
           {
             "textures": 123,
-            "geometries": 61
+            "geometries": 60
           },
           {
             "textures": 123,
@@ -84,7 +84,7 @@
       "tier": "low",
       "name": "W moves the machine",
       "pass": true,
-      "detail": "4.11 m in 2 s"
+      "detail": "6.96 m in 2 s"
     },
     {
       "tier": "low",
@@ -96,25 +96,25 @@
       "tier": "low",
       "name": "MASS grows from eating",
       "pass": true,
-      "detail": "5.0 → 7.7 kg"
+      "detail": "5.0 → 7.1 kg"
     },
     {
       "tier": "low",
       "name": "gameplay canvas is not blank",
       "pass": true,
-      "detail": "{\"mean\":115.3,\"std\":28.7,\"colours\":187}"
+      "detail": "{\"mean\":101.9,\"std\":32.4,\"colours\":238}"
     },
     {
       "tier": "low",
       "name": "dash frame is not blank",
       "pass": true,
-      "detail": "{\"mean\":106.6,\"std\":43,\"colours\":389}"
+      "detail": "{\"mean\":105.8,\"std\":38.5,\"colours\":392}"
     },
     {
       "tier": "low",
       "name": "restart does not leak GPU textures/geometries",
       "pass": true,
-      "detail": "round textures 33 → 123 → 123, geometries 0 → 61 → 60"
+      "detail": "round textures 33 → 123 → 123, geometries 0 → 60 → 60"
     },
     {
       "tier": "low",

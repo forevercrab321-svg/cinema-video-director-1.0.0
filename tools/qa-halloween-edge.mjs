@@ -174,6 +174,7 @@ async function honkcatch() {
     me.z = h.egg.z;
     me.speed = 0;
     me.invulnerableUntil = 0;
+    h.egg.botHonkAt = 1e9; // AI rivals must not wake her during this experiment
     for (const v of h.hunters) { v.x = me.x; v.z = me.z; v.lungeUntil = 0; }
     g.emote(6);
     return { stage: h.stage() };
@@ -231,7 +232,7 @@ async function stealth10() {
   await stepTo(p, 308, 0.5);
   let s;
   for (let i = 0; i < 6; i++) {
-    await p.evaluate(({ i }) => { const g = window.__ARENA__.game(); for (const v of g.hunt.hunters) { v.x = 0; v.z = 0; } const me = g.local; me.x = g.hunt.egg.x + 1.5; me.z = g.hunt.egg.z; me.speed = 0; if (i % 3 === 0) g.emote(6); }, { i });
+    await p.evaluate(({ i }) => { const g = window.__ARENA__.game(); g.hunt.egg.botHonkAt = 1e9; for (const v of g.hunt.hunters) { v.x = 0; v.z = 0; } const me = g.local; me.x = g.hunt.egg.x + 1.5; me.z = g.hunt.egg.z; me.speed = 0; if (i % 3 === 0) g.emote(6); }, { i });
     s = await step(p, 0.2);
     if (s.hunt.egg.by) break;
   }
@@ -243,8 +244,8 @@ async function stealth10() {
     const x = await step(p, 0.2);
     if (x.hunt?.caught.includes(x.me)) caughtAt = x.t;
   }
-  console.log(`      woke at ${egAt}, bosses parked on the machine from then on, caught at ${caughtAt}`);
-  ok(s.hunt.egg.by && caughtAt !== null && caughtAt >= egAt + 10 - 0.05 && caughtAt <= egAt + 10.6, `[stealth10] invisible for the full 10 s, catchable right after (caught at +${caughtAt === null ? '—' : (caughtAt - egAt).toFixed(2)} s)`);
+  console.log(`      woke by ${s.hunt.egg.by} (me ${s.me}) at ${egAt}, bosses parked on the machine from then on, caught at ${caughtAt}`);
+  ok(s.hunt.egg.by === s.me && caughtAt !== null && caughtAt >= egAt + 10 - 0.05 && caughtAt <= egAt + 10.6, `[stealth10] invisible for the full 10 s, catchable right after (caught at +${caughtAt === null ? '—' : (caughtAt - egAt).toFixed(2)} s)`);
   ok(errors.length === 0, `[stealth10] no page errors ${errors.slice(0, 3).join(' | ')}`);
   results.stealth10 = { egAt, caughtAt };
   await ctx.close();
@@ -259,7 +260,7 @@ async function falsewake() {
   await p.evaluate(() => (window.__ARENA__.game().matchTime = 299.5));
   await stepTo(p, 307, 0.5);
   // Honk far from her (at the plaza edge), let the bubble expire.
-  await p.evaluate(() => { const g = window.__ARENA__.game(); for (const v of g.hunt.hunters) { v.x = 0; v.z = 0; } g.emote(6); });
+  await p.evaluate(() => { const g = window.__ARENA__.game(); g.hunt.egg.botHonkAt = 1e9; for (const v of g.hunt.hunters) { v.x = 0; v.z = 0; } g.emote(6); });
   await step(p, 3);
   const r = await p.evaluate(() => {
     const g = window.__ARENA__.game();
@@ -286,7 +287,7 @@ async function guesthonk() {
   let woke = null;
   for (let i = 0; i < 30; i++) {
     // Keep the bosses off both machines for the experiment (host simulates them).
-    await host.p.evaluate(() => { const gm = window.__ARENA__.game(); for (const v of gm.hunt.hunters) { v.x = 0; v.z = 0; } });
+    await host.p.evaluate(() => { const gm = window.__ARENA__.game(); gm.hunt.egg.botHonkAt = 1e9; for (const v of gm.hunt.hunters) { v.x = 0; v.z = 0; } });
     await guest.p.evaluate(({ x, z, i }) => { const gm = window.__ARENA__.game(); if (!gm.local?.alive) return; gm.local.x = x + 1.5; gm.local.z = z; gm.local.speed = 0; if (i % 6 === 0) gm.emote(6); }, { ...egg, i });
     [h, g] = await both(0.1, 0.1, [host, guest]);
     if (h.hunt.egg.by) { woke = h.hunt.egg.by; break; }

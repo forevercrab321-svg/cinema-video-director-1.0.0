@@ -23,9 +23,14 @@ export const HALLOWEEN = {
   /** Villain size (m) and catch reach (m, added to the runner's radius). */
   hunterHeight: 3.0,
   hunterReach: 0.6,
-  /** Villain speed as a share of a standard machine's top speed at huntMass, ramping over the hunt. */
-  speedStart: 0.85,
-  speedEnd: 1.0,
+  /**
+   * Villain speed as a share of a standard machine's top speed at huntMass, ramping over the hunt.
+   * Audit 2026-10-02 (tools/halloween-balance.mjs, 6 AI runners): 0.92→1.12 with a 1.7× lunge and
+   * 0.75 m reach caught 86 % of machines and the first-half leader in 12/12 rounds; 0.82→0.96,
+   * 1.35× and 0.6 m catch 59 % and the leader in 5/16 (humans dash and juke better than the AI).
+   */
+  speedStart: 0.82,
+  speedEnd: 0.96,
   /** Close to its target a villain lunges: speed × lungeMul for lungeSeconds, then cools down. */
   lungeRange: 6,
   lungeMul: 1.35,
@@ -56,13 +61,13 @@ export const EGG = {
   height: 2.0,
   /** Golden egg sparkles give her away within hintRange m; a translucent ghost within ghostRange. */
   hintRange: 15,
-  ghostRange: 8,
+  ghostRange: 6,
   /** Honk within this distance (m, plus the machine's radius) to wake her. */
-  wakeRange: 8,
+  wakeRange: 4,
   stealthSeconds: 10,
   scoreBonus: 1 / 3,
   /** An AI rival next to her honks with this chance per second. */
-  botHonkChance: 0.8,
+  botHonkChance: 0.35,
 } as const;
 
 export type HunterKind = 'shock' | 'cannibal' | 'motel';
