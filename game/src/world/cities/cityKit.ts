@@ -159,6 +159,7 @@ export function makeCity(style: CityStyle): CityDef {
   const pick = <T>(list: readonly T[]) => list[Math.floor(rand() * list.length)];
   const taken: Rect[] = [];
   let graveyard: Rect | null = null;
+  let patch: Rect | null = null; // themed site ground (pumpkin patch)
   const free = (r: Rect, pad: number) => !taken.some((t) => r.x0 < t.x1 + pad && r.x1 > t.x0 - pad && r.z0 < t.z1 + pad && r.z1 > t.z0 - pad);
   const inPlaza = (r: Rect, pad: number) => {
     const cx = THREE.MathUtils.clamp(0, r.x0, r.x1);
@@ -336,6 +337,7 @@ export function makeCity(style: CityStyle): CityDef {
     const cx = (r.x0 + r.x1) / 2;
     const cz = (r.z0 + r.z1) / 2;
     if (style.siteKit) {
+      patch = { x0: r.x0 + WALK + 1, x1: r.x1 - WALK - 1, z0: r.z0 + WALK + 1, z1: r.z1 - WALK - 1 };
       for (const [type, dx, dz, yaw] of style.siteKit) if (fits(type, cx + dx, cz + dz, yaw, 0.6)) place(type, cx + dx, cz + dz, yaw);
       for (const [type, radius, count] of style.siteFood ?? []) clusters.push({ type, x: cx, z: cz, radius, count });
       return;
@@ -495,7 +497,7 @@ export function makeCity(style: CityStyle): CityDef {
     spawn: spawns[0],
     spawns,
     ...(style.starterRing ? { starterRing: style.starterRing } : {}),
-    build: (lib) => buildDistrict(lib, style, perimeter, faces, graveyard),
+    build: (lib) => buildDistrict(lib, style, perimeter, faces, graveyard, patch),
     dressing: { trees, crown: style.treeCrown, seed: style.seed, ...(style.deadTrees ? { dead: true } : {}) },
     climaxName: style.climaxName,
     climaxNameZh: style.climaxNameZh,
@@ -503,7 +505,7 @@ export function makeCity(style: CityStyle): CityDef {
 }
 
 // ── Static district: ground, roads, markings, kerbs, lights, perimeter facades, skyline ──
-function buildDistrict(lib: MaterialLibrary, style: CityStyle, perimeter: StaticBlock[], faces: { block: StaticBlock; cx: number; cz: number; ry: number; len: number }[], graveyard: Rect | null = null): CityBuild {
+function buildDistrict(lib: MaterialLibrary, style: CityStyle, perimeter: StaticBlock[], faces: { block: StaticBlock; cx: number; cz: number; ry: number; len: number }[], graveyard: Rect | null = null, patch: Rect | null = null): CityBuild {
   const batch = new Batch();
   const occluders: THREE.Object3D[] = [];
   const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d);
@@ -540,6 +542,7 @@ function buildDistrict(lib: MaterialLibrary, style: CityStyle, perimeter: Static
     batch.add('sidewalk', box(3.2, 0.014, g.z1 - g.z0), gx, CURB + 0.007, gz);
     batch.add('sidewalk', box(g.x1 - g.x0, 0.014, 3.2), gx, CURB + 0.007, gz);
   }
+  if (patch) batch.add('gravel', box(patch.x1 - patch.x0, 0.012, patch.z1 - patch.z0), (patch.x0 + patch.x1) / 2, CURB + 0.006, (patch.z0 + patch.z1) / 2);
   batch.add('curb', new THREE.TorusGeometry(PLAZA_R, 0.1, 4, 64).rotateX(Math.PI / 2), 0, CURB, 0);
   // Plaza paving rings and radial joints.
   for (const r of [8, 14, 20, 26]) batch.add('paintLine', new THREE.RingGeometry(r - 0.12, r + 0.12, 64).rotateX(-Math.PI / 2), 0, CURB + 0.004, 0);
