@@ -76,11 +76,13 @@ Each owner applies the shrink and revive to its own machine (as with mass today)
   - `submit_match` accepts up to 6 rows and up to 630 s.
   - Until 0007 is applied, a 6-player room still plays. The directory shows at most 4, and a 5–6-row result submission is rejected (coins are client-side anyway).
 
-## Status (2026-10-02)
+## Status (2026-10-02, release candidate rev 5)
 
 | Part | State | Evidence |
 | --- | --- | --- |
-| Hunt mode (lock, shrink, rise, chase, catch, ranking) | DONE | `node tools/halloween-test.mjs` — solo (6 machines, full 10 min) + duo over LocalNet, all checks pass; 4 of 6 caught per round, trailing machines can win |
+| Hunt mode (lock, shrink, rise, chase, catch, ranking) | DONE | `node tools/halloween-test.mjs` — solo (6 machines, full 10 min) + duo over LocalNet, all checks pass. Balance (`tools/halloween-balance.mjs`, 16 rounds): 59 % caught, first-half leader caught in 5/16, trailing machines can win |
+| Egg Valley / 蛋之谷 | DONE | duo test (same spot on both pages, wake, stealth, +1/3); `tools/qa-halloween-edge.mjs` (honk-vs-catch frame, full 10 s stealth, guest honk); `tools/qa-egg-spots.mjs` (24 seeds reachable, never in the plaza) |
+| UI (EN / 中文, phone / tablet / desktop) | DONE | `tools/qa-halloween-ui.mjs` → `renders/review/qa/ui/`: no off-screen blocks, board clears the minimap; only transient banners overlap the feed on small phones |
 | Map (Halloween-only, 541 placements, classes 0–8) | DONE | `renders/review/halloween/*.jpg`; other cities hash-identical |
 | Villains (3 bosses) | DONE, NEEDS CD REVIEW | `renders/review/hunters/` |
 | Atmosphere / VFX | DONE | `renders/review/halloween-fx/`, 8–10 draw calls |

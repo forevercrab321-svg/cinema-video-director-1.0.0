@@ -79,34 +79,34 @@ export type HunterKind = 'shock' | 'cannibal' | 'motel';
  */
 export const PORTAL_REAL_NAMES = false;
 
+/**
+ * Vite replaces `import.meta.env.VITE_PORTAL_BUILD` at build time, so in a portal build `REAL` is
+ * the constant `false` and the real names are dropped from the bundle (platform review greps it).
+ * Node tools that import this file have no `import.meta.env`: they get the real names.
+ */
+// `?.` keeps Node (no import.meta.env) working; Vite still folds the whole expression.
+const PORTAL: boolean = import.meta.env?.VITE_PORTAL_BUILD === '1';
+const REAL = !PORTAL || PORTAL_REAL_NAMES;
+
 export interface HunterDef {
   kind: HunterKind;
+  /** The name this build shows (the real name, or the neutral nickname in portal builds). */
   name: string;
   nameZh: string;
-  portalName: string;
-  portalNameZh: string;
   /** Feed line when this villain catches someone. */
   catchLine: string;
   catchLineZh: string;
 }
 
 export const HUNTERS: readonly HunterDef[] = [
-  { kind: 'shock', name: 'Yang Yongxin', nameZh: '杨永信', portalName: 'The Shock Doctor', portalNameZh: '电击院长', catchLine: 'zapped', catchLineZh: '电晕了' },
-  { kind: 'cannibal', name: 'Hannibal', nameZh: '汉尼拔', portalName: 'The Cannibal', portalNameZh: '食人魔', catchLine: 'had for dinner', catchLineZh: '当成了晚餐' },
-  { kind: 'motel', name: 'Norman Bates', nameZh: '诺曼·贝茨', portalName: 'The Motel Keeper', portalNameZh: '汽车旅馆老板', catchLine: 'checked in', catchLineZh: '请进了旅馆' },
+  { kind: 'shock', name: REAL ? 'Yang Yongxin' : 'The Shock Doctor', nameZh: REAL ? '杨永信' : '电击院长', catchLine: 'zapped', catchLineZh: '电晕了' },
+  { kind: 'cannibal', name: REAL ? 'Hannibal' : 'The Cannibal', nameZh: REAL ? '汉尼拔' : '食人魔', catchLine: 'had for dinner', catchLineZh: '当成了晚餐' },
+  { kind: 'motel', name: REAL ? 'Norman Bates' : 'The Motel Keeper', nameZh: REAL ? '诺曼·贝茨' : '汽车旅馆老板', catchLine: 'checked in', catchLineZh: '请进了旅馆' },
 ];
-
-const portal = (() => {
-  try {
-    return (import.meta as { env?: Record<string, string> }).env?.VITE_PORTAL_BUILD === '1';
-  } catch {
-    return false;
-  }
-})();
 
 /** Display name of a villain for this build ([zh, en]). */
 export function hunterName(h: HunterDef): [string, string] {
-  return portal && !PORTAL_REAL_NAMES ? [h.portalNameZh, h.portalName] : [h.nameZh, h.name];
+  return [h.nameZh, h.name];
 }
 
 export const isHalloween = (city: string | undefined): boolean => city === HALLOWEEN_CITY;
