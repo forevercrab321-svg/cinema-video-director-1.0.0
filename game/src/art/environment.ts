@@ -135,6 +135,11 @@ export function createSkyDome(radius = 900, palette: Palette = GOLDEN_HOUR): THR
 /** Sky bakes per renderer and palette: rounds reuse them (each bake is a PMREM render target). */
 const skyBakes = new WeakMap<THREE.WebGLRenderer, Map<Palette, THREE.Texture>>();
 
+/** After a WebGL context loss the bakes' render targets are empty: forget them so the next call re-bakes. */
+export function forgetSkyBakes(renderer: THREE.WebGLRenderer): void {
+  skyBakes.delete(renderer);
+}
+
 /** Fallback when the HDRI cannot load: environment baked from the procedural sky (cached per palette). */
 export function bakeSkyEnvironment(renderer: THREE.WebGLRenderer, palette: Palette = GOLDEN_HOUR): THREE.Texture {
   let bakes = skyBakes.get(renderer);

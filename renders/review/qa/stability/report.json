@@ -1,0 +1,306 @@
+{
+ "date": "2026-10-02T13:47:57.406Z",
+ "dir": "/tmp/claude-0/-home-user-cinema-video-director-1-0-0/07ed8f8f-3445-53b9-9779-d0cd8c138488/scratchpad/cg",
+ "cpu": 1,
+ "playSeconds": 40,
+ "scenarios": {
+  "refuse": {
+   "backend": "refuse",
+   "errors": [
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+   ],
+   "warnings": [
+    "[net] realtime arena:GYK3L CHANNEL_ERROR Error: channel error: transport failure\n    at at (http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:17390)\n    at http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:22204\n    at Object.callback (http://127.0.0.1:34657/game/assets/supabase-VaY9",
+    "[net] realtime arena:GYK3L CLOSED ",
+    "[net] realtime arena:GYK3L CLOSED ",
+    "[net] realtime arena:GYK3L CLOSED ",
+    "[net] realtime arena:GYK3L CHANNEL_ERROR Error: channel error: transport failure\n    at at (http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:17390)\n    at http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:22204\n    at Object.callback (http://127.0.0.1:34657/game/assets/supabase-VaY9",
+    "[net] realtime arena:GYK3L CLOSED ",
+    "[net] realtime arena:GYK3L CHANNEL_ERROR Error: channel error: transport failure\n    at at (http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:17390)\n    at http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:22204\n    at Object.callback (http://127.0.0.1:34657/game/assets/supabase-VaY9",
+    "[net] realtime arena:GYK3L CLOSED ",
+    "[net] realtime arena:GYK3L CHANNEL_ERROR Error: channel error: transport failure\n    at at (http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:17390)\n    at http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:22204\n    at Object.callback (http://127.0.0.1:34657/game/assets/supabase-VaY9",
+    "[net] realtime arena:GYK3L CLOSED ",
+    "[net] realtime arena:GYK3L CHANNEL_ERROR Error: channel error: transport failure\n    at at (http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:17390)\n    at http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:22204\n    at Object.callback (http://127.0.0.1:34657/game/assets/supabase-VaY9",
+    "[net] realtime arena:GYK3L CLOSED "
+   ],
+   "timeline": [
+    {
+     "t": 1.5,
+     "what": "host page loaded"
+    },
+    {
+     "t": 8.6,
+     "what": "room browser shown",
+     "status": "Connecting…"
+    },
+    {
+     "t": 30.1,
+     "what": "clicked Quick play vs AI"
+    },
+    {
+     "t": 31.1,
+     "what": "ready to start",
+     "boot": false,
+     "bootText": "",
+     "hub": false,
+     "hubStatus": null,
+     "lobby": true,
+     "start": {
+      "disabled": false,
+      "text": "Warm up vs AI\nrestarts when a friend joi"
+     },
+     "arena": true,
+     "phase": "lobby",
+     "cg": [
+      "init",
+      "game.loadingStart",
+      "game.addSettingsChangeListener",
+      "game.addAuthListener",
+      "game.addJoinRoomListener",
+      "game.loadingStop"
+     ]
+    },
+    {
+     "t": 55.1,
+     "what": "lobby rebuilds in 10 s idle",
+     "n": 0
+    },
+    {
+     "t": 55.1,
+     "what": "phase before clicking Start",
+     "phase": "countdown"
+    },
+    {
+     "t": 55.1,
+     "what": "clicked Start"
+    },
+    {
+     "t": 75.3,
+     "what": "phase",
+     "phase": "countdown"
+    }
+   ],
+   "requests": {
+    "supabase": 71,
+    "failed": 0
+   },
+   "loadState": {
+    "boot": false,
+    "bootText": "",
+    "hub": false,
+    "hubStatus": null,
+    "lobby": true,
+    "start": {
+     "disabled": false,
+     "text": "Warm up vs AI\nrestarts when a friend joi"
+    },
+    "arena": true,
+    "phase": "lobby",
+    "cg": [
+     "init",
+     "game.loadingStart",
+     "game.addSettingsChangeListener",
+     "game.addAuthListener",
+     "game.addJoinRoomListener",
+     "game.loadingStop"
+    ]
+   },
+   "lobbyRebuildsPer10s": 0,
+   "phaseBeforeStart": "countdown"
+  },
+  "hang": {
+   "backend": "hang",
+   "errors": [
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed.",
+    "WebSocket connection to 'wss://fcpqnxfggafwelioyldo.supabase.co/realtime/v1/websocket?apikey=sb_publishable_IdDdk52YK5F0m-7Gn7c1tw_uUAB28e1&vsn=1.0.0' failed: Establishing a tunnel via proxy server failed."
+   ],
+   "warnings": [
+    "[net] realtime arena:QLJRA CHANNEL_ERROR Error: channel error: transport failure\n    at at (http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:17390)\n    at http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:22204\n    at Object.callback (http://127.0.0.1:34657/game/assets/supabase-VaY9",
+    "[net] realtime arena:QLJRA CLOSED ",
+    "[net] realtime arena:QLJRA CHANNEL_ERROR Error: channel error: transport failure\n    at at (http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:17390)\n    at http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:22204\n    at Object.callback (http://127.0.0.1:34657/game/assets/supabase-VaY9",
+    "[net] realtime arena:QLJRA CLOSED ",
+    "[net] realtime arena:QLJRA CLOSED ",
+    "[net] realtime arena:QLJRA CLOSED ",
+    "[net] realtime arena:QLJRA CHANNEL_ERROR Error: channel error: transport failure\n    at at (http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:17390)\n    at http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:22204\n    at Object.callback (http://127.0.0.1:34657/game/assets/supabase-VaY9",
+    "[net] realtime arena:QLJRA CLOSED ",
+    "[net] realtime arena:QLJRA CHANNEL_ERROR Error: channel error: transport failure\n    at at (http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:17390)\n    at http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:22204\n    at Object.callback (http://127.0.0.1:34657/game/assets/supabase-VaY9",
+    "[net] realtime arena:QLJRA CLOSED ",
+    "[net] realtime arena:QLJRA CHANNEL_ERROR Error: channel error: transport failure\n    at at (http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:17390)\n    at http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:22204\n    at Object.callback (http://127.0.0.1:34657/game/assets/supabase-VaY9",
+    "[net] realtime arena:QLJRA CLOSED ",
+    "[net] realtime arena:QLJRA CHANNEL_ERROR Error: channel error: transport failure\n    at at (http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:17390)\n    at http://127.0.0.1:34657/game/assets/supabase-VaY9-frs.js:2:22204\n    at Object.callback (http://127.0.0.1:34657/game/assets/supabase-VaY9",
+    "[net] realtime arena:QLJRA CLOSED "
+   ],
+   "timeline": [
+    {
+     "t": 1.4,
+     "what": "host page loaded"
+    },
+    {
+     "t": 9,
+     "what": "room browser shown",
+     "status": "Connecting…"
+    },
+    {
+     "t": 25.3,
+     "what": "clicked Quick play vs AI"
+    },
+    {
+     "t": 47.8,
+     "what": "ready to start",
+     "boot": false,
+     "bootText": "",
+     "hub": false,
+     "hubStatus": null,
+     "lobby": true,
+     "start": {
+      "disabled": false,
+      "text": "Warm up vs AIrestarts when a friend join"
+     },
+     "arena": true,
+     "phase": "countdown",
+     "cg": [
+      "init",
+      "game.loadingStart",
+      "game.addSettingsChangeListener",
+      "game.addAuthListener",
+      "game.addJoinRoomListener",
+      "game.loadingStop",
+      "game.updateRoom",
+      "game.showInviteButton"
+     ]
+    },
+    {
+     "t": 67.4,
+     "what": "lobby rebuilds in 10 s idle",
+     "n": 0
+    },
+    {
+     "t": 67.4,
+     "what": "phase before clicking Start",
+     "phase": "countdown"
+    },
+    {
+     "t": 67.4,
+     "what": "clicked Start"
+    },
+    {
+     "t": 87.6,
+     "what": "phase",
+     "phase": "countdown"
+    }
+   ],
+   "requests": {
+    "supabase": 23,
+    "failed": 0
+   },
+   "loadState": {
+    "boot": false,
+    "bootText": "",
+    "hub": false,
+    "hubStatus": null,
+    "lobby": true,
+    "start": {
+     "disabled": false,
+     "text": "Warm up vs AIrestarts when a friend join"
+    },
+    "arena": true,
+    "phase": "countdown",
+    "cg": [
+     "init",
+     "game.loadingStart",
+     "game.addSettingsChangeListener",
+     "game.addAuthListener",
+     "game.addJoinRoomListener",
+     "game.loadingStop",
+     "game.updateRoom",
+     "game.showInviteButton"
+    ]
+   },
+   "lobbyRebuildsPer10s": 0,
+   "phaseBeforeStart": "countdown"
+  }
+ }
+}

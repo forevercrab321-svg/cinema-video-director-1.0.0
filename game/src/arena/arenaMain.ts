@@ -4,9 +4,9 @@ import { AudioEngine } from '../audio/AudioEngine';
 import { roundSecondsFor } from '../config/arena';
 import { HALLOWEEN, isHalloween } from '../config/halloween';
 import { createHalloweenFx } from '../world/halloweenFx';
-import { bakeSkyEnvironment } from '../art/environment';
+import { bakeSkyEnvironment, forgetSkyBakes } from '../art/environment';
 import { RenderPipeline } from '../art/postfx';
-import { installRenderGuards, type AppContext } from '../app';
+import { installContextRecovery, installRenderGuards, type AppContext } from '../app';
 import { FIXED_DT } from '../game/Game';
 import { LocalNet, RoomNet, SoloNet, type Net } from '../net/Net';
 import { SupabaseNet } from '../net/SupabaseNet';
@@ -60,13 +60,21 @@ export async function runArena(ctx: AppContext): Promise<void> {
   let shownResultsEp = -1;
   const audio = testMode ? null : new AudioEngine();
 
+  // A WebGL context loss empties the HDRI's PMREM (prefiltered on the GPU): sky bakes from then on.
+  let hdriLost = false;
   const envFor = (scene: THREE.Scene, city: CityDef) => {
     // The daylight HDRI would light a night map like noon: Halloween Town bakes its own moonlit sky.
-    const hdri = isHalloween(city.id) ? null : ctx.hdri;
+    const hdri = isHalloween(city.id) || hdriLost ? null : ctx.hdri;
     scene.environment = hdri?.texture ?? bakeSkyEnvironment(renderer, city.palette);
     scene.environmentRotation.y = hdri?.rotationFor(city.palette.sunDirection) ?? 0;
     scene.environmentIntensity = city.palette.envIntensity;
   };
+  if (!testMode)
+    installContextRecovery(renderer, () => {
+      hdriLost = true;
+      forgetSkyBakes(renderer);
+      for (const g of [game, preview]) if (g) envFor(g.scene, g.city);
+    });
   const usePipeline = (g: ArenaGame) => {
     pipeline?.dispose();
     pipeline = new RenderPipeline(renderer, g.scene, g.camera, quality);

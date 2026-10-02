@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { AudioEngine } from './audio/AudioEngine';
-import { bakeSkyEnvironment } from './art/environment';
+import { bakeSkyEnvironment, forgetSkyBakes } from './art/environment';
 import { RenderPipeline } from './art/postfx';
 import { Bot } from './debug/bot';
 import { FIXED_DT, Game } from './game/Game';
-import { installRenderGuards, type AppContext } from './app';
+import { installContextRecovery, installRenderGuards, type AppContext } from './app';
 
 /** Story mode: Scrap City, single player, alley to warehouse (the MVP run). */
 export function runStory(ctx: AppContext): void {
@@ -85,6 +85,11 @@ export function runStory(ctx: AppContext): void {
     let last = performance.now();
     let acc = 0;
     const adapt = installRenderGuards(renderer, () => pipeline, resize);
+    installContextRecovery(renderer, () => {
+      forgetSkyBakes(renderer);
+      game.scene.environment = bakeSkyEnvironment(renderer);
+      game.scene.environmentRotation.y = 0;
+    });
     renderer.setAnimationLoop((now) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
