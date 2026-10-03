@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-02T14:13:06.217Z",
+  "date": "2026-10-03T02:24:19.815Z",
   "base": "http://127.0.0.1:5196/game/",
   "viewport": {
     "width": 960,
@@ -9,21 +9,21 @@
   "tiers": {
     "low": {
       "tier": "low",
-      "loadMs": 8601,
+      "loadMs": 9430,
       "lobby": {
         "mean": 81.7,
         "std": 29.3,
         "colours": 356
       },
       "dash": {
-        "mean": 85.6,
-        "std": 39.8,
-        "colours": 304
+        "mean": 86.2,
+        "std": 40.6,
+        "colours": 348
       },
       "play": {
-        "mean": 66.3,
-        "std": 15.4,
-        "colours": 134
+        "mean": 74.7,
+        "std": 27.1,
+        "colours": 283
       },
       "start": {
         "x": 0,
@@ -34,9 +34,9 @@
         "dashCooldown": 0
       },
       "end": {
-        "x": -15.613683885901759,
-        "z": 87.9261897502118,
-        "mass": 8.21,
+        "x": -3.891007675559435,
+        "z": 68.02245092923482,
+        "mass": 9.20059218569945,
         "alive": true,
         "dashTime": 0,
         "dashCooldown": 0
@@ -50,11 +50,11 @@
         "restarts": [
           {
             "textures": 118,
-            "geometries": 54
+            "geometries": 56
           },
           {
             "textures": 118,
-            "geometries": 54
+            "geometries": 55
           }
         ]
       },
@@ -96,25 +96,25 @@
       "tier": "low",
       "name": "MASS grows from eating",
       "pass": true,
-      "detail": "5.0 → 8.2 kg"
+      "detail": "5.0 → 9.2 kg"
     },
     {
       "tier": "low",
       "name": "gameplay canvas is not blank",
       "pass": true,
-      "detail": "{\"mean\":66.3,\"std\":15.4,\"colours\":134}"
+      "detail": "{\"mean\":74.7,\"std\":27.1,\"colours\":283}"
     },
     {
       "tier": "low",
       "name": "dash frame is not blank",
       "pass": true,
-      "detail": "{\"mean\":85.6,\"std\":39.8,\"colours\":304}"
+      "detail": "{\"mean\":86.2,\"std\":40.6,\"colours\":348}"
     },
     {
       "tier": "low",
       "name": "restart does not leak GPU textures/geometries",
       "pass": true,
-      "detail": "round textures 34 → 118 → 118, geometries 0 → 54 → 54"
+      "detail": "round textures 34 → 118 → 118, geometries 0 → 56 → 55"
     },
     {
       "tier": "low",
