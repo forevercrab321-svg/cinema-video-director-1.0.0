@@ -110,6 +110,12 @@ body:has(#ge-hub) .ge-dash, body:has(#ge-hub) .ge-full, body:has(#ge-hub) #hud {
 #ge-hub .empty b { color: var(--ge-ink); }
 #ge-hub .skel { height: 62px; border-radius: var(--ge-r2); background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.09), rgba(255,255,255,.04)); background-size: 200% 100%; animation: ge-skel 1.4s linear infinite; }
 @keyframes ge-skel { from { background-position: 200% 0; } to { background-position: 0 0; } }
+#ge-hub .starting { display: none; }
+#ge-hub.busy .main, #ge-hub.busy .tools { pointer-events: none; opacity: .3; transition: opacity .2s; }
+#ge-hub.busy .starting { display: flex; position: fixed; inset: 0; z-index: 20; background: rgba(16,18,20,.78); backdrop-filter: blur(3px); align-items: center; justify-content: center; flex-direction: column; gap: 14px; font-size: 22px; font-weight: 800; letter-spacing: .08em; color: #ffb347; text-shadow: 0 2px 12px rgba(0,0,0,.6); pointer-events: none; }
+#ge-hub .starting i { width: 34px; height: 34px; border-radius: 50%; border: 4px solid rgba(255,179,71,.25); border-top-color: #ffb347; animation: ge-spin .8s linear infinite; }
+@keyframes ge-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #ge-hub .starting i { animation-duration: 2.4s; } }
 @media (prefers-reduced-motion: reduce) { #ge-hub .quick, #ge-hub .live i, #ge-hub .skel { animation: none !important; } }
 /* Medium widths: the room list keeps the room. */
 @media (max-width: 1000px) { #ge-hub .main { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); } #ge-hub .title small { display: none; } }
@@ -210,7 +216,7 @@ export class HubUi {
           <div class="rooms-h"><span class="t">${L('公开房间', 'PUBLIC ROOMS')}<b class="n"></b></span><span class="s">${L('绿色：等人中，直接加入 · 琥珀色：房主在和 AI 热身，你一来就重开', 'Green: waiting, join now · Amber: host is warming up vs AI and restarts with you')}</span></div>
           <div class="list" role="list"></div>
         </section>
-      </div>`;
+      </div><div class="starting" role="status" aria-live="polite"><i></i><span>${L('正在开局…', 'Starting…')}</span></div>`;
     document.body.appendChild(this.el);
     this.wire();
     this.renderPub();
@@ -235,10 +241,18 @@ export class HubUi {
     this.style.remove();
   }
 
+  /** The choice is made: show "Starting…" (the room connects next, which can take a few seconds). */
+  busy(): void {
+    this.el.classList.add('busy');
+  }
+
   private done(c: HubChoice): void {
+    if (!this.resolve) return; // a second click while starting
+    this.busy();
     const r = this.resolve;
     this.resolve = null;
-    r?.(c);
+    // Let "Starting…" paint before the room is built (that work blocks the page for a moment).
+    requestAnimationFrame(() => requestAnimationFrame(() => r(c)));
   }
 
   private create(pub: boolean): void {
