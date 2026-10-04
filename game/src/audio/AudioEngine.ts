@@ -185,6 +185,13 @@ export class AudioEngine {
     if (this.trackSrc && this.ctx) this.trackSrc.playbackRate.setTargetAtTime(this.tension, this.ctx.currentTime, 0.3);
   }
 
+  /**
+   * Cities that ship a file track in public/music/. Only these are fetched: a request for a file
+   * that is not there is a 404, which portal QA tools (CrazyGames) report as a missing resource.
+   * Add the id here when you drop a new <id>.mp3 into public/music/.
+   */
+  private static readonly FILE_TRACKS: ReadonlySet<string> = new Set(['shanghai', 'newyork', 'paris', 'scrap']);
+
   private loadTrack(id: string): void {
     const req = ++this.trackReq;
     this.trackSrc?.stop();
@@ -192,7 +199,7 @@ export class AudioEngine {
     this.trackSrc = null;
     this.trackLive = false;
     const ctx = this.ctx;
-    if (!ctx) return;
+    if (!ctx || !AudioEngine.FILE_TRACKS.has(id)) return; // no file: the procedural theme plays
     const base = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './';
     fetch(`${base}music/${id}.mp3`)
       .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))

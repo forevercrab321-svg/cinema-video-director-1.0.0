@@ -113,6 +113,10 @@ export async function runArena(ctx: AppContext): Promise<void> {
 
   let net: Net | null = null;
   let choice: HubChoice | null = null;
+  // The room browser stays up (showing "Starting…") until the lobby's live loop takes over, or for
+  // Quick play until the warm-up round has started: the player never looks at a frozen frame.
+  let stopHubLoop: (() => void) | null = null;
+  let disposeHub: (() => void) | null = null;
   const want = params.get('net');
   if (want === 'local') net = new LocalNet(params.get('room') ?? 'dev', nickname);
   else if (want !== 'solo') {
@@ -121,7 +125,7 @@ export async function runArena(ctx: AppContext): Promise<void> {
     const linked = portal.invitedRoom() ?? params.get('room');
     // No room in the link: the room browser is the first screen (vs AI, create, code, public rooms).
     // [platform-room] A portal's instant-multiplayer launch (CrazyGames) goes straight into a new room.
-    if (!net && hub && want === null && !linked && !portal.instantMultiplayer?.() && (backendConfigured() || demoHub)) choice = await showHub(hub);
+    if (!net && hub && want === null && !linked && !portal.instantMultiplayer?.() && (backendConfigured() || demoHub)) ({ choice, stopLoop: stopHubLoop, dispose: disposeHub } = await showHub(hub));
     if (!net && backendConfigured()) {
       // Invite links keep working exactly as before (any code the old flow accepted).
       const code = choice ? choice.code : (linked ?? newRoomCode()).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || newRoomCode();
@@ -137,8 +141,11 @@ export async function runArena(ctx: AppContext): Promise<void> {
   net ??= new SoloNet(nickname);
   track('lobby_view', { mode: net.kind });
 
-  /** The room browser over a slow flyover of the first city; resolves with the player's choice. */
-  async function showHub(h: HubLike): Promise<HubChoice> {
+  /**
+   * The room browser over a slow flyover of the first city; resolves with the player's choice. It then
+   * shows "Starting…": `stopLoop` ends its flyover loop, `dispose` removes it.
+   */
+  async function showHub(h: HubLike): Promise<{ choice: HubChoice; stopLoop: () => void; dispose: () => void }> {
     buildPreview(CITIES[0].id);
     h.setSource(() => ({ room: null, state: 'hub', announce: null }));
     track('room_browser_view', {});
@@ -168,9 +175,7 @@ export async function runArena(ctx: AppContext): Promise<void> {
     });
     loaded();
     const c = await hubUi.show();
-    renderer.setAnimationLoop(null);
-    hubUi.dispose();
-    return c;
+    return { choice: c, stopLoop: () => renderer.setAnimationLoop(null), dispose: () => hubUi.dispose() };
   }
 
   let lobbyDirty = true;
@@ -195,6 +200,7 @@ export async function runArena(ctx: AppContext): Promise<void> {
         ui.resetRound();
         ui.hideResults();
         ui.renderLobby();
+        disposeHub?.(); // Quick play's "Starting…" ends when its round exists
         return g;
       },
       endGame() {
@@ -344,7 +350,10 @@ export async function runArena(ctx: AppContext): Promise<void> {
     const since = Date.now();
     const iv = window.setInterval(() => {
       const waited = Date.now() - since;
-      if (session.match.ph !== 'lobby' || waited > 15_000) return window.clearInterval(iv);
+      if (session.match.ph !== 'lobby' || waited > 15_000) {
+        disposeHub?.();
+        return window.clearInterval(iv);
+      }
       if ((session.net.connected() || waited > 3000) && session.isHost() && session.warmupReady() && session.canStart()) {
         window.clearInterval(iv);
         void (ui.onBeforeStart?.() ?? Promise.resolve()).catch(() => undefined).then(() => session.start());
@@ -465,6 +474,10 @@ export async function runArena(ctx: AppContext): Promise<void> {
 
   resize();
   loaded();
+  // The live loop takes over from the room browser's flyover; "Starting…" stays up for Quick play
+  // until its warm-up round is running (see the auto-start above).
+  stopHubLoop?.();
+  if (!choice?.warmup) disposeHub?.();
   if (!testMode) {
     const adapt = installRenderGuards(renderer, () => pipeline!, resize);
     let last = performance.now();

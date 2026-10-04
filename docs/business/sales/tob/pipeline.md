@@ -9,7 +9,7 @@
 | 平台 | 阶段 | 合作方式 | 分成（出处见档案） | 我们的包 | 下一步 | 负责 | 截止 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | CrazyGames | 3 提交中（rev 3 已上传、Preview 通过、QA 清单已填、Details 已填；差横/竖版预览视频） | 广告分成（Basic Launch 期间无广告收入） | 现行比例官方未公开 | `release/crazygames/grow-everything-crazygames.zip`（rev 3） | 上传两段 ≤20 s 预览视频 → Basic Launch 提交 | BD + 用户 | 10/2 |
-| itch.io | 2 材料就绪 | 自助发布；免费 + 可选打赏 | 默认 10%，可自设 | `dist-portal.zip` | 用户注册 → 发布 | 用户 + BD | D1 |
+| itch.io | 4 已上线（rev 8，Public） | 自助发布；免费 + 可选打赏 | 默认 10%，可自设 | `dist-portal.zip` | 用户注册 → 发布 | 用户 + BD | D1 |
 | Newgrounds | 2 材料就绪 | 自助发布；曝光为主 | 官方未查到 | `dist-portal.zip` | 用户注册 → 发布 | 用户 + BD | D1 |
 | Y8 | 1 资格确认 | 送审；广告分成 | 开发者 50% | `dist-portal.zip`（SDK 要求待看） | 注册后读门户里的 SDK 要求 | 用户 → 工程 | D2 |
 | GameDistribution | X 被拒（2026-09-29 邮件："does not fit with our catalog"） | 分发到发行网络；广告分成 | 开发者得净收入 33% | `release/gamedistribution/grow-everything-gd.zip`（rev 3，已打好） | 按对方邮件：拿到其他平台的真实数据后，通过 Customer Support 页面附数据再申请复审；先上 CrazyGames 拿数据 | BD | 拿到 CrazyGames 数据后 |
@@ -23,6 +23,11 @@
 ## 推进记录
 
 <!-- 格式：日期 · 平台 · 做了什么 · 对方原话或门户状态 · 下一步 -->
+
+- 2026-10-04 · itch.io · 项目已改为 Public：https://forevercrab321-svg.itch.io/grow-everything ；旧上传文件已隐藏（未删除），公开页可正常游玩 · 门户：Public · 已完成：正文 Description（中英，含万圣节小镇 / The Hunt / 蛋之谷）；主题无标题开关，改用横幅 `release/itch/banner-960x240@2x.png`（Edit theme → Banner，居中）· agent 一次加载卡在 Connecting… 约 25 s，刷新后正常 · 下一步：补截图和封面
+- 2026-10-03 · itch.io · 项目 forevercrab321-svg.itch.io/grow-everything（编辑页 /game/edit/5091958，账号用 forevercrab321@gmail.com 的 GitHub 登录）：rev 8 web 包上传并设为浏览器游玩，Viewport 960×540；agent 实测 Starting… 立即出现、进对局、W/A/D 驾驶、排行榜和小地图完整 · 门户：Draft · 隐藏旧上传文件后改 Public
+- 2026-10-02 · 自有网站 · PR #23 合并（ae046ea），Vercel 正式站已更新到 rev 6（万圣节小镇 + 蛋之谷 + 图形环境恢复）；agent 实测城市列表出现 Halloween Town · 门户：Production Ready · 下一步 itch.io / Newgrounds 发布（`release/web-portals/grow-everything-web.zip`）
+- 2026-10-02 · CrazyGames · 被拒（"stability and technical improvements"）；Rejected 状态下门户不开放上传新构建；旧 Draft 已删除；从 cityhunters2025@gmail.com 给 submissions@crazygames.com 发邮件询问上传方式和具体问题 · 未回复 · 等回复；rev 6 包已就绪
 
 - 2026-10-01 · CrazyGames · rev 3 上传（34 个文件逐个核对）；Preview：Room browser → Quick play 正常；QA 工具自动检测：Loading Start/Stop、Mute、Auth Listener、Get User、Room join listener、Update room、Invite Button、Invite Link、Gameplay Start 全部检测到，Warnings 为空；Instant Multiplayer Test 通过（跳过大厅直接建房）；手机：iPhone Safari 经邀请链接进房、2 人在线、触摸可玩；QA 清单按实际情况填 Yes/N/A（无文字聊天 → N/A）；Details：Category .io，Tags 3D/Arena/Car/Destroy/Grow（门户最多 5 个且无 multiplayer 标签），Min 2 / Max 4 players，Landscape，3 张封面已传（门户提示左上角可能被标签遮住，方形封面的 "GROW" 标题在此区域，待换图），截图无字段 · 门户：Details 未保存，缺必填的横版 + 竖版预览视频（≤20 s，MP4/MOV） · 用 tools/capture-clip.mjs 渲染两段视频，上传后 Basic Launch 提交
 

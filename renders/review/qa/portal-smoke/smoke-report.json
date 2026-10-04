@@ -1,29 +1,29 @@
 {
-  "date": "2026-10-02T08:04:18.000Z",
-  "base": "http://127.0.0.1:4181/",
+  "date": "2026-10-03T02:24:59.224Z",
+  "base": "http://127.0.0.1:4184/",
   "viewport": {
     "width": 960,
     "height": 540
   },
-  "city": "halloween",
+  "city": "shanghai",
   "tiers": {
     "low": {
       "tier": "low",
-      "loadMs": 7483,
+      "loadMs": 7512,
       "lobby": {
-        "mean": 81.7,
-        "std": 29.3,
-        "colours": 356
+        "mean": 132.6,
+        "std": 37.1,
+        "colours": 341
       },
       "dash": {
-        "mean": 85.2,
-        "std": 40.8,
-        "colours": 318
+        "mean": 104.8,
+        "std": 38.8,
+        "colours": 393
       },
       "play": {
-        "mean": 65.6,
-        "std": 15.5,
-        "colours": 174
+        "mean": 144.7,
+        "std": 24.6,
+        "colours": 172
       },
       "start": {
         "x": 0,
@@ -34,9 +34,9 @@
         "dashCooldown": 0
       },
       "end": {
-        "x": -16.55026902439922,
-        "z": 84.66215276023686,
-        "mass": 8.168229108978451,
+        "x": -13.570748389537242,
+        "z": 86.22409510586782,
+        "mass": 8.078601826074333,
         "alive": true,
         "dashTime": 0,
         "dashCooldown": 0
@@ -44,17 +44,17 @@
       "moved": 6.963040625000502,
       "gpu": {
         "round1": {
-          "textures": 34,
+          "textures": 33,
           "geometries": 0
         },
         "restarts": [
           {
-            "textures": 118,
-            "geometries": 54
+            "textures": 123,
+            "geometries": 60
           },
           {
-            "textures": 118,
-            "geometries": 55
+            "textures": 123,
+            "geometries": 60
           }
         ]
       },
@@ -68,7 +68,7 @@
       "tier": "low",
       "name": "lobby canvas is not blank",
       "pass": true,
-      "detail": "{\"mean\":81.7,\"std\":29.3,\"colours\":356}"
+      "detail": "{\"mean\":132.6,\"std\":37.1,\"colours\":341}"
     },
     {
       "tier": "low",
@@ -98,25 +98,25 @@
       "tier": "low",
       "name": "MASS grows from eating",
       "pass": true,
-      "detail": "5.0 → 8.2 kg"
+      "detail": "5.0 → 8.1 kg"
     },
     {
       "tier": "low",
       "name": "gameplay canvas is not blank",
       "pass": true,
-      "detail": "{\"mean\":65.6,\"std\":15.5,\"colours\":174}"
+      "detail": "{\"mean\":144.7,\"std\":24.6,\"colours\":172}"
     },
     {
       "tier": "low",
       "name": "dash frame is not blank",
       "pass": true,
-      "detail": "{\"mean\":85.2,\"std\":40.8,\"colours\":318}"
+      "detail": "{\"mean\":104.8,\"std\":38.8,\"colours\":393}"
     },
     {
       "tier": "low",
       "name": "restart does not leak GPU textures/geometries",
       "pass": true,
-      "detail": "round textures 34 → 118 → 118, geometries 0 → 54 → 55"
+      "detail": "round textures 33 → 123 → 123, geometries 0 → 60 → 60"
     },
     {
       "tier": "low",
