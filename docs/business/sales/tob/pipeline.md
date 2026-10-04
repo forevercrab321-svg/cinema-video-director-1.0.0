@@ -9,7 +9,7 @@
 | 平台 | 阶段 | 合作方式 | 分成（出处见档案） | 我们的包 | 下一步 | 负责 | 截止 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | CrazyGames | 3 提交中（rev 3 已上传、Preview 通过、QA 清单已填、Details 已填；差横/竖版预览视频） | 广告分成（Basic Launch 期间无广告收入） | 现行比例官方未公开 | `release/crazygames/grow-everything-crazygames.zip`（rev 3） | 上传两段 ≤20 s 预览视频 → Basic Launch 提交 | BD + 用户 | 10/2 |
-| itch.io | 2 材料就绪 | 自助发布；免费 + 可选打赏 | 默认 10%，可自设 | `dist-portal.zip` | 用户注册 → 发布 | 用户 + BD | D1 |
+| itch.io | 3 已上传（rev 8，Draft，待改 Public） | 自助发布；免费 + 可选打赏 | 默认 10%，可自设 | `dist-portal.zip` | 用户注册 → 发布 | 用户 + BD | D1 |
 | Newgrounds | 2 材料就绪 | 自助发布；曝光为主 | 官方未查到 | `dist-portal.zip` | 用户注册 → 发布 | 用户 + BD | D1 |
 | Y8 | 1 资格确认 | 送审；广告分成 | 开发者 50% | `dist-portal.zip`（SDK 要求待看） | 注册后读门户里的 SDK 要求 | 用户 → 工程 | D2 |
 | GameDistribution | X 被拒（2026-09-29 邮件："does not fit with our catalog"） | 分发到发行网络；广告分成 | 开发者得净收入 33% | `release/gamedistribution/grow-everything-gd.zip`（rev 3，已打好） | 按对方邮件：拿到其他平台的真实数据后，通过 Customer Support 页面附数据再申请复审；先上 CrazyGames 拿数据 | BD | 拿到 CrazyGames 数据后 |
@@ -24,6 +24,7 @@
 
 <!-- 格式：日期 · 平台 · 做了什么 · 对方原话或门户状态 · 下一步 -->
 
+- 2026-10-03 · itch.io · 项目 forevercrab321-svg.itch.io/grow-everything（编辑页 /game/edit/5091958，账号用 forevercrab321@gmail.com 的 GitHub 登录）：rev 8 web 包上传并设为浏览器游玩，Viewport 960×540；agent 实测 Starting… 立即出现、进对局、W/A/D 驾驶、排行榜和小地图完整 · 门户：Draft · 隐藏旧上传文件后改 Public
 - 2026-10-02 · 自有网站 · PR #23 合并（ae046ea），Vercel 正式站已更新到 rev 6（万圣节小镇 + 蛋之谷 + 图形环境恢复）；agent 实测城市列表出现 Halloween Town · 门户：Production Ready · 下一步 itch.io / Newgrounds 发布（`release/web-portals/grow-everything-web.zip`）
 - 2026-10-02 · CrazyGames · 被拒（"stability and technical improvements"）；Rejected 状态下门户不开放上传新构建；旧 Draft 已删除；从 cityhunters2025@gmail.com 给 submissions@crazygames.com 发邮件询问上传方式和具体问题 · 未回复 · 等回复；rev 6 包已就绪
 
