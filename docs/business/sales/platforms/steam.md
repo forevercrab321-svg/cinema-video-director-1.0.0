@@ -42,7 +42,7 @@ Known gap: the Windows `.exe` still has the default Electron icon (setting it fr
 | Library capsule | 600×900 | `release/steam-store/library_capsule_600x900.png` |
 | Library hero | 3840×1240 | `release/steam-store/library_hero_3840x1240.png` |
 | Library logo | 1280×720, transparent | `release/steam-store/library_logo_1280x720.png` |
-| Screenshots | 1920×1080, at least 5 | `release/steam-store/screenshots/` + `marketing/press-kit/screenshots/` |
+| Screenshots | 1920×1080, at least 5 | `release/steam-store/screenshots/` (5 Halloween Town shots, neutral names) + `marketing/press-kit/screenshots/` (Shanghai, New York, Paris) |
 | Trailer | optional at first | `renders/marketing/` clips can be cut later |
 
 ## Store text
