@@ -8,8 +8,9 @@ import { chromium } from 'playwright';
 const root = resolve(import.meta.dirname, '..');
 const out = resolve(root, 'release/steam-store');
 const b64 = (p) => `data:image/png;base64,${readFileSync(resolve(root, p)).toString('base64')}`;
-const wide = b64('marketing/press-kit/covers/cover-1920x1080.png'); // car + street on the right half
-const tall = b64('release/crazygames/cover-800x1200.png'); // car + street below y≈460
+// HUD-free Halloween Town renders from tools/steam-shots.mjs (player machine centred, dusk sky on top).
+const art = b64('release/steam-store/art/art-halloween-160s.png'); // 1920×1080
+const hero = b64('release/steam-store/art/art-hero-160s.png'); // 1920×620
 
 const css = `
 *{margin:0;box-sizing:border-box}body{background:transparent}
@@ -27,28 +28,26 @@ const region = (img, iw, ih, x, y, w, h, W, H) => {
 };
 const title = (size, style) => `<div class="t" style="font-size:${size}px;${style}"><b>GROW</b><i>EVERYTHING</i></div>`;
 
+const top = 'background:linear-gradient(180deg,rgba(10,8,24,.85) 0%,rgba(10,8,24,.45) 34%,rgba(10,8,24,0) 52%)';
+const bottom = 'background:linear-gradient(0deg,rgba(10,8,24,.95) 0%,rgba(10,8,24,.75) 26%,rgba(10,8,24,0) 50%)';
 const jobs = [
   // name, W, H, html
   ['header_capsule_920x430', 920, 430,
-    `<div class="bg" style="${region(wide, 1920, 1080, 860, 300, 1060, 495, 920, 430)}"></div>
-     <div class="shade" style="background:linear-gradient(90deg,rgba(12,13,16,.94) 0%,rgba(12,13,16,.75) 42%,rgba(12,13,16,0) 70%)"></div>
-     ${title(92, 'left:40px;top:118px')}`],
+    `<div class="bg" style="${region(art, 1920, 1080, 200, 0, 1500, 701, 920, 430)}"></div><div class="shade" style="${top}"></div>
+     ${title(74, 'left:34px;top:26px')}`],
   ['small_capsule_462x174', 462, 174,
-    `<div class="bg" style="${region(wide, 1920, 1080, 980, 360, 940, 354, 462, 174)}"></div>
-     <div class="shade" style="background:linear-gradient(90deg,rgba(12,13,16,.95) 0%,rgba(12,13,16,.8) 50%,rgba(12,13,16,.1) 80%)"></div>
-     ${title(50, 'left:18px;top:40px')}`],
+    `<div class="bg" style="${region(art, 1920, 1080, 300, 0, 1600, 603, 462, 174)}"></div><div class="shade" style="background:rgba(10,8,24,.45)"></div>
+     ${title(58, 'left:22px;top:30px')}`],
   ['main_capsule_1232x706', 1232, 706,
-    `<div class="bg" style="${region(wide, 1920, 1080, 700, 220, 1220, 700, 1232, 706)}"></div>
-     <div class="shade" style="background:linear-gradient(90deg,rgba(12,13,16,.92) 0%,rgba(12,13,16,.7) 38%,rgba(12,13,16,0) 62%)"></div>
-     ${title(128, 'left:56px;top:212px')}`],
+    `<div class="bg" style="${region(art, 1920, 1080, 260, 0, 1570, 900, 1232, 706)}"></div><div class="shade" style="${top}"></div>
+     ${title(104, 'left:48px;top:34px')}`],
   ['vertical_capsule_748x896', 748, 896,
-    `<div class="bg" style="${region(tall, 800, 1200, 120, 470, 560, 671, 748, 896)}"></div>
-     <div class="shade" style="background:linear-gradient(0deg,rgba(12,13,16,.95) 0%,rgba(12,13,16,.8) 30%,rgba(12,13,16,0) 55%)"></div>
-     ${title(112, 'left:44px;bottom:60px')}`],
+    `<div class="bg" style="${region(art, 1920, 1080, 600, 120, 740, 886, 748, 896)}"></div><div class="shade" style="${bottom}"></div>
+     ${title(104, 'left:42px;bottom:56px')}`],
   ['library_capsule_600x900', 600, 900,
-    `<div class="bg" style="${region(tall, 800, 1200, 190, 470, 420, 630, 600, 900)}"></div>
-     <div class="shade" style="background:linear-gradient(0deg,rgba(12,13,16,.95) 0%,rgba(12,13,16,.8) 30%,rgba(12,13,16,0) 55%)"></div>
-     ${title(88, 'left:36px;bottom:64px')}`],
+    `<div class="bg" style="${region(art, 1920, 1080, 670, 120, 600, 900, 600, 900)}"></div><div class="shade" style="${bottom}"></div>
+     ${title(86, 'left:34px;bottom:60px')}`],
+  ['library_hero_3840x1240', 3840, 1240, `<div class="bg" style="${region(hero, 1920, 620, 0, 0, 1920, 620, 3840, 1240)}"></div>`],
   ['library_logo_1280x720', 1280, 720, title(190, 'left:60px;top:190px')],
 ];
 

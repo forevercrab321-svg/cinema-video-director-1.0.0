@@ -718,7 +718,9 @@ export class ArenaUi {
         tag.classList.remove('edge');
         tag.style.transform = '';
         tag.textContent = `☠ BOSS · ${L(zh, en)}`;
-        tag.style.left = `${((v.x + 1) / 2) * innerWidth}px`;
+        // Keep the whole label on screen when the boss stands near the edge.
+        const half = tag.offsetWidth / 2 + 4;
+        tag.style.left = `${Math.min(innerWidth - half, Math.max(half, ((v.x + 1) / 2) * innerWidth))}px`;
         tag.style.top = `${((1 - v.y) / 2) * innerHeight}px`;
       } else {
         let ex = v.z > 1 ? -v.x : v.x;
