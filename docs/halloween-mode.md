@@ -26,9 +26,9 @@ These were confirmed with the Creative Director on 2026-10-02.
 
 | id | Own-site name | Portal name | Look |
 | --- | --- | --- | --- |
-| `shock` | 杨永信 / Yang Yongxin | The Shock Doctor / 电击院长 | Middle-aged doctor, square glasses, short black side-parted hair, white coat with a name badge, crackling electro-baton |
-| `cannibal` | 汉尼拔 / Hannibal | The Cannibal / 食人魔 | Slicked-back hair, orange prison jumpsuit, white muzzle mask, maroon eyes, hands cuffed in front |
-| `motel` | 诺曼·贝茨 / Norman Bates | The Motel Keeper / 汽车旅馆老板 | Lanky young man, cardigan under his mother's floral dress, grey bun wig, raised kitchen knife |
+| `shock` | 杨永信 / Yang Yongxin | The Net-Addiction Shock Doctor / 戒网瘾电击院长 | Middle-aged doctor, square glasses, short black side-parted hair, white coat with a name badge, crackling electro-baton |
+| `cannibal` | 汉尼拔 / Hannibal | Dr. Cannibal / 食人魔医生 | Slicked-back hair, orange prison jumpsuit, white muzzle mask, maroon eyes, hands cuffed in front |
+| `motel` | 诺曼·贝茨 / Norman Bates | The Psycho Motel Keeper / 惊魂旅馆老板 | Lanky young man, cardigan under his mother's floral dress, grey bun wig, raised kitchen knife |
 
 ## Round timeline (Halloween map)
 

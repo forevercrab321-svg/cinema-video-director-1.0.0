@@ -34,3 +34,6 @@ dist-portal-*.zip
 
 # Marketing captures: regenerate with tools/capture-clip.mjs; commit only reviewed cuts
 renders/marketing/
+
+# Steam desktop builds (large binaries; rebuild with tools/build-steam.mjs)
+release/steam/

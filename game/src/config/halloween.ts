@@ -99,9 +99,9 @@ export interface HunterDef {
 }
 
 export const HUNTERS: readonly HunterDef[] = [
-  { kind: 'shock', name: REAL ? 'Yang Yongxin' : 'The Shock Doctor', nameZh: REAL ? '杨永信' : '电击院长', catchLine: 'zapped', catchLineZh: '电晕了' },
-  { kind: 'cannibal', name: REAL ? 'Hannibal' : 'The Cannibal', nameZh: REAL ? '汉尼拔' : '食人魔', catchLine: 'had for dinner', catchLineZh: '当成了晚餐' },
-  { kind: 'motel', name: REAL ? 'Norman Bates' : 'The Motel Keeper', nameZh: REAL ? '诺曼·贝茨' : '汽车旅馆老板', catchLine: 'checked in', catchLineZh: '请进了旅馆' },
+  { kind: 'shock', name: REAL ? 'Yang Yongxin' : 'The Net-Addiction Shock Doctor', nameZh: REAL ? '杨永信' : '戒网瘾电击院长', catchLine: 'zapped', catchLineZh: '电晕了' },
+  { kind: 'cannibal', name: REAL ? 'Hannibal' : 'Dr. Cannibal', nameZh: REAL ? '汉尼拔' : '食人魔医生', catchLine: 'had for dinner', catchLineZh: '当成了晚餐' },
+  { kind: 'motel', name: REAL ? 'Norman Bates' : 'The Psycho Motel Keeper', nameZh: REAL ? '诺曼·贝茨' : '惊魂旅馆老板', catchLine: 'checked in', catchLineZh: '请进了旅馆' },
 ];
 
 /** Display name of a villain for this build ([zh, en]). */

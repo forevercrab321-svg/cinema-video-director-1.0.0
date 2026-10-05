@@ -101,7 +101,7 @@ function audit() {
   const dashHit = dash ? document.elementFromPoint(dash.x + dash.w / 2, dash.y + dash.h / 2)?.classList.contains('ge-dash') : false;
   const body = document.body.innerText;
   const realNames = ['Yang Yongxin', '杨永信', 'Hannibal', '汉尼拔', 'Norman Bates', '诺曼'].filter((n) => body.includes(n));
-  const portalNames = ['The Shock Doctor', '电击院长', 'The Cannibal', '食人魔', 'The Motel Keeper', '汽车旅馆老板'].filter((n) => body.includes(n));
+  const portalNames = ['The Net-Addiction Shock Doctor', '戒网瘾电击院长', 'Dr. Cannibal', '食人魔医生', 'The Psycho Motel Keeper', '惊魂旅馆老板'].filter((n) => body.includes(n));
   return { realNames, portalNames, vw, vh, blocks, offscreen: offscreen.slice(0, 12), clipped: clipped.slice(0, 12), overlaps, hornHit, dashHit, tags: [...document.querySelectorAll('#arena .tag')].filter(vis).map((t) => t.innerText).slice(0, 10) };
 }
 

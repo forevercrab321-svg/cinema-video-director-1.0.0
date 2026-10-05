@@ -1,0 +1,13 @@
+{
+  "name": "grow-everything",
+  "productName": "GROW EVERYTHING",
+  "version": "1.0.0",
+  "description": "GROW EVERYTHING desktop build for Steam",
+  "main": "main.cjs",
+  "private": true,
+  "author": "Zhuleli",
+  "devDependencies": {
+    "@electron/packager": "^19.0.0",
+    "electron": "38.2.0"
+  }
+}
