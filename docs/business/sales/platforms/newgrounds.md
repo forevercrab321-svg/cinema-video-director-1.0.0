@@ -51,12 +51,12 @@
 **标题**：GROW EVERYTHING
 
 **短描述（≤150 字符）**
-- EN：`Eat anything smaller than you, grow, and swallow a whole city. 4-player online rooms with friends, AI fills empty seats.`
-- 中：`吃掉比你小的一切，越吃越大，最后吞掉整座城市！最多 4 人联机，好友没到齐就由 AI 补位。`
+- EN：`Eat anything smaller than you, grow, swallow a whole city. Then survive Halloween Town, where three bosses hunt you down.`
+- 中：`吃掉比你小的一切，越吃越大，吞掉整座城市！万圣节小镇里三个 BOSS 追着你跑。`
 
-**长描述**（Newgrounds 用户以英文为主，正文以英文为主、附中文）
-- EN：Start small. Eat a trash can. Eat a car. Eat a bus. Eat your friend. GROW EVERYTHING is a 3D "eat the city" arena: drive a googly-eyed machine through Shanghai, New York or Paris and swallow everything smaller than you until you can take down the Oriental Pearl Tower, the Empire State Building or the Eiffel Tower. Up to 4 players per city — bigger eats smaller, so every chase can flip in a second. Share one invite link; AI rivals fill empty seats. Rounds up to 5 minutes, 3 lives each. Googly-eyed machines burp and honk. Cosmetics only, no pay-to-win.
-- 中：从小开始，吃垃圾桶、吃汽车、吃公交车、吃掉你的朋友。《GROW EVERYTHING》是一款 3D「吞掉整座城市」竞技游戏：驾驶大眼珠机器在上海、纽约、巴黎吃掉比你小的一切，直到吞下东方明珠、帝国大厦或埃菲尔铁塔。每城最多 4 人，大吃小，追逐随时反转。发一个邀请链接，空位 AI 补上。每局最长 5 分钟，每人 3 条命。大眼珠机器会打嗝、按喇叭。只卖外观，不卖变强。
+**长描述**（2026-10-06 更新：万圣节小镇、6 人、新 BOSS 名）
+- EN：Start small. Eat a trash can. Eat a car. Eat a bus. Eat your friend. GROW EVERYTHING is a 3D "eat the city" arena: drive a googly-eyed machine through Shanghai, New York, Paris or Halloween Town and swallow everything smaller than you until you can take down the landmark. Bigger eats smaller, so every chase can flip in a second. In Halloween Town you grow for the first half, then everyone shrinks and three bosses (the Net-Addiction Shock Doctor, Dr. Cannibal and the Psycho Motel Keeper) crawl out to hunt you. Get caught and your score is gone. Find the hidden Egg Valley and honk to turn invisible. Quick play starts instantly against AI; share one link to play with friends. Cosmetics only, no pay-to-win.
+- 中：从小开始，吃垃圾桶、吃汽车、吃公交车、吃掉你的朋友。在上海、纽约、巴黎或万圣节小镇里吃掉比你小的一切，直到推倒地标。万圣节小镇上半场吃东西长大，下半场所有车变小，戒网瘾电击院长、食人魔医生、惊魂旅馆老板三个 BOSS 爬出来追人，被抓分数清零。找到藏起来的蛋之谷按喇叭就能隐身。快速开始马上和 AI 开局，发一个链接就能和朋友一起玩。只卖外观，不卖变强。
 
 **玩法说明**
 - EN：Eat anything smaller than you to grow. Smaller rivals are food too — bigger ones will eat you. Dashing into something too big stuns you and costs mass. Grow big enough to topple the landmark.
@@ -66,7 +66,7 @@
 - EN：WASD move · mouse look · SPACE dash · 1–6 emotes · H horn · M mute. Mobile (landscape): drag left side to move, DASH bottom-right.
 - 中：WASD 移动 · 鼠标转视角 · 空格冲刺 · 1–6 表情 · H 喇叭 · M 静音。手机横屏：左侧拖动移动，右下角冲刺。
 
-**标签**：EN `io, multiplayer, 3d, eating, city, destruction, funny, driving, arena` · 中 `io、多人、3D、吞噬、城市、破坏、搞笑、驾驶、竞技`
+**标签**：EN `io, multiplayer, 3d, eating, city, destruction, funny, driving, arena, halloween` · 中 `io、多人、3D、吞噬、城市、破坏、搞笑、驾驶、竞技`
 
 ## 7. 下一步（用户操作）
 

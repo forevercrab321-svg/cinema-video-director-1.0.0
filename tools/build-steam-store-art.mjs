@@ -48,6 +48,13 @@ const jobs = [
     `<div class="bg" style="${region(art, 1920, 1080, 670, 120, 600, 900, 600, 900)}"></div><div class="shade" style="${bottom}"></div>
      ${title(86, 'left:34px;bottom:60px')}`],
   ['library_hero_3840x1240', 3840, 1240, `<div class="bg" style="${region(hero, 1920, 620, 0, 0, 1920, 620, 3840, 1240)}"></div>`],
+  // Web-portal icons (Newgrounds, itch.io cover) from the same key art.
+  ['portal_icon_630x500', 630, 500,
+    `<div class="bg" style="${region(art, 1920, 1080, 430, 60, 1040, 825, 630, 500)}"></div><div class="shade" style="${top}"></div>
+     ${title(62, 'left:28px;top:24px')}`],
+  ['portal_icon_512x512', 512, 512,
+    `<div class="bg" style="${region(art, 1920, 1080, 560, 60, 800, 800, 512, 512)}"></div><div class="shade" style="${top}"></div>
+     ${title(54, 'left:24px;top:22px')}`],
   ['library_logo_1280x720', 1280, 720, title(190, 'left:60px;top:190px')],
 ];
 
