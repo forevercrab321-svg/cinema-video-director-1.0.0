@@ -24,6 +24,8 @@
 
 <!-- 格式：日期 · 平台 · 做了什么 · 对方原话或门户状态 · 下一步 -->
 
+- 2026-10-05 · YouTube Playables · 提交 Public Playables Interest Form（cityhunters2025@gmail.com）· 官方：合适才会联系，不合适不回信 · 等待；获批后做无联网单人版（见 platforms/youtube-playables.md）
+- 2026-10-05 · Steam · 电脑版安装包、商店图、商店文案完成；Steam 账号 cityhunters2025 已注册 · 用户暂缓 100 美元 Steam Direct 费用 · 有网页平台数据后再决定
 - 2026-10-04 · itch.io · 项目已改为 Public：https://forevercrab321-svg.itch.io/grow-everything ；旧上传文件已隐藏（未删除），公开页可正常游玩 · 门户：Public · 已完成：正文 Description（中英，含万圣节小镇 / The Hunt / 蛋之谷）；主题无标题开关，改用横幅 `release/itch/banner-960x240@2x.png`（Edit theme → Banner，居中）· agent 一次加载卡在 Connecting… 约 25 s，刷新后正常 · 下一步：补截图和封面
 - 2026-10-03 · itch.io · 项目 forevercrab321-svg.itch.io/grow-everything（编辑页 /game/edit/5091958，账号用 forevercrab321@gmail.com 的 GitHub 登录）：rev 8 web 包上传并设为浏览器游玩，Viewport 960×540；agent 实测 Starting… 立即出现、进对局、W/A/D 驾驶、排行榜和小地图完整 · 门户：Draft · 隐藏旧上传文件后改 Public
 - 2026-10-02 · 自有网站 · PR #23 合并（ae046ea），Vercel 正式站已更新到 rev 6（万圣节小镇 + 蛋之谷 + 图形环境恢复）；agent 实测城市列表出现 Halloween Town · 门户：Production Ready · 下一步 itch.io / Newgrounds 发布（`release/web-portals/grow-everything-web.zip`）

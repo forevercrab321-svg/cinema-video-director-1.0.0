@@ -1,6 +1,6 @@
 # YouTube Playables
 
-Status: **applying** (2026-10-06): interest form being filled by the user's browser agent. Developer access is early access; the SDK, test suite and publishing tools open only after Google approves.
+Status: **interest form submitted** (2026-10-05 21:08 local, "Public Playables Interest Form", Google account cityhunters2025@gmail.com). Google only replies if the game is a fit ("we will reach out"); no email otherwise. The response can be edited via the form's "Edit your response" link. Developer access is early access; the SDK, test suite and publishing tools open only after Google approves.
 
 Sources: https://developers.google.com/youtube/gaming/playables · https://developers.google.com/youtube/gaming/playables/support/contact · https://developers.google.com/youtube/gaming/playables/certification/requirements
 
